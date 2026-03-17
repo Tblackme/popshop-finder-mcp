@@ -12,11 +12,11 @@ Environment Variables:
                       (default: "all")
 """
 
-import os
-import time
 import hashlib
 import logging
-from typing import Any, Dict, List, Optional, Set
+import os
+import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ _CACHE_TTL_SECONDS = 86_400  # 24 hours
 _REQUEST_TIMEOUT = 5.0       # seconds
 
 
-def _parse_tool_set(raw: str) -> Optional[Set[str]]:
+def _parse_tool_set(raw: str) -> set[str] | None:
     """Return None (meaning 'all') or a set of lowercase tool names."""
     raw = raw.strip().lower()
     if raw in ("all", "*", ""):
@@ -53,9 +53,9 @@ class SerperConnector:
 
     def __init__(self, api_key: str = "", tools_config: str = "all"):
         self._api_key = api_key
-        self._tool_set: Optional[Set[str]] = _parse_tool_set(tools_config)
+        self._tool_set: set[str] | None = _parse_tool_set(tools_config)
         # Cache: query_hash -> (timestamp, result_dict)
-        self._cache: Dict[str, tuple] = {}
+        self._cache: dict[str, tuple] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -69,7 +69,7 @@ class SerperConnector:
             return True
         return tool_name.lower() in self._tool_set
 
-    async def enrich(self, query: str, context_hint: str = "") -> Dict[str, Any]:
+    async def enrich(self, query: str, context_hint: str = "") -> dict[str, Any]:
         """
         Fetch web context for a query.
 
@@ -100,7 +100,7 @@ class SerperConnector:
     # Internal
     # ------------------------------------------------------------------
 
-    async def _fetch(self, query: str, context_hint: str) -> Dict[str, Any]:
+    async def _fetch(self, query: str, context_hint: str) -> dict[str, Any]:
         """Call Serper API and parse the response."""
         try:
             import httpx
@@ -130,10 +130,10 @@ class SerperConnector:
         return self._parse_response(data)
 
     @staticmethod
-    def _parse_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_response(data: dict[str, Any]) -> dict[str, Any]:
         """Extract snippets and links from the Serper JSON response."""
-        snippets: List[str] = []
-        links: List[Dict[str, str]] = []
+        snippets: list[str] = []
+        links: list[dict[str, str]] = []
 
         # Organic results
         for item in data.get("organic", []):
@@ -162,7 +162,7 @@ class SerperConnector:
     def _cache_key(text: str) -> str:
         return hashlib.md5(text.encode("utf-8")).hexdigest()
 
-    def _get_cached(self, key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached(self, key: str) -> dict[str, Any] | None:
         entry = self._cache.get(key)
         if entry is None:
             return None
@@ -172,7 +172,7 @@ class SerperConnector:
             return None
         return value
 
-    def _set_cached(self, key: str, value: Dict[str, Any]) -> None:
+    def _set_cached(self, key: str, value: dict[str, Any]) -> None:
         self._cache[key] = (time.time(), value)
 
     def cache_size(self) -> int:
@@ -184,7 +184,7 @@ class SerperConnector:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_instance: Optional[SerperConnector] = None
+_instance: SerperConnector | None = None
 
 
 def get_serper() -> SerperConnector:

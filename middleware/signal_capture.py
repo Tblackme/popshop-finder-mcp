@@ -11,13 +11,13 @@ Environment Variables:
                               (default: /data/signals/signals.json)
 """
 
-import os
-import json
 import asyncio
+import json
 import logging
-from datetime import datetime, timezone, timedelta
+import os
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ _DEFAULT_LOG_PATH = "/data/signals/signals.json"
 _SEARCH_KEYS = ("query", "search", "keyword", "q", "term", "name", "title")
 
 
-def _extract_search_term(arguments: Dict[str, Any]) -> str:
+def _extract_search_term(arguments: dict[str, Any]) -> str:
     """Return the first string value found under any recognised search key."""
     for key in _SEARCH_KEYS:
         value = arguments.get(key)
@@ -66,7 +66,7 @@ class SignalCapture:
     async def capture(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
         session_id: str,
         duration_ms: float,
@@ -84,7 +84,7 @@ class SignalCapture:
             "search_term": _extract_search_term(arguments),
             "user_id": user_id,
             "session_id": session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "duration_ms": duration_ms,
             "success": success,
         }
@@ -92,14 +92,14 @@ class SignalCapture:
         # Fire-and-forget — never await this in the hot path
         asyncio.create_task(self._write(signal))
 
-    def get_trending(self, n: int = 10) -> List[Dict[str, Any]]:
+    def get_trending(self, n: int = 10) -> list[dict[str, Any]]:
         """
         Return the top-N search terms from the last 7 days.
 
         Returns a list of dicts: [{term, count}, ...]
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-        counts: Dict[str, int] = {}
+        cutoff = datetime.now(UTC) - timedelta(days=7)
+        counts: dict[str, int] = {}
 
         for signal in self._iter_signals():
             term = signal.get("search_term", "").strip()
@@ -117,7 +117,7 @@ class SignalCapture:
         sorted_terms = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         return [{"term": t, "count": c} for t, c in sorted_terms[:n]]
 
-    def get_signal_stats(self) -> Dict[str, Any]:
+    def get_signal_stats(self) -> dict[str, Any]:
         """
         Return aggregate stats over the full signal store.
 
@@ -126,8 +126,8 @@ class SignalCapture:
         """
         total = 0
         users: set = set()
-        tool_counts: Dict[str, int] = {}
-        term_counts: Dict[str, int] = {}
+        tool_counts: dict[str, int] = {}
+        term_counts: dict[str, int] = {}
 
         for signal in self._iter_signals():
             total += 1
@@ -155,7 +155,7 @@ class SignalCapture:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _write(self, signal: Dict[str, Any]) -> None:
+    async def _write(self, signal: dict[str, Any]) -> None:
         """Append one signal to the NDJSON log file (async, locked)."""
         try:
             async with self._lock:
@@ -190,10 +190,10 @@ class SignalCapture:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_instance: Optional[SignalCapture] = None
+_instance: SignalCapture | None = None
 
 
-def get_signal_capture(log_path: Optional[str] = None) -> SignalCapture:
+def get_signal_capture(log_path: str | None = None) -> SignalCapture:
     """Return the global SignalCapture singleton."""
     global _instance
     if _instance is None:

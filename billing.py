@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -35,7 +35,7 @@ class UserUsage:
     total_calls: int = 0
     total_tokens: int = 0
     total_cost_usd: float = 0.0
-    calls_by_tool: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    calls_by_tool: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     period_start: str = ""
     period_end: str = ""
     stripe_customer_id: str = ""
@@ -98,11 +98,11 @@ class UsageTracker:
         self.config = config or BillingConfig()
         self._stripe = None
 
-        self._api_keys: Dict[str, APIKey] = {}
-        self._usage: Dict[str, UserUsage] = {}
-        self._records: List[UsageRecord] = []
-        self._rate_windows: Dict[str, List[float]] = defaultdict(list)
-        self._affiliates: Dict[str, AffiliatePartner] = {}
+        self._api_keys: dict[str, APIKey] = {}
+        self._usage: dict[str, UserUsage] = {}
+        self._records: list[UsageRecord] = []
+        self._rate_windows: dict[str, list[float]] = defaultdict(list)
+        self._affiliates: dict[str, AffiliatePartner] = {}
 
         if self.config.enabled and self.config.stripe_secret_key:
             self._init_stripe()
@@ -151,7 +151,7 @@ class UsageTracker:
         self._save_state()
         return api_key
 
-    def validate_api_key(self, key: str) -> Optional[APIKey]:
+    def validate_api_key(self, key: str) -> APIKey | None:
         api_key = self._api_keys.get(key)
         if api_key and api_key.is_active:
             api_key.last_used = datetime.utcnow().isoformat()
@@ -172,7 +172,7 @@ class UsageTracker:
         self,
         partner_name: str,
         payout_email: str,
-        commission_rate: Optional[float] = None,
+        commission_rate: float | None = None,
     ) -> AffiliatePartner:
         import secrets
 
@@ -196,7 +196,7 @@ class UsageTracker:
         self._save_state()
         return partner
 
-    def get_affiliate(self, code: str) -> Optional[AffiliatePartner]:
+    def get_affiliate(self, code: str) -> AffiliatePartner | None:
         partner = self._affiliates.get(code)
         if partner and partner.is_active:
             return partner
@@ -214,7 +214,7 @@ class UsageTracker:
             self._save_state()
         return updated
 
-    def get_affiliate_dashboard(self, code: str) -> Optional[Dict[str, Any]]:
+    def get_affiliate_dashboard(self, code: str) -> dict[str, Any] | None:
         partner = self.get_affiliate(code)
         if not partner:
             return None
@@ -349,7 +349,7 @@ class UsageTracker:
         tier: str = "pro",
         success_url: str = "",
         cancel_url: str = "",
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self._stripe:
             return None
         try:
@@ -368,7 +368,7 @@ class UsageTracker:
     # ------------------------------------------------------------------
     # Metrics
     # ------------------------------------------------------------------
-    def get_usage_summary(self, user_id: str) -> Dict[str, Any]:
+    def get_usage_summary(self, user_id: str) -> dict[str, Any]:
         usage = self.get_or_create_usage(user_id)
         return {
             "user_id": user_id,
@@ -380,11 +380,11 @@ class UsageTracker:
             "tier": usage.tier,
         }
 
-    def get_global_metrics(self) -> Dict[str, Any]:
+    def get_global_metrics(self) -> dict[str, Any]:
         total_users = len(self._usage)
         total_calls = sum(u.total_calls for u in self._usage.values())
         total_revenue = sum(u.total_cost_usd for u in self._usage.values())
-        tool_totals: Dict[str, int] = defaultdict(int)
+        tool_totals: dict[str, int] = defaultdict(int)
         for usage in self._usage.values():
             for tool, count in usage.calls_by_tool.items():
                 tool_totals[tool] += count
@@ -405,7 +405,7 @@ class UsageTracker:
             "active_period": datetime.utcnow().strftime("%Y-%m"),
         }
 
-    def get_recent_activity(self, user_id: str = None, limit: int = 50) -> List[Dict]:
+    def get_recent_activity(self, user_id: str = None, limit: int = 50) -> list[dict]:
         records = self._records
         if user_id:
             records = [r for r in records if r.user_id == user_id]
@@ -459,12 +459,24 @@ class UsageTracker:
 
 
 def create_billing_middleware(tracker: UsageTracker):
+    def _normalize_tool_result(result: Any) -> list[dict[str, Any]]:
+        if isinstance(result, str):
+            try:
+                return [{"type": "json", "json": json.loads(result)}]
+            except json.JSONDecodeError:
+                return [{"type": "text", "text": result}]
+
+        if isinstance(result, dict):
+            return [{"type": "json", "json": result}]
+
+        return [{"type": "text", "text": str(result)}]
+
     async def middleware(
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         api_key_str: str,
         handler,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if tracker.config.enabled:
             api_key = tracker.validate_api_key(api_key_str)
             if not api_key:
@@ -494,7 +506,14 @@ def create_billing_middleware(tracker: UsageTracker):
         except Exception as e:
             success = False
             error_msg = str(e)
-            result = f"Error: {error_msg}"
+            tracker.record_usage(
+                api_key=api_key,
+                tool_name=tool_name,
+                duration_ms=(time.time() - start) * 1000,
+                success=success,
+                error=error_msg,
+            )
+            return {"error": error_msg}
 
         duration_ms = (time.time() - start) * 1000
         tracker.record_usage(
@@ -504,7 +523,7 @@ def create_billing_middleware(tracker: UsageTracker):
             success=success,
             error=error_msg,
         )
-        return {"content": [{"type": "text", "text": result}]}
+        return {"content": _normalize_tool_result(result)}
 
     return middleware
 

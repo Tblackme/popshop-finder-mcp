@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kansas City Listings | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/features">Features</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/about">About</a>
+        <a class="active" href="/listings">Listings</a>
+        <a href="/find-my-next-market">Find My Next Market</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/features">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/about">About</a>
+      <a href="/listings">Listings</a>
+      <a href="/find-my-next-market">Find My Next Market</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Kansas City listings</span>
+        <h1>Current Kansas City events and more discovered opportunities.</h1>
+        <p>This page stays focused on Kansas City only. It shows current stored events first, then more events found by the discovery tool, with direct open-link actions.</p>
+      </div>
+    </section>
+    <section>
+      <div class="container">
+        <div class="split-grid">
+          <div class="form-card">
+            <h3>Worth-it inputs</h3>
+            <form class="form-grid" data-kc-business-form>
+              <div class="field"><label for="avg_sale_price">Average sale price</label><input id="avg_sale_price" name="avg_sale_price" type="number" min="0" value="45"></div>
+              <div class="field"><label for="avg_sales_per_event">Average sales per event</label><input id="avg_sales_per_event" name="avg_sales_per_event" type="number" min="0" value="18"></div>
+              <div class="field"><label for="typical_cogs">Typical cost of goods</label><input id="typical_cogs" name="typical_cogs" type="number" min="0" value="180"></div>
+              <div class="field"><label for="travel_cost">Travel cost estimate</label><input id="travel_cost" name="travel_cost" type="number" min="0" value="45"></div>
+              <div class="field"><label for="booth_budget">Booth budget</label><input id="booth_budget" name="booth_budget" type="number" min="0" value="150"></div>
+              <div class="field"><label for="preferred_min_profit">Preferred minimum profit</label><input id="preferred_min_profit" name="preferred_min_profit" type="number" min="0" value="250"></div>
+              <div class="field"><label for="vendor_type">Vendor type</label><input id="vendor_type" name="vendor_type" value="handmade vendor"></div>
+              <div class="stack-row">
+                <button class="btn btn-primary" type="submit">Rate Kansas City Events</button>
+                <button class="btn btn-secondary" type="button" data-refresh-kc-listings>Refresh Events</button>
+              </div>
+            </form>
+          </div>
+          <div class="form-card">
+            <h3>How ratings work</h3>
+            <p class="muted">Each event gets numbered ratings from 1 to 10 for profit potential, traffic quality, booth cost fairness, competition level, and overall worth-it score.</p>
+            <p class="muted">The color scale runs red to green, so you can scan weak opportunities quickly and spot the strongest Kansas City options first.</p>
+            <a class="btn btn-secondary" href="/find-my-next-market">Open Market Finder</a>
+          </div>
+        </div>
+        <div class="status" data-kc-listings-status></div>
+      </div>
+    </section>
+    <section>
+      <div class="container split-grid">
+        <div>
+          <div class="section-heading">
+            <h2>Current Events</h2>
+            <p>Stored and known Kansas City events currently in the Vendor Atlas event database.</p>
+          </div>
+          <div class="results-grid" data-kc-current-events>
+            <div class="empty-state"><strong>Loading current Kansas City events...</strong></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-heading">
+            <h2>More Events</h2>
+            <p>Additional Kansas City event links discovered by the event-finding tool.</p>
+          </div>
+          <div class="results-grid" data-kc-more-events>
+            <div class="empty-state"><strong>Loading more Kansas City events...</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>Vendor Atlas</div>
+      <div>Kansas City-focused listings powered by live event discovery.</div>
+    </div>
+  </footer>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

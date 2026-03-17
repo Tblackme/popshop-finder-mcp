@@ -11,9 +11,9 @@ Components:
     sync             - Two-way sync engine tying all middleware together
 """
 
-from middleware.signal_capture import SignalCapture, get_signal_capture
 from middleware.serper_connector import SerperConnector, get_serper
 from middleware.session_manager import SessionManager, get_session_manager
+from middleware.signal_capture import SignalCapture, get_signal_capture
 from middleware.sync import SyncEngine, get_sync_engine
 
 __all__ = [

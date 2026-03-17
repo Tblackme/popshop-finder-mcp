@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find My Next Market | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links"><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a class="active" href="/find-my-next-market">Find My Next Market</a></nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a><div data-mobile-auth-nav></div></div>
+  </header>
+  <main>
+    <section class="page-hero"><div class="container"><span class="eyebrow">Find my next market</span><h1>Search known events and discover more opportunities in one place.</h1><p>When you search here, Vendor Atlas uses the MCP event search tools to pull direct matches and broader discovered events for the same location.</p></div></section>
+    <section>
+      <div class="container split-grid">
+        <div class="form-card">
+          <h3>Search filters</h3>
+          <form class="form-grid" data-market-search-form>
+            <div class="field"><label for="city">City</label><input id="city" name="city" placeholder="Austin" value="Austin"></div>
+            <div class="field"><label for="state">State</label><input id="state" name="state" placeholder="TX"></div>
+            <div class="field"><label for="vendor_category">Vendor category</label><input id="vendor_category" name="vendor_category" placeholder="jewelry"></div>
+            <div class="field"><label for="event_size">Event size</label><select id="event_size" name="event_size"><option value="">Any</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></div>
+            <div class="field"><label for="distance_radius">Distance radius</label><input id="distance_radius" name="distance_radius" placeholder="25"></div>
+            <button class="btn btn-primary btn-block" type="submit">Search Markets</button>
+            <div class="status" data-market-status></div>
+          </form>
+        </div>
+        <div>
+          <div class="section-heading"><h2>Search Results</h2><p>Direct results from `search_events` appear first, followed by broader candidates from `discover_events`.</p></div>
+          <div class="results-grid" data-market-results>
+            <div class="empty-state"><strong>Start with a city.</strong><p class="muted">This page combines MCP search and discovery results and lets signed-in members save markets to the dashboard.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer"><div class="container footer-grid"><div>Vendor Atlas</div><div>Search smarter today. Save your shortlist for later.</div></div></footer>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

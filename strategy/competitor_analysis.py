@@ -16,7 +16,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -46,11 +46,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_json(path: Path) -> Dict[str, Any]:
+def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def weighted_score(scores: Dict[str, float], weights: Dict[str, float]) -> float:
+def weighted_score(scores: dict[str, float], weights: dict[str, float]) -> float:
     weighted_total = 0.0
     weight_sum = 0.0
     for key, weight in weights.items():
@@ -77,7 +77,7 @@ def round_price(value: float) -> int:
     return candidate
 
 
-def score_gap_labels(our_scores: Dict[str, float], competitors: List[Dict[str, Any]]) -> List[str]:
+def score_gap_labels(our_scores: dict[str, float], competitors: list[dict[str, Any]]) -> list[str]:
     if not competitors:
         return []
     categories = set(our_scores.keys())
@@ -94,7 +94,7 @@ def score_gap_labels(our_scores: Dict[str, float], competitors: List[Dict[str, A
     return labels
 
 
-def generate_public_items(payload: Dict[str, Any], opportunities: List[str]) -> List[Dict[str, str]]:
+def generate_public_items(payload: dict[str, Any], opportunities: list[str]) -> list[dict[str, str]]:
     our = payload["our_product"]
     competitors = payload.get("competitors", [])
     items = [
@@ -198,6 +198,12 @@ def main() -> int:
         },
     }
 
+    improvement_lines = (
+        "".join([f"- {item}\n" for item in opportunities])
+        if opportunities
+        else "- No major score gaps detected."
+    )
+
     report_md = f"""# Competitive Analysis Report
 
 ## Position
@@ -215,7 +221,7 @@ def main() -> int:
 - Recommended pro calls: {rec_pro_calls}
 
 ## Actionable Improvement Areas
-{"".join(f"- {item}\n" for item in opportunities) if opportunities else "- No major score gaps detected."}
+{improvement_lines}
 
 ## Public Messaging Guardrail
 - Talk about outcomes, speed, reliability, compliance, and support.

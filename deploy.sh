@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-PORT="${SERVER_PORT:-{{SERVER_PORT}}}"
+PORT="${SERVER_PORT:-3000}"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Colors

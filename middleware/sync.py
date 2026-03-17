@@ -15,10 +15,10 @@ Environment Variables:
                      https://sync.example.com  (default: "" = disabled)
 """
 
-import os
 import asyncio
 import logging
-from typing import Any, Dict, Optional
+import os
+from typing import Any
 
 from middleware.signal_capture import get_signal_capture
 
@@ -59,7 +59,7 @@ class SyncEngine:
     async def capture_and_sync(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
         session_id: str,
         result: Any,
@@ -96,7 +96,7 @@ class SyncEngine:
         self,
         tool_name: str,
         query: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Pull enriched context from the sync endpoint.
 
@@ -109,7 +109,7 @@ class SyncEngine:
 
         try:
             import httpx
-            params: Dict[str, str] = {"tool": tool_name}
+            params: dict[str, str] = {"tool": tool_name}
             if query:
                 params["q"] = query[:500]  # cap length
 
@@ -139,7 +139,7 @@ class SyncEngine:
     async def _post_ingest(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
         session_id: str,
         duration_ms: float,
@@ -171,7 +171,7 @@ class SyncEngine:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_instance: Optional[SyncEngine] = None
+_instance: SyncEngine | None = None
 
 
 def get_sync_engine() -> SyncEngine:

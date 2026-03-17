@@ -3,21 +3,23 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "{{PROJECT_SLUG}}"
+name = "vendor-atlas-mcp"
 version = "0.1.0"
-description = "{{PROJECT_DESCRIPTION}}"
+description = "Vendor Atlas MCP server and consumer dashboard for vendor market discovery."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
-    {name = "{{AUTHOR_NAME}}", email = "{{AUTHOR_EMAIL}}"},
+    {name = "Vendor Atlas", email = "support@example.com"},
 ]
 
 dependencies = [
-    "aiohttp>=3.9",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
     "python-dotenv>=1.0",
     "stripe>=7.0",
     "httpx>=0.27",
+    "itsdangerous>=2.2",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +34,20 @@ dev = [
 ]
 
 [project.scripts]
-{{PROJECT_SLUG}} = "server:main"
+vendor-atlas-mcp = "server:main"
+
+[tool.setuptools]
+py-modules = [
+    "billing",
+    "config",
+    "server",
+    "storage_events",
+    "storage_markets",
+    "storage_users",
+]
+
+[tool.setuptools.packages.find]
+include = ["middleware*", "tools*"]
 
 [tool.ruff]
 line-length = 100
@@ -43,5 +58,6 @@ select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
+addopts = "-p no:cacheprovider"
 asyncio_mode = "auto"
 testpaths = ["tests"]

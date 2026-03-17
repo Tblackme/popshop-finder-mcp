@@ -1,0 +1,129 @@
+[
+  {
+    "name": "discover_events",
+    "description": "Find candidate popup markets, makers markets, craft fairs, and vendor events across supported source categories.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "sources": { "type": "array", "items": { "type": "string" } },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "searched_at": { "type": "string" },
+        "results_count": { "type": "integer" },
+        "events": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  },
+  {
+    "name": "extract_event",
+    "description": "Scrape an event page and extract structured market details from the source URL.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" }
+      },
+      "required": ["url"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "event": { "type": "object" },
+        "extracted_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  {
+    "name": "enrich_event",
+    "description": "Add extra event signals such as social buzz, repeat-history hints, and traffic estimates.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string" },
+        "event": { "type": "object" }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string" },
+        "enrichment": { "type": "object" },
+        "event": { "type": "object" }
+      }
+    }
+  },
+  {
+    "name": "score_event",
+    "description": "Calculate Vendor Atlas Profit Signals for an event and classify it as low, medium, or high opportunity.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string" },
+        "event": { "type": "object" },
+        "enrichment": { "type": "object" }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string" },
+        "profit_score": { "type": "integer" },
+        "signal": { "type": "string" },
+        "factors": { "type": "array", "items": { "type": "string" } },
+        "event": { "type": "object" }
+      }
+    }
+  },
+  {
+    "name": "save_event",
+    "description": "Store a discovered, extracted, or scored event in the Vendor Atlas events database.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "event": { "type": "object" }
+      },
+      "required": ["event"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean" },
+        "event_id": { "type": "string" },
+        "saved_at": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "search_events",
+    "description": "Search stored Vendor Atlas events for dashboard and agent workflows.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "date_range": { "type": "string" },
+        "event_size": { "type": "string" },
+        "vendor_category": { "type": "string" },
+        "distance_radius": { "type": ["string", "number"] }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "filters": { "type": "object" },
+        "results_count": { "type": "integer" },
+        "events": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+]

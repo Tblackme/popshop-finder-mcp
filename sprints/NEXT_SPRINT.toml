@@ -1,0 +1,198 @@
+# Vendor Atlas Sprint — Convergence + QA
+# Focus: align the frontend with the new FastAPI search surface, clean text/encoding rough edges,
+# and broaden confidence with a deeper QA/test pass.
+
+sprint_name = "Vendor Atlas — Convergence + QA"
+start_date = "2026-03-16"
+end_date = "2026-03-30"
+
+# ---------------------------------------------------------------------------
+# PHASE 1: Frontend/backend convergence
+# ---------------------------------------------------------------------------
+
+[tasks.CONV-001]
+id = "CONV-001"
+name = "Switch dashboard search fully to /markets/search"
+description = "Move the frontend search flow off the legacy /consumer/run wrapper and onto the direct FastAPI search endpoint."
+estimated_time = "1.5 hours"
+estimated_lines = 70
+agent = "general-purpose"
+phase = "Phase 1: Convergence"
+status = "completed"
+priority = "high"
+estimated_hours = 1.5
+prompt = """
+DESIGN DECISION: The dashboard should use the new FastAPI search endpoint directly.
+WHY: The backend now exposes GET /markets/search plus /config.json, but site/index.html still partially relies on the older MCP-style wrapper for market search.
+
+Context (CRITICAL):
+- server.py exposes GET /markets/search and GET /config.json.
+- site/index.html already has CONFIG.API_BASE_URL and the dashboard search flow.
+- /markets/search currently returns both event-native fields and a compatibility markets/result payload.
+
+Steps:
+1. Update the dashboard search flow to call GET /markets/search directly.
+2. Use /config.json when available for runtime API base/config flags.
+3. Keep ranking/compare/profile flows working after the search change.
+4. Remove any stale assumptions that market search must go through /consumer/run.
+
+Success criteria:
+- Market search uses the direct HTTP endpoint.
+- The dashboard still renders cards, ranking, save/apply/details, and errors correctly.
+"""
+dependencies = []
+
+[tasks.CONV-002]
+id = "CONV-002"
+name = "Retire or document legacy search_markets compatibility path"
+description = "Decide whether the legacy search_markets wrapper remains supported or becomes an internal compatibility layer only."
+estimated_time = "45 min"
+estimated_lines = 40
+agent = "general-purpose"
+phase = "Phase 1: Convergence"
+status = "completed"
+priority = "medium"
+estimated_hours = 0.75
+prompt = """
+DESIGN DECISION: The repo now has both the old search_markets path and the newer search_events + /markets/search path.
+WHY: That overlap is useful temporarily, but it should be clarified so future work does not fork the architecture again.
+
+Context (CRITICAL):
+- tools/vendor_atlas_markets.py still exists for compatibility.
+- tools/vendor_atlas_pipeline.py and /markets/search are the intended forward path.
+- Docs should explain what is canonical.
+
+Steps:
+1. Review the compatibility behavior of search_markets.
+2. Either simplify it to an explicit compatibility wrapper or document it clearly as legacy-compatible.
+3. Update docs accordingly.
+
+Success criteria:
+- Future contributors can tell which market search surface is canonical.
+"""
+dependencies = ["CONV-001"]
+
+# ---------------------------------------------------------------------------
+# PHASE 2: QA + test hardening
+# ---------------------------------------------------------------------------
+
+[tasks.QA-001]
+id = "QA-001"
+name = "Add coverage for config + HTTP search + pipeline flow"
+description = "Expand tests beyond consumer-run smoke checks into direct FastAPI and pipeline surfaces."
+estimated_time = "1.5 hours"
+estimated_lines = 90
+agent = "general-purpose"
+phase = "Phase 2: QA"
+status = "completed"
+priority = "high"
+estimated_hours = 1.5
+prompt = """
+DESIGN DECISION: The system now spans FastAPI endpoints, MCP tools, and browser-facing flows, so tests should cover the newer surfaces directly.
+WHY: Current tests are a good start, but more direct coverage will catch regressions in runtime config, search, scoring, and event storage behavior.
+
+Context (CRITICAL):
+- tests/test_consumer_flows.py already covers profile, search, compare, scraper, and some pipeline functions.
+- server.py now exposes /config.json and /markets/search.
+- storage_events.py and storage_markets.py support env-driven paths.
+
+Steps:
+1. Add tests for /config.json and /markets/search response shape.
+2. Add at least one storage-path/env-oriented test where practical.
+3. Keep tests lightweight and local-only.
+
+Success criteria:
+- The newer FastAPI surfaces have direct regression coverage.
+"""
+dependencies = []
+
+[tasks.QA-002]
+id = "QA-002"
+name = "Manual browser QA checklist and issue sweep"
+description = "Write a short browser smoke-test checklist for the major flows and capture any remaining rough edges."
+estimated_time = "1 hour"
+estimated_lines = 50
+agent = "general-purpose"
+phase = "Phase 2: QA"
+status = "completed"
+priority = "medium"
+estimated_hours = 1.0
+prompt = """
+DESIGN DECISION: Not every frontend issue will show up in Python tests.
+WHY: The product now has multiple modals, overlays, list states, and dashboard actions that benefit from a quick manual checklist.
+
+Context (CRITICAL):
+- site/index.html is the main app surface.
+- Key flows: search, save, details, compare, vendor profile quiz, mobile menu, runtime config fallback.
+
+Steps:
+1. Write a concise manual QA checklist in docs or README.
+2. Focus on the user-visible flows most likely to regress.
+3. Note any known gaps or follow-up items discovered during the sweep.
+
+Success criteria:
+- The repo includes a practical smoke-test checklist for the product UI.
+"""
+dependencies = ["CONV-001"]
+
+# ---------------------------------------------------------------------------
+# PHASE 3: Content + polish cleanup
+# ---------------------------------------------------------------------------
+
+[tasks.POL-001]
+id = "POL-001"
+name = "Clean encoding and punctuation artifacts in UI text"
+description = "Replace smart-quote/encoding artifacts and normalize user-facing punctuation across the frontend."
+estimated_time = "1 hour"
+estimated_lines = 80
+agent = "general-purpose"
+phase = "Phase 3: Polish"
+status = "completed"
+priority = "medium"
+estimated_hours = 1.0
+prompt = """
+DESIGN DECISION: The interface should read as polished product copy, not pasted/generated text with encoding artifacts.
+WHY: The repo still contains visible punctuation/encoding artifacts in the frontend copy such as odd apostrophes, dashes, and separator glyphs.
+
+Context (CRITICAL):
+- site/index.html includes several user-visible copy strings rendered in cards, messages, and helper text.
+- We prefer ASCII by default unless a file clearly justifies otherwise.
+
+Steps:
+1. Sweep site/index.html for visible encoding artifacts and normalize them.
+2. Keep copy consumer-friendly and consistent with the current tone.
+3. Avoid changing semantics unless the wording is clearly rough.
+
+Success criteria:
+- The main UI no longer shows awkward encoded punctuation in visible text.
+"""
+dependencies = []
+
+[tasks.POL-002]
+id = "POL-002"
+name = "Review backend docs for stale wording"
+description = "Make sure docs consistently describe the current six-tool FastAPI/MCP architecture."
+estimated_time = "45 min"
+estimated_lines = 40
+agent = "general-purpose"
+phase = "Phase 3: Polish"
+status = "completed"
+priority = "low"
+estimated_hours = 0.75
+prompt = """
+DESIGN DECISION: Docs should reflect the architecture we actually built.
+WHY: Some copied task text and older files may still mention outdated naming or transports in ways that could confuse future work.
+
+Context (CRITICAL):
+- README.md and docs/VENDOR_ATLAS_MCP.md are the primary references.
+- ACTIVE_SPRINT.toml contains historical task text and is not itself user docs, but canonical docs should not drift.
+
+Steps:
+1. Review primary docs for stale naming like old tool names or outdated flow descriptions.
+2. Update only the canonical docs, not every historical artifact.
+3. Keep examples aligned with the current six-tool pipeline.
+
+Success criteria:
+- Primary docs consistently describe the current architecture.
+"""
+dependencies = ["CONV-002"]

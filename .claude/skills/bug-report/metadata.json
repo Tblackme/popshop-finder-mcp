@@ -1,0 +1,32 @@
+{
+  "name": "bug-report",
+  "version": "1.0.0",
+  "description": "Creates a properly formatted GitHub bug report issue following ÆtherLight SOP",
+  "author": "ÆtherLight Team",
+  "created": "2025-10-29",
+  "updated": "2025-10-29",
+  "parameters": {
+    "description": {
+      "type": "string",
+      "required": true,
+      "description": "Brief description of the bug"
+    },
+    "severity": {
+      "type": "string",
+      "required": false,
+      "default": "medium",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Bug severity level"
+    },
+    "component": {
+      "type": "string",
+      "required": false,
+      "description": "Component or area affected"
+    }
+  },
+  "dependencies": {
+    "gh": ">=2.0.0"
+  },
+  "tags": ["github", "issues", "bug", "reporting"],
+  "repository": "https://github.com/AEtherlight-ai/lumina"
+}

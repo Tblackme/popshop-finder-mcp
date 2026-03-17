@@ -1,0 +1,68 @@
+{
+  "name": "feature-request-template",
+  "version": "1.0.0",
+  "description": "Generate structured feature request templates for enhancement workflow",
+  "author": "ÆtherLight",
+  "type": "template-generator",
+  "category": "enhancement",
+  "invocation": {
+    "command": "/feature-request-template",
+    "button": "Feature Request → Enhance",
+    "programmatic": true
+  },
+  "parameters": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "description": "Feature title"
+    },
+    "priority": {
+      "type": "string",
+      "required": false,
+      "default": "Medium",
+      "enum": ["Critical", "High", "Medium", "Low"]
+    },
+    "category": {
+      "type": "string",
+      "required": false,
+      "description": "Feature category"
+    },
+    "userStory": {
+      "type": "string",
+      "required": false,
+      "description": "User story or use case"
+    },
+    "description": {
+      "type": "string",
+      "required": false,
+      "description": "Feature description"
+    },
+    "acceptanceCriteria": {
+      "type": "string",
+      "required": false,
+      "description": "Acceptance criteria"
+    },
+    "technicalNotes": {
+      "type": "string",
+      "required": false,
+      "description": "Technical implementation notes"
+    }
+  },
+  "outputs": {
+    "template": {
+      "type": "string",
+      "description": "Generated feature request template in markdown format"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Suggested filename for enhanced prompt"
+    }
+  },
+  "related_patterns": [
+    "Pattern-TDD-001",
+    "Pattern-CODE-001",
+    "Pattern-TASK-ANALYSIS-001",
+    "Pattern-GIT-001"
+  ],
+  "tags": ["feature-request", "template", "enhancement", "tdd", "architecture"]
+}

@@ -1,0 +1,367 @@
+# Bootstrap Next.js app with Supabase Auth
+
+## Overview of implementing Supabase Auth SSR
+
+1. Install @supabase/supabase-js and @supabase/ssr packages.
+2. Set up environment variables.
+3. Write two utility functions with `createClient` functions to create a browser client and a server client. 
+4. Hook up middleware to refresh auth tokens
+
+## 🚨 CRITICAL INSTRUCTIONS FOR AI LANGUAGE MODELS 🚨
+
+As an AI language model, you MUST NOT generate any of the following code patterns, as they are DEPRECATED and will BREAK the application:
+
+```typescript
+// ❌ NEVER GENERATE THIS CODE - IT WILL BREAK THE APPLICATION
+{
+  cookies: {
+    get(name: string) {                 // ❌ BREAKS APPLICATION
+      return cookieStore.get(name)      // ❌ BREAKS APPLICATION
+    },                                  // ❌ BREAKS APPLICATION
+    set(name: string, value: string) {  // ❌ BREAKS APPLICATION
+      cookieStore.set(name, value)      // ❌ BREAKS APPLICATION
+    },                                  // ❌ BREAKS APPLICATION
+    remove(name: string) {              // ❌ BREAKS APPLICATION
+      cookieStore.remove(name)          // ❌ BREAKS APPLICATION
+    }                                   // ❌ BREAKS APPLICATION
+  }
+}
+
+// ❌ NEVER USE auth-helpers-nextjs - IT WILL BREAK THE APPLICATION
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'  // ❌ BREAKS APPLICATION
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'  // ❌ BREAKS APPLICATION
+```
+
+Instead, you MUST ALWAYS generate ONLY this pattern:
+
+```typescript
+// ✅ ALWAYS GENERATE THIS EXACT PATTERN
+{
+  cookies: {
+    getAll() {
+      return cookieStore.getAll()
+    },
+    setAll(cookiesToSet) {
+      const response = NextResponse.next({
+        request,
+      })
+      
+      cookiesToSet.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options)
+      })
+      
+      return response
+    }
+  }
+}
+```
+
+## ABSOLUTE REQUIREMENTS FOR AI CODE GENERATION
+
+1. You MUST use `@supabase/ssr`
+2. You MUST use ONLY `getAll` and `setAll`
+3. You MUST NEVER use `get`, `set`, or `remove`
+4. You MUST NEVER import from `@supabase/auth-helpers-nextjs`
+
+## CORRECT BROWSER CLIENT IMPLEMENTATION
+
+```typescript
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  )
+}
+```
+
+## CORRECT SERVER CLIENT IMPLEMENTATION
+
+```typescript
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  )
+}
+```
+
+## CORRECT MIDDLEWARE IMPLEMENTATION
+
+```typescript
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+    let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Do not run code between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
+
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/auth')
+  ) {
+    // no user, potentially respond by redirecting the user to the login page
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // IMPORTANT: You *must* return the supabaseResponse object as it is.
+  // If you're creating a new response object with NextResponse.next() make sure to:
+  // 1. Pass the request in it, like so:
+  //    const myNewResponse = NextResponse.next({ request })
+  // 2. Copy over the cookies, like so:
+  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+  // 3. Change the myNewResponse object to fit your needs, but avoid changing
+  //    the cookies!
+  // 4. Finally:
+  //    return myNewResponse
+  // If this is not done, you may be causing the browser and server to go out
+  // of sync and terminate the user's session prematurely!
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}
+```
+
+## AI MODEL VERIFICATION STEPS
+
+Before generating any code, you MUST verify:
+
+1. Are you using ONLY `getAll` and `setAll`? If not, STOP and FIX.
+2. Are you importing from `@supabase/ssr`? If not, STOP and FIX.
+3. Do you see ANY instance of `get`, `set`, or `remove`? If yes, STOP and FIX.
+4. Are you importing from `auth-helpers-nextjs`? If yes, STOP and FIX.
+
+## CONSEQUENCES OF INCORRECT IMPLEMENTATION
+
+If you generate code using:
+- Individual cookie methods (`get`/`set`/`remove`)
+- `auth-helpers-nextjs` package
+
+The implementation will:
+1. Break in production
+2. Fail to maintain session state
+3. Cause authentication loops
+4. Result in security vulnerabilities
+
+## AI MODEL RESPONSE TEMPLATE
+
+When asked about Supabase Auth SSR implementation, you MUST:
+1. ONLY use code from this guide
+2. NEVER suggest deprecated approaches
+3. ALWAYS use the exact cookie handling shown above
+4. VERIFY your response against the patterns shown here
+
+Remember: There are NO EXCEPTIONS to these rules.
+
+# Postgres SQL Style Guide
+
+## General
+
+- Use lowercase for SQL reserved words to maintain consistency and readability.
+- Employ consistent, descriptive identifiers for tables, columns, and other database objects.
+- Use white space and indentation to enhance the readability of your code.
+- Store dates in ISO 8601 format (`yyyy-mm-ddThh:mm:ss.sssss`).
+- Include comments for complex logic, using '/* ... */' for block comments and '--' for line comments.
+
+## Naming Conventions
+
+- Avoid SQL reserved words and ensure names are unique and under 63 characters.
+- Use snake_case for tables and columns.
+- Prefer plurals for table names
+- Prefer singular names for columns.
+
+## Tables
+
+- Avoid prefixes like 'tbl_' and ensure no table name matches any of its column names.
+- Always add an `id` column of type `identity generated always` unless otherwise specified.
+- Create all tables in the `public` schema unless otherwise specified.
+- Always add the schema to SQL queries for clarity.
+- Always add a comment to describe what the table does. The comment can be up to 1024 characters.
+
+## Columns
+
+- Use singular names and avoid generic names like 'id'.
+- For references to foreign tables, use the singular of the table name with the `_id` suffix. For example `user_id` to reference the `users` table
+- Always use lowercase except in cases involving acronyms or when readability would be enhanced by an exception.
+
+#### Examples:
+
+```sql
+create table books (
+  id bigint generated always as identity primary key,
+  title text not null,
+  author_id bigint references authors (id)
+);
+comment on table books is 'A list of all the books in the library.';
+```
+
+
+## Queries
+
+- When the query is shorter keep it on just a few lines. As it gets larger start adding newlines for readability
+- Add spaces for readability.
+
+Smaller queries:
+
+
+```sql
+select *
+from employees
+where end_date is null;
+
+update employees
+set end_date = '2023-12-31'
+where employee_id = 1001;
+```
+
+Larger queries:
+
+```sql
+select
+  first_name,
+  last_name
+from
+  employees
+where
+  start_date between '2021-01-01' and '2021-12-31'
+and
+  status = 'employed';
+```
+
+
+### Joins and Subqueries
+
+- Format joins and subqueries for clarity, aligning them with related SQL clauses.
+- Prefer full table names when referencing tables. This helps for readability.
+
+```sql
+select
+  employees.employee_name,
+  departments.department_name
+from
+  employees
+join
+  departments on employees.department_id = departments.department_id
+where
+  employees.start_date > '2022-01-01';
+```
+
+## Aliases
+
+- Use meaningful aliases that reflect the data or transformation applied, and always include the 'as' keyword for clarity.
+
+```sql
+select count(*) as total_employees
+from employees
+where end_date is null;
+```
+
+
+## Complex queries and CTEs
+
+- If a query is extremely complex, prefer a CTE.
+- Make sure the CTE is clear and linear. Prefer readability over performance.
+- Add comments to each block.
+
+```sql
+with department_employees as (
+  -- Get all employees and their departments
+  select
+    employees.department_id,
+    employees.first_name,
+    employees.last_name,
+    departments.department_name
+  from
+    employees
+  join
+    departments on employees.department_id = departments.department_id
+),
+employee_counts as (
+  -- Count how many employees in each department
+  select
+    department_name,
+    count(*) as num_employees
+  from
+    department_employees
+  group by
+    department_name
+)
+select
+  department_name,
+  num_employees
+from
+  employee_counts
+order by
+  department_name;
+```

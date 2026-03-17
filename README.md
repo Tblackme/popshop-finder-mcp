@@ -1,98 +1,147 @@
-# {{PROJECT_NAME}}
+# Vendor Atlas
 
-{{PROJECT_DESCRIPTION}}
+Vendor Atlas is a consumer-friendly market discovery app for vendors, makers, and pop-up sellers. It includes:
 
-## What You Get
-
-- MCP server (`SSE` + `stdio`)
-- Tool registry (`tools/`)
-- Billing middleware (`billing.py`)
-- API keys + free tier + rate limits
-- Stripe usage metering + checkout endpoint
-- Affiliate signup + referral commission tracking
-- Landing page (`site/index.html`)
-- Consumer web panel (no MCP setup required)
-- Deploy scripts (`docker-compose.yml`, `deploy.sh`)
-- Competitor/pricing strategy toolkit (`strategy/`)
-- Prompt pack for install/sales/public messaging (`prompts/`)
+- a browser-facing dashboard in [site/index.html](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/site/index.html)
+- a FastAPI MCP server in [server.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/server.py)
+- tool handlers for profile building, market search, ranking, and compare flows in [tools](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tools)
+- local SQLite-backed market storage in [storage_markets.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/storage_markets.py)
+- local SQLite-backed event storage in [storage_events.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/storage_events.py)
 
 ## Local Setup
 
-```bash
-cp .env.example .env
-./deploy.sh setup
-./deploy.sh start
-```
-
-Health:
+Create and activate a virtual environment, then install the project with dev dependencies:
 
 ```bash
-curl http://localhost:{{SERVER_PORT}}/health
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 ```
 
-## Billing Endpoints
-
-- `POST /billing/keys` create API key
-- `GET /billing/usage?api_key=...` user usage summary
-- `GET /billing/activity?api_key=...` recent calls
-- `GET /billing/metrics?admin_key=...` admin usage/revenue totals
-- `POST /billing/checkout` Stripe checkout session
-- `POST /billing/webhook` Stripe webhook handler
-
-## Deploy
-
-### Docker Compose
+If you only want runtime dependencies, use:
 
 ```bash
-./deploy.sh start
+python -m pip install -r requirements.txt
 ```
 
-### Competitive Pricing Analysis
+Optional: copy `.env.example` to `.env` if you want to override defaults.
+
+## Run The App
+
+Start the local server:
 
 ```bash
-./deploy.sh benchmark
+python server.py
 ```
 
-This generates:
-- `reports/competitive_report.md`
-- `site/public-comparison.json`
-- `site/pricing-recommendation.json`
-
-### Fly.io
-
-```bash
-./deploy.sh fly
-```
-
-### Railway
-
-```bash
-./deploy.sh railway
-```
-
-## Connect from Claude
-
-### Remote SSE
-
-Point Claude MCP config to:
+The app will be available at:
 
 ```text
-https://your-domain.example/sse
+http://localhost:3000/
 ```
 
-Include `X-API-Key: <user_api_key>` in client headers if billing is enabled.
+Useful endpoints:
 
-### Local stdio
+- `GET /` landing page + consumer dashboard
+- `GET /health` health check with version, protocol, tool count, and SSE client count
+- `GET /config.json` runtime config for API base and product flags
+- `GET /markets/search` canonical frontend-ready stored event search
+- `GET /consumer/tools` browser-friendly tool listing with names, descriptions, and input schemas
+- `POST /consumer/run` browser-friendly tool execution
+
+## MCP Backend
+
+Vendor Atlas now exposes a six-tool MCP pipeline:
+
+- `discover_events`
+- `extract_event`
+- `enrich_event`
+- `score_event`
+- `save_event`
+- `search_events`
+
+Backend and tool documentation:
+
+- [docs/VENDOR_ATLAS_MCP.md](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/VENDOR_ATLAS_MCP.md)
+- [docs/example_mcp_tools.json](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/example_mcp_tools.json)
+- [docs/QA_CHECKLIST.md](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/QA_CHECKLIST.md)
+- [docs/CLAUDE_LAUNCH_CHECKLIST.md](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/CLAUDE_LAUNCH_CHECKLIST.md)
+- [docs/MVP_POPUP_SHOP_FINDER_MASTER_PLAN.md](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/MVP_POPUP_SHOP_FINDER_MASTER_PLAN.md) historical MVP planning notes from the earlier Pop-Up Shop Finder phase
+
+## Docker
+
+Build and run with Docker:
 
 ```bash
-python server.py --stdio
+docker build -t vendor-atlas-mcp .
+docker run --rm -p 3000:3000 vendor-atlas-mcp
 ```
 
-## Customize
+Or use Compose:
 
-1. Replace `tools/example.py` with your product tools.
-2. Update per-tool pricing in `billing.py`.
-3. Configure affiliate defaults in `.env`.
-4. Edit landing page copy and consumer panel in `site/index.html`.
-5. Set Stripe env vars in `.env`.
-6. Update `prompts/` files for support and sales assistant behavior.
+```bash
+docker compose up --build
+```
+
+## Validate Changes
+
+Run the test suite:
+
+```bash
+python -m pytest
+```
+
+Run the smoke tests added for consumer flows only:
+
+```bash
+python -m pytest tests/test_consumer_flows.py -q
+```
+
+Run lint:
+
+```bash
+python -m ruff check .
+```
+
+## Current Test Note
+
+If `python -m pytest` fails with `No module named pytest`, install the dev dependencies first:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+## Data + Storage
+
+- Market data is stored in `vendor_atlas.db` in the repo root by default.
+- Fresh local setups automatically seed a bundled demo dataset if the markets table is empty.
+- The `events` table is also auto-seeded from the bundled demo dataset for FastAPI/MCP event workflows.
+- Billing and usage state can write to environment-configured paths.
+- Distance radius is accepted by the API for MVP, but geographic filtering is still a future enhancement.
+- Optional env vars:
+  - `VENDOR_ATLAS_DB_PATH`
+  - `VENDOR_ATLAS_DEMO_DATA_PATH`
+  - `SERVER_HOST`
+  - `SERVER_PORT`
+
+## Project Structure
+
+- [server.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/server.py): app entrypoint and HTTP/MCP routes
+- [billing.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/billing.py): billing/error middleware and endpoints
+- [config.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/config.py): environment-driven config
+- [site/index.html](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/site/index.html): Vendor Atlas frontend
+- [storage_events.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/storage_events.py): event storage for discovered markets and MCP workflows
+- [tools/vendor_atlas_markets.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tools/vendor_atlas_markets.py): legacy-compatible `search_markets` wrapper
+- [tools/vendor_atlas_pipeline.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tools/vendor_atlas_pipeline.py): canonical six-tool event discovery pipeline
+- [tools/vendor_atlas_profile.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tools/vendor_atlas_profile.py): vendor profile tool
+- [tools/vendor_atlas_scoring.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tools/vendor_atlas_scoring.py): ranking and compare tools
+- [tests/test_consumer_flows.py](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/tests/test_consumer_flows.py): smoke tests for core flows
+- [sprints/ACTIVE_SPRINT.toml](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/sprints/ACTIVE_SPRINT.toml): current sprint plan
+
+## Notes
+
+- Billing is off by default for the current MVP flow.
+- The dashboard search flow should use `GET /markets/search`; `POST /consumer/run` remains in use for profile, ranking, compare, and other tool-driven actions.
+- `search_markets` remains available as a compatibility wrapper, but the forward path is `search_events` plus `GET /markets/search`.
+- The repo still contains MCP/SSE support for broader integrations, but the main product experience is the browser dashboard.

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Up | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links"><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a></nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a><div data-mobile-auth-nav></div></div>
+  </header>
+  <main>
+    <section class="page-hero"><div class="container"><span class="eyebrow">Create your account</span><h1>Start building your market shortlist.</h1><p>Create a secure account to save events, personalize your profile, and access your protected member dashboard.</p></div></section>
+    <section><div class="container" style="max-width: 720px;"><div class="form-card">
+      <form class="form-grid" data-signup-form>
+        <div class="field"><label for="name">Name</label><input id="name" name="name" required></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required></div>
+        <div class="field"><label for="username">Username</label><input id="username" name="username" required></div>
+        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
+        <div class="field"><label for="interests">Interests or tags</label><input id="interests" name="interests" placeholder="jewelry, craft fairs, vintage"></div>
+        <div class="field"><label for="bio">Short bio</label><textarea id="bio" name="bio" placeholder="Tell us a little about your business."></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+        <div class="status" data-signup-status></div>
+      </form>
+    </div></div></section>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

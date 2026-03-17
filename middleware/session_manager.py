@@ -9,8 +9,8 @@ No I/O, no external dependencies.  Always succeeds.
 """
 
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class SessionManager:
     """
 
     def __init__(self):
-        self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._sessions: dict[str, dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -43,7 +43,7 @@ class SessionManager:
         self,
         session_id: str,
         user_id: str = "anonymous",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Return the existing session or create a new one.
 
@@ -63,7 +63,7 @@ class SessionManager:
         self,
         session_id: str,
         tool_name: str,
-        result_context: Optional[Dict[str, Any]] = None,
+        result_context: dict[str, Any] | None = None,
     ) -> None:
         """
         Record a completed tool call on the session.
@@ -81,7 +81,7 @@ class SessionManager:
         if result_context:
             session["current_context"].update(result_context)
 
-    def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
         """Return the session dict or None if it doesn't exist."""
         return self._sessions.get(session_id)
 
@@ -91,7 +91,7 @@ class SessionManager:
 
         Returns the number of sessions removed.
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=max_age_minutes)
         stale = []
 
         for sid, session in self._sessions.items():
@@ -119,7 +119,7 @@ class SessionManager:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _new_record(session_id: str, user_id: str) -> Dict[str, Any]:
+    def _new_record(session_id: str, user_id: str) -> dict[str, Any]:
         now = _now_iso()
         return {
             "session_id": session_id,
@@ -136,14 +136,14 @@ class SessionManager:
 # ---------------------------------------------------------------------------
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------
 # Singleton
 # ---------------------------------------------------------------------------
 
-_instance: Optional[SessionManager] = None
+_instance: SessionManager | None = None
 
 
 def get_session_manager() -> SessionManager:

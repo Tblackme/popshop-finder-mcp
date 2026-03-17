@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign In | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links"><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a></nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a><div data-mobile-auth-nav></div></div>
+  </header>
+  <main>
+    <section class="page-hero"><div class="container"><span class="eyebrow">Member sign in</span><h1>Welcome back.</h1><p>Sign in to access your private dashboard, saved markets, and profile settings.</p></div></section>
+    <section><div class="container" style="max-width: 620px;"><div class="form-card">
+      <form class="form-grid" data-signin-form>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required></div>
+        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
+        <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+        <div class="status" data-signin-status></div>
+      </form>
+      <p class="muted">Need an account? <a href="/signup"><strong>Create one here</strong></a>.</p>
+    </div></div></section>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

@@ -11,9 +11,8 @@ Export:
 """
 
 import platform
-from datetime import datetime, timezone
-from typing import Dict, Any, Callable, Coroutine
-
+from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime
 
 # ===========================================================================
 # Tool Definitions (JSON Schema for MCP tools/list)
@@ -68,7 +67,7 @@ GET_STATUS_TOOL = {
 # Tool Handlers (async functions called by tools/call)
 # ===========================================================================
 
-_start_time = datetime.now(timezone.utc)
+_start_time = datetime.now(UTC)
 
 
 async def handle_echo(text: str = "") -> str:
@@ -83,7 +82,7 @@ async def handle_hello_world(name: str = "World", message: str = "Hello") -> str
 
 async def handle_get_status() -> str:
     """Status handler - returns server information."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     uptime = now - _start_time
     hours, remainder = divmod(int(uptime.total_seconds()), 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -91,7 +90,7 @@ async def handle_get_status() -> str:
     from tools import ALL_TOOLS
 
     status_lines = [
-        f"Server Status: OK",
+        "Server Status: OK",
         f"Time (UTC): {now.strftime('%Y-%m-%d %H:%M:%S')}",
         f"Uptime: {hours}h {minutes}m {seconds}s",
         f"Platform: {platform.system()} {platform.release()}",
@@ -107,7 +106,7 @@ async def handle_get_status() -> str:
 
 TOOLS = [ECHO_TOOL, HELLO_WORLD_TOOL, GET_STATUS_TOOL]
 
-HANDLERS: Dict[str, Callable[..., Coroutine]] = {
+HANDLERS: dict[str, Callable[..., Coroutine]] = {
     "echo": handle_echo,
     "hello_world": handle_hello_world,
     "get_status": handle_get_status,

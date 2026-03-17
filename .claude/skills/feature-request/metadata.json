@@ -1,0 +1,33 @@
+{
+  "name": "feature-request",
+  "version": "1.0.0",
+  "description": "Creates a properly formatted GitHub feature request issue following ÆtherLight SOP",
+  "author": "ÆtherLight Team",
+  "created": "2025-10-29",
+  "updated": "2025-10-29",
+  "parameters": {
+    "description": {
+      "type": "string",
+      "required": true,
+      "description": "Brief description of the requested feature"
+    },
+    "priority": {
+      "type": "string",
+      "required": false,
+      "default": "medium",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Feature priority level"
+    },
+    "category": {
+      "type": "string",
+      "required": false,
+      "enum": ["voice", "sprint", "patterns", "ui", "skills", "performance", "other"],
+      "description": "Feature category"
+    }
+  },
+  "dependencies": {
+    "gh": ">=2.0.0"
+  },
+  "tags": ["github", "issues", "feature", "enhancement"],
+  "repository": "https://github.com/AEtherlight-ai/lumina"
+}

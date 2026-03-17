@@ -1,0 +1,73 @@
+{
+  "name": "bug-report-template",
+  "version": "1.0.0",
+  "description": "Generate structured bug report templates for enhancement workflow",
+  "author": "ÆtherLight",
+  "type": "template-generator",
+  "category": "enhancement",
+  "invocation": {
+    "command": "/bug-report-template",
+    "button": "Bug Report → Enhance",
+    "programmatic": true
+  },
+  "parameters": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "description": "Bug title"
+    },
+    "severity": {
+      "type": "string",
+      "required": false,
+      "default": "Medium",
+      "enum": ["Critical", "High", "Medium", "Low"]
+    },
+    "component": {
+      "type": "string",
+      "required": false,
+      "description": "Affected component"
+    },
+    "description": {
+      "type": "string",
+      "required": false,
+      "description": "Bug description"
+    },
+    "stepsToReproduce": {
+      "type": "string",
+      "required": false,
+      "description": "Steps to reproduce the bug"
+    },
+    "expectedBehavior": {
+      "type": "string",
+      "required": false,
+      "description": "Expected behavior"
+    },
+    "actualBehavior": {
+      "type": "string",
+      "required": false,
+      "description": "Actual behavior"
+    },
+    "context": {
+      "type": "string",
+      "required": false,
+      "description": "Additional context"
+    }
+  },
+  "outputs": {
+    "template": {
+      "type": "string",
+      "description": "Generated bug report template in markdown format"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Suggested filename for enhanced prompt"
+    }
+  },
+  "related_patterns": [
+    "Pattern-TDD-001",
+    "Pattern-BUG-FIX-001",
+    "Pattern-GIT-001",
+    "Pattern-CODE-001"
+  ],
+  "tags": ["bug-report", "template", "enhancement", "tdd", "debugging"]
+}

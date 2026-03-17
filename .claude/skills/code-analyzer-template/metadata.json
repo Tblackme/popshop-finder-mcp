@@ -1,0 +1,58 @@
+{
+  "name": "code-analyzer-template",
+  "version": "1.0.0",
+  "description": "Generate structured code analysis templates for enhancement workflow",
+  "author": "ÆtherLight",
+  "type": "template-generator",
+  "category": "enhancement",
+  "invocation": {
+    "command": "/code-analyzer-template",
+    "button": "Code Analyzer → Enhance",
+    "programmatic": true
+  },
+  "parameters": {
+    "languages": {
+      "type": "array",
+      "required": false,
+      "description": "Programming languages to analyze",
+      "default": ["TypeScript", "JavaScript"]
+    },
+    "frameworks": {
+      "type": "array",
+      "required": false,
+      "description": "Frameworks used in project"
+    },
+    "focus": {
+      "type": "string",
+      "required": false,
+      "description": "What to analyze (architecture, performance, security, testing, documentation, refactoring, general)"
+    },
+    "complexity": {
+      "type": "string",
+      "required": false,
+      "default": "Moderate",
+      "enum": ["Simple", "Moderate", "Complex", "Very Complex"]
+    },
+    "concerns": {
+      "type": "string",
+      "required": false,
+      "description": "Specific concerns or areas to focus on"
+    }
+  },
+  "outputs": {
+    "template": {
+      "type": "string",
+      "description": "Generated code analysis template in markdown format"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Suggested filename for enhanced prompt"
+    }
+  },
+  "related_patterns": [
+    "Pattern-CODE-001",
+    "Pattern-TASK-ANALYSIS-001",
+    "Pattern-GIT-001"
+  ],
+  "tags": ["code-analysis", "template", "enhancement", "architecture", "quality"]
+}
