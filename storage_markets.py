@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent / "vendor_atlas.db"
-DB_PATH = Path(os.environ.get("VENDOR_ATLAS_DB_PATH", str(DEFAULT_DB_PATH))).expanduser()
+from db_runtime import connect
+
 DEMO_DATA_PATH = Path(
     os.environ.get("VENDOR_ATLAS_DEMO_DATA_PATH", str(Path(__file__).resolve().parent / "data" / "demo_markets.json"))
 ).expanduser()
@@ -45,14 +44,11 @@ class Market:
         return data
 
 
-def _connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _connect():
+    return connect()
 
 
-def _upsert_market_conn(conn: sqlite3.Connection, market: Market) -> None:
+def _upsert_market_conn(conn, market: Market) -> None:
     conn.execute(
         """
         INSERT INTO markets (
@@ -114,7 +110,7 @@ def _upsert_market_conn(conn: sqlite3.Connection, market: Market) -> None:
     )
 
 
-def _seed_demo_markets_if_empty(conn: sqlite3.Connection) -> None:
+def _seed_demo_markets_if_empty(conn) -> None:
     count = conn.execute("SELECT COUNT(*) AS count FROM markets").fetchone()["count"]
     if count or not DEMO_DATA_PATH.exists():
         return

@@ -259,6 +259,157 @@ priority = "high"
 estimated_hours = 1.5
 dependencies = ["VA-001", "VA-002", "API-002"]
 
+# ---------------------------------------------------------------------------
+# PHASE 4: UI/WebApp sync + consistency cleanup
+# ---------------------------------------------------------------------------
+
+[tasks.SYNC-001]
+id = "SYNC-001"
+name = "Audit and fix broken core functionality"
+description = "Stabilize profit/analytics, saved events, dead buttons, and incorrect routing before any new feature work."
+estimated_time = "3 hours"
+estimated_lines = 120
+agent = "general-purpose"
+phase = "Phase 4: Sync"
+status = "completed"
+priority = "high"
+estimated_hours = 3.0
+prompt = """
+DESIGN DECISION: Fix broken core functionality first.
+WHY: Vendor Atlas should feel reliable before it grows. The most urgent problems are profit visibility, saved-event flow, dead buttons, and role-routing mistakes.
+
+Checklist:
+1. Profit / analytics:
+   - Ensure profit displays on the Business page.
+   - Keep calculation as revenue - expenses - vendor_fee.
+   - Source from vendor_event_stats with zero-safe fallbacks.
+   - Ensure business/analytics buttons are clickable and meaningful.
+2. Saved events:
+   - Verify save event writes to persistence.
+   - Ensure saved events appear in the correct view immediately.
+   - Add clear empty state if no saved items exist.
+3. Buttons:
+   - Audit every visible button in current web flows.
+   - Remove dead clicks and silent failures.
+4. Routing:
+   - Ensure shopper flows never land in vendor-only screens by mistake.
+   - Ensure vendor action language stays Apply while shopper action language stays RSVP or save-oriented where applicable.
+
+Success criteria:
+- Profit page renders correctly and never blanks on missing values.
+- Saved events flow works end-to-end.
+- No obvious dead buttons remain in core flows.
+- Role routing is consistent.
+"""
+dependencies = ["VA-005"]
+
+[tasks.SYNC-002]
+id = "SYNC-002"
+name = "Role-based homepage and entry cleanup"
+description = "Make the homepage and entry flow clearer for shopper, vendor, and organizer without redesigning the entire app."
+estimated_time = "2 hours"
+estimated_lines = 90
+agent = "general-purpose"
+phase = "Phase 4: Sync"
+status = "completed"
+priority = "high"
+estimated_hours = 2.0
+prompt = """
+DESIGN DECISION: Homepage should clearly orient users by role.
+WHY: The app now supports vendor, organizer, and shopper flows, so entry points should not feel vendor-only or outdated.
+
+Checklist:
+1. Homepage:
+   - Center entry around Shopper, Vendor, Organizer.
+   - Remove outdated 'Find Markets' emphasis where it conflicts with multi-role entry.
+   - Add clear enter-app / instant-login style path.
+2. Shopper:
+   - Replace shopper-facing 'Plan' framing with 'Connect' where appropriate.
+   - Keep shopper actions focused on follow, RSVP/save, and discovery.
+3. Routing:
+   - Shopper dashboard CTA routes to shopper discovery.
+   - Vendor dashboard CTA routes to vendor discovery/planning.
+
+Success criteria:
+- Homepage feels multi-role.
+- Shopper and vendor primary actions are clearly different.
+- Entry flow does not confuse roles.
+"""
+dependencies = ["SYNC-001"]
+
+[tasks.SYNC-003]
+id = "SYNC-003"
+name = "UI consistency and empty-state pass"
+description = "Standardize cards, buttons, copy, and empty states across dashboard screens and supporting pages."
+estimated_time = "2 hours"
+estimated_lines = 100
+agent = "general-purpose"
+phase = "Phase 4: Sync"
+status = "completed"
+priority = "medium"
+estimated_hours = 2.0
+prompt = """
+DESIGN DECISION: The app should feel cohesive even when data is sparse.
+WHY: Inconsistent card/button treatments and weak empty states make the product feel unfinished.
+
+Checklist:
+1. Standardize:
+   - Event cards
+   - Vendor cards
+   - Dashboard card spacing
+   - Button hierarchy
+2. Remove remaining placeholder or fake-looking UI where practical.
+3. Add clear empty states for:
+   - no events
+   - no saved items
+   - no analytics data
+4. Each empty state should suggest the next action.
+
+Success criteria:
+- Core pages use consistent card and button patterns.
+- Empty states guide the user instead of feeling broken.
+- Placeholder copy no longer dominates user-facing screens.
+"""
+dependencies = ["SYNC-001"]
+
+[tasks.SYNC-004]
+id = "SYNC-004"
+name = "Full click-through smoke and state refresh check"
+description = "Validate end-to-end interaction flow so saved, applied, and created data appears immediately and reliably."
+estimated_time = "2 hours"
+estimated_lines = 80
+agent = "general-purpose"
+phase = "Phase 4: Sync"
+status = "completed"
+priority = "high"
+estimated_hours = 2.0
+prompt = """
+DESIGN DECISION: Finish with a full click-through smoke pass.
+WHY: The product should feel complete and responsive after actions, not just render the right static screens.
+
+Checklist:
+1. Smoke path:
+   - app loads
+   - browse events
+   - click event
+   - save event
+   - shopper RSVP/save action
+   - vendor apply action
+   - dashboard updates
+   - analytics shows real numbers
+2. Verify immediate state refresh after:
+   - save
+   - apply
+   - create event
+3. Capture remaining gaps rather than expanding feature scope.
+
+Success criteria:
+- Core flows feel reliable in one pass.
+- State changes appear without confusing lag or stale UI.
+- Any remaining gaps are documented clearly.
+"""
+dependencies = ["SYNC-001", "SYNC-002", "SYNC-003"]
+
 [tasks.VA-006]
 id = "VA-006"
 name = "Pro pricing CTA and copy"
@@ -1184,3 +1335,208 @@ Success criteria:
 - Developers can quickly understand how to call the new tools and routes.
 """
 dependencies = ["MCP-001", "MCP-002", "MCP-003", "MCP-004", "API-004"]
+
+# ---------------------------------------------------------------------------
+# PHASE 9: Shopper storefront commerce
+# ---------------------------------------------------------------------------
+
+[tasks.SHOP-001]
+id = "SHOP-001"
+name = "Vendor Shopify storefront setup and token storage"
+description = "Let vendors save a Shopify shop domain and Storefront API token for shopper-facing product browsing."
+estimated_time = "1.5 hours"
+estimated_lines = 90
+agent = "general-purpose"
+phase = "Phase 9: Shopify Storefront"
+status = "completed"
+priority = "high"
+estimated_hours = 1.5
+prompt = """
+DESIGN DECISION: Vendor Atlas should support lightweight shopper commerce by letting vendors connect a Shopify storefront without building a cart or payment system.
+WHY: Shoppers need a simple path from vendor discovery to browsing products and buying directly from the vendor's Shopify store.
+
+Context (CRITICAL):
+- Existing Shopify integration is admin-oriented: OAuth + product/inventory sync for the vendor dashboard.
+- New requirement is storefront-oriented:
+  - store shop domain
+  - storefront API token
+  - fetch lightweight product data for public vendor browsing
+- Roles already exist: vendor, market, shopper.
+- Public vendor profiles already resolve through /u/{username} and JSON through /api/vendors/{username}.
+
+Steps:
+1. Extend the Shopify connection storage so a vendor can save:
+   - shop domain
+   - storefront access token
+   while preserving compatibility with the existing admin-token flow.
+2. Add a vendor-facing API route to save/update storefront configuration safely.
+3. Validate and normalize the shop domain format so it becomes a clean Shopify domain.
+4. Keep error states clear and non-technical when a vendor enters invalid store details.
+
+Success criteria:
+- Vendors can save a Shopify storefront configuration.
+- Storefront credentials are persisted and retrievable for vendor-owned flows.
+- Existing admin-oriented Shopify integration is not broken.
+"""
+dependencies = ["DATA-001"]
+
+[tasks.SHOP-002]
+id = "SHOP-002"
+name = "Storefront product fetch and public vendor product API"
+description = "Fetch vendor products from Shopify Storefront GraphQL and expose a safe public product payload."
+estimated_time = "2 hours"
+estimated_lines = 120
+agent = "general-purpose"
+phase = "Phase 9: Shopify Storefront"
+status = "completed"
+priority = "high"
+estimated_hours = 2.0
+prompt = """
+DESIGN DECISION: Shopper-facing product browsing should use Shopify's Storefront API and expose only the data needed for a fast vendor profile experience.
+WHY: We want a minimal, resilient read-only product layer with no custom checkout stack.
+
+Context (CRITICAL):
+- Required product fields:
+  - name
+  - price
+  - image
+  - product handle
+- Checkout should redirect to Shopify product or checkout pages rather than implementing in-app cart/payment flows.
+- Example fetch shape uses POST https://{shop-domain}/api/2024-01/graphql.json with X-Shopify-Storefront-Access-Token.
+- Public vendor profiles already exist and should gain a shopper-safe products endpoint.
+
+Steps:
+1. Add a Storefront GraphQL fetch helper that requests a small product set and normalizes:
+   - title/name
+   - price amount
+   - first image URL
+   - handle
+   - direct product URL
+2. Add a backend route for public vendor products, such as /api/vendors/{username}/products.
+3. Return loading-safe empty states and structured error payloads when Shopify is unavailable or misconfigured.
+4. Ensure failed Shopify requests do not crash public profile rendering.
+
+Success criteria:
+- Vendor products can be fetched from Shopify Storefront API.
+- Public vendor product responses are normalized, minimal, and stable.
+- Empty/misconfigured/failed Shopify states are handled gracefully.
+"""
+dependencies = ["SHOP-001"]
+
+[tasks.SHOP-003]
+id = "SHOP-003"
+name = "Vendor profile shop section and simple buy flow"
+description = "Add a clean shopper-facing product grid, product detail surface, and Buy from Vendor redirect."
+estimated_time = "2 hours"
+estimated_lines = 140
+agent = "general-purpose"
+phase = "Phase 9: Shopify Storefront"
+status = "completed"
+priority = "high"
+estimated_hours = 2.0
+prompt = """
+DESIGN DECISION: Product browsing should feel native to Vendor Atlas, but buying should stay seamless by sending shoppers to Shopify.
+WHY: The goal is repeated discovery and easy conversion, not duplicating commerce features inside Vendor Atlas.
+
+Context (CRITICAL):
+- Public vendor profiles already support follow/unfollow and upcoming events.
+- New UI requirements:
+  - Shop Products section
+  - clean grid layout
+  - large images
+  - minimal text
+  - fast loading
+  - product details
+  - Buy from Vendor button
+- Shopper role already has a dashboard and vendor discovery flows.
+
+Steps:
+1. Add a "Shop Products" section to the public vendor profile experience.
+2. Render product cards with large images, clear pricing, and minimal supporting copy.
+3. Add a lightweight product detail view or expanded card state that keeps the interaction simple.
+4. Wire "Buy from Vendor" to redirect to the vendor's Shopify product page.
+5. Preserve a clean separation between vendor, market, and shopper interfaces.
+
+Success criteria:
+- Shopper-visible vendor profiles show a clean product grid when Shopify is connected.
+- Product details are easy to view without clutter.
+- Buy actions redirect shoppers directly to Shopify.
+"""
+dependencies = ["SHOP-002"]
+
+[tasks.SHOP-004]
+id = "SHOP-004"
+name = "Storefront loading, empty, and failure UX hardening"
+description = "Add polished loading and fallback states for vendor product browsing and integrations setup."
+estimated_time = "1.25 hours"
+estimated_lines = 90
+agent = "general-purpose"
+phase = "Phase 9: Shopify Storefront"
+status = "completed"
+priority = "medium"
+estimated_hours = 1.25
+prompt = """
+DESIGN DECISION: Shopify storefront browsing must degrade gracefully and never create a broken-feeling vendor profile.
+WHY: Third-party commerce connections are one of the easiest places for instability to leak into shopper UX.
+
+Context (CRITICAL):
+- Current app already has async state patterns for Shopify admin flows and shopper/vendor dashboards.
+- New storefront surfaces need:
+  - loading state
+  - empty state
+  - failed API state
+  - instant feedback after vendor setup changes
+- Language should stay friendly and non-technical.
+
+Steps:
+1. Add visible loading placeholders or status messaging for storefront product fetches.
+2. Add empty states for:
+   - vendor has not connected Shopify
+   - vendor has no products
+   - products are temporarily unavailable
+3. Ensure vendor setup surfaces confirm save/sync success or failure clearly.
+4. Keep public profiles usable even when products cannot be shown.
+
+Success criteria:
+- No broken or blank Shopify storefront sections.
+- Public and vendor-facing Shopify states are understandable and calm.
+- Async failures remain contained and do not interrupt the rest of the profile/dashboard flow.
+"""
+dependencies = ["SHOP-001", "SHOP-002", "SHOP-003"]
+
+[tasks.SHOP-005]
+id = "SHOP-005"
+name = "Storefront integration regression coverage"
+description = "Add backend and UI-oriented regression tests for Shopify storefront setup and product browsing."
+estimated_time = "1.5 hours"
+estimated_lines = 110
+agent = "general-purpose"
+phase = "Phase 9: Shopify Storefront"
+status = "completed"
+priority = "medium"
+estimated_hours = 1.5
+prompt = """
+DESIGN DECISION: Shopify storefront work should land with regression coverage because it touches auth, public profiles, vendor setup, and third-party API failure handling.
+WHY: Commerce-related regressions are easy to miss and highly visible to users.
+
+Context (CRITICAL):
+- Existing smoke coverage lives in tests/test_consumer_flows.py.
+- Network access is restricted in test runs, so Shopify API calls should be mocked or monkeypatched.
+- New tests should cover:
+  - saving storefront domain/token
+  - fetching/serializing storefront products
+  - public vendor product endpoint behavior
+  - empty/failure handling
+  - public profile shopper flow staying stable
+
+Steps:
+1. Add test coverage for saving storefront settings.
+2. Mock Shopify Storefront GraphQL responses and verify normalization.
+3. Test public vendor product API success, empty, and failure states.
+4. Verify the broader shopper/vendor profile flow does not regress.
+
+Success criteria:
+- The storefront integration is protected by regression tests.
+- Tests do not depend on live Shopify credentials or network access.
+"""
+dependencies = ["SHOP-001", "SHOP-002", "SHOP-003", "SHOP-004"]

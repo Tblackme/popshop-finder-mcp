@@ -8,96 +8,35 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="container nav">
+    <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links"><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a></nav>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a class="active" href="/dashboard">Plan</a>
+        <a href="/discover">Discover</a>
+        <a href="/final-plan">Profit</a>
+      </nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a><div data-mobile-auth-nav></div></div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a><div data-mobile-auth-nav></div></div>
   </header>
   <main data-dashboard-root>
-    <section class="page-hero"><div class="container"><span class="eyebrow">Member dashboard</span><h1 data-dashboard-welcome>Welcome back.</h1><p>Your private dashboard keeps your profile and saved markets in one place.</p></div></section>
-    <section>
-      <div class="container dashboard-grid">
-        <article class="dashboard-card">
-          <h3>Profile</h3>
-          <form class="form-grid" data-profile-form>
-            <div class="field"><label for="profile_name">Name</label><input id="profile_name" name="name" required></div>
-            <div class="field"><label for="profile_interests">Interests</label><input id="profile_interests" name="interests"></div>
-            <div class="field"><label for="profile_bio">Bio</label><textarea id="profile_bio" name="bio"></textarea></div>
-            <button class="btn btn-primary" type="submit">Save Profile</button>
-            <div class="status" data-profile-status></div>
-          </form>
-        </article>
-        <article class="dashboard-card">
-          <h3>Quick actions</h3>
-          <p class="muted">Search fresh markets, compare options, and keep building your shortlist.</p>
-          <div class="stack-row">
-            <a class="btn btn-primary" href="/find-my-next-market">Find Markets</a>
-            <button class="btn btn-secondary" type="button" data-logout-button>Logout</button>
-          </div>
-        </article>
-      </div>
-    </section>
-    <section>
-      <div class="container dashboard-grid">
-        <article class="dashboard-card">
-          <h3>Availability planner</h3>
-          <p class="muted">Set the days and months that fit your real schedule, then let Vendor Atlas suggest the best-fit markets for your planner.</p>
-          <form class="form-grid" data-availability-form>
-            <div class="field">
-              <label>Available weekdays</label>
-              <div class="bubble-grid" data-weekday-picker>
-                <button class="bubble" type="button" data-weekday="Monday">Mon</button>
-                <button class="bubble" type="button" data-weekday="Tuesday">Tue</button>
-                <button class="bubble" type="button" data-weekday="Wednesday">Wed</button>
-                <button class="bubble" type="button" data-weekday="Thursday">Thu</button>
-                <button class="bubble" type="button" data-weekday="Friday">Fri</button>
-                <button class="bubble" type="button" data-weekday="Saturday">Sat</button>
-                <button class="bubble" type="button" data-weekday="Sunday">Sun</button>
-              </div>
-            </div>
-            <div class="field">
-              <label>Preferred months</label>
-              <div class="bubble-grid" data-month-picker>
-                <button class="bubble" type="button" data-month="January">Jan</button>
-                <button class="bubble" type="button" data-month="February">Feb</button>
-                <button class="bubble" type="button" data-month="March">Mar</button>
-                <button class="bubble" type="button" data-month="April">Apr</button>
-                <button class="bubble" type="button" data-month="May">May</button>
-                <button class="bubble" type="button" data-month="June">Jun</button>
-                <button class="bubble" type="button" data-month="July">Jul</button>
-                <button class="bubble" type="button" data-month="August">Aug</button>
-                <button class="bubble" type="button" data-month="September">Sep</button>
-                <button class="bubble" type="button" data-month="October">Oct</button>
-                <button class="bubble" type="button" data-month="November">Nov</button>
-                <button class="bubble" type="button" data-month="December">Dec</button>
-              </div>
-            </div>
-            <div class="split-grid">
-              <div class="field"><label for="weekly_capacity">Weekly capacity</label><input id="weekly_capacity" name="weekly_capacity" type="number" min="1" value="2"></div>
-              <div class="field"><label for="monthly_goal">Monthly goal</label><input id="monthly_goal" name="monthly_goal" type="number" min="1" value="6"></div>
-            </div>
-            <div class="field"><label for="availability_notes">Notes</label><textarea id="availability_notes" name="notes" placeholder="Example: best on weekends, avoid late-night load-in, prefer spring and fall dates."></textarea></div>
-            <button class="btn btn-primary" type="submit">Save Availability</button>
-            <div class="status" data-availability-status></div>
-          </form>
-        </article>
-        <article class="dashboard-card">
-          <h3>Schedule-fit recommendations</h3>
-          <p class="muted">These suggestions use your availability settings plus the markets already in your dashboard and event database.</p>
-          <div class="saved-grid" data-recommended-markets>
-            <div class="empty-state"><strong>Set your availability.</strong><p class="muted">Once your planner is saved, Vendor Atlas will show best-fit recommendations here.</p></div>
-          </div>
-        </article>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Your market assistant</span>
+        <h1 data-dashboard-welcome>Welcome back.</h1>
+        <p>Pick one thing to do. We will guide you step by step.</p>
       </div>
     </section>
     <section>
       <div class="container">
-        <div class="section-heading"><h2>Saved markets</h2><p>Markets you saved from the finder page show up here for quick follow-up.</p></div>
-        <div class="saved-grid" data-saved-markets>
-          <div class="empty-state"><strong>Loading your dashboard...</strong></div>
+        <div class="dashboard-card">
+          <span class="eyebrow">Saved markets</span>
+          <p class="muted">Your saved markets, recommendations, and next steps will load here.</p>
+        </div>
+        <div data-guided-dashboard>
+          <div class="empty-state"><strong>Loading your assistant...</strong></div>
         </div>
       </div>
     </section>

@@ -1,0 +1,272 @@
+/* Final Plan page — official Vendor Atlas palette (cream, teal, amber). See site/DESIGN.md */
+
+body.final-plan-page {
+  --surface2: var(--surface-strong);
+  --surface3: rgba(19, 38, 35, 0.06);
+  --border: var(--line);
+  --border2: rgba(19, 38, 35, 0.18);
+  --text2: var(--muted);
+  --text3: rgba(19, 38, 35, 0.5);
+  --accent: var(--brand);
+  --accent2: var(--brand-deep);
+  --accent-glow: rgba(15, 118, 110, 0.12);
+  --gold: var(--accent);
+  --gold-dim: rgba(232, 159, 71, 0.15);
+  --green: var(--success);
+  --green-dim: rgba(2, 122, 72, 0.12);
+  --red: var(--danger);
+  --red-dim: rgba(180, 35, 24, 0.1);
+  --amber: var(--accent);
+  --amber-dim: rgba(232, 159, 71, 0.12);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+body.final-plan-page::before {
+  opacity: 0.08;
+}
+
+.final-plan-page .nav {
+  background: rgba(247, 242, 234, 0.95);
+  border-bottom: 1px solid var(--line);
+}
+
+.final-plan-page .nav-logo-mark {
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+}
+
+.final-plan-page .badge {
+  background: var(--brand);
+  color: white;
+}
+
+.final-plan-page .discovery-header {
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06) 0%, transparent 100%);
+}
+
+.final-plan-page .discovery-title span { color: var(--brand-deep); }
+
+.final-plan-page .search-input:focus { border-color: var(--brand); }
+
+.final-plan-page .mode-btn.active { background: var(--brand); color: white; }
+
+.final-plan-page .chip:hover { border-color: var(--brand); color: var(--brand-deep); }
+.final-plan-page .chip.active { background: var(--accent-glow); border-color: var(--brand); color: var(--brand-deep); }
+
+.final-plan-page .cat-tab.active {
+  background: var(--surface-strong);
+  border-color: var(--line);
+  border-bottom-color: var(--surface-strong);
+}
+
+.final-plan-page .event-card:hover {
+  box-shadow: var(--shadow);
+}
+.final-plan-page .event-card.selected { border-color: var(--brand); background: rgba(15, 118, 110, 0.06); }
+.final-plan-page .event-card.best::before { background: var(--success); }
+.final-plan-page .event-card.worth::before { background: var(--accent); }
+.final-plan-page .event-card.notideal::before { background: var(--border2); }
+
+.final-plan-page .card-add-btn:hover { background: var(--brand); border-color: var(--brand); color: white; }
+.final-plan-page .card-add-btn.added { background: var(--green-dim); border-color: var(--success); color: var(--success); }
+
+.final-plan-page .pref-chip.active { background: var(--accent-glow); border-color: var(--brand); color: var(--brand-deep); }
+
+.final-plan-page .plan-counter-card {
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+}
+
+.final-plan-page .plan-hero::before {
+  background: radial-gradient(ellipse 60% 100% at 80% 50%, rgba(15, 118, 110, 0.12), transparent);
+}
+.final-plan-page .plan-hero-label { color: var(--brand-deep); }
+.final-plan-page .plan-hero-label::before { background: var(--brand); }
+.final-plan-page .plan-hero-title em { color: var(--brand-deep); }
+
+.final-plan-page .kpi-card:nth-child(1)::after { background: var(--brand); }
+.final-plan-page .kpi-card:nth-child(2)::after { background: var(--success); }
+.final-plan-page .kpi-card:nth-child(3)::after { background: var(--accent); }
+.final-plan-page .kpi-card:nth-child(4)::after { background: var(--danger); }
+
+.final-plan-page .map-placeholder:hover { border-color: var(--brand); }
+
+.final-plan-page .route-num.first { border-color: var(--success); color: var(--success); }
+
+.final-plan-page .sel-event-why { border-left-color: var(--brand); }
+.final-plan-page .sel-event-remove:hover { color: var(--danger); border-color: var(--danger); }
+
+.final-plan-page .action-btn.primary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+}
+.final-plan-page .action-btn {
+  transition:
+    transform 210ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    background-color 200ms ease-out,
+    border-color 200ms ease-out,
+    color 200ms ease-out,
+    opacity 140ms ease-out;
+  will-change: transform, box-shadow;
+}
+.final-plan-page .action-btn:active {
+  transform: scale(0.98);
+}
+.final-plan-page .action-btn:disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.final-plan-page .tl-dot { background: var(--brand); }
+.final-plan-page .tl-dot.green { background: var(--success); }
+.final-plan-page .tl-dot.gold { background: var(--accent); }
+
+.final-plan-page .advice-card.tip { background: rgba(15, 118, 110, 0.06); border-color: rgba(15, 118, 110, 0.25); }
+.final-plan-page .advice-text.tip strong { color: var(--brand-deep); }
+
+input[type=range].final-plan-range { accent-color: var(--brand); }
+
+/* Budget dashboard */
+.final-plan-page .budget-dashboard { margin-bottom: 24px; }
+.final-plan-page .budget-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.final-plan-page .budget-card {
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.final-plan-page .budget-val { display: block; font-size: 1.25rem; font-weight: 700; }
+.final-plan-page .budget-val.green { color: var(--success); }
+.final-plan-page .budget-val.red { color: var(--danger); }
+.final-plan-page .budget-lab { font-size: 0.85rem; color: var(--text2); }
+.final-plan-page .budget-highlight { margin-top: 8px; font-size: 0.9rem; }
+.final-plan-page .budget-highlight.good { color: var(--success); }
+.final-plan-page .budget-highlight.warn { color: var(--amber); }
+
+/* Event history */
+.final-plan-page .event-history-section { margin-top: 24px; }
+.final-plan-page .history-list { margin-top: 12px; }
+.final-plan-page .history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  margin-bottom: 8px;
+  background: var(--surface2);
+}
+.final-plan-page .history-main { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.final-plan-page .history-meta { font-size: 0.85rem; color: var(--text2); }
+.final-plan-page .history-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--text2); }
+.final-plan-page .history-detail-row { margin: 0 0 4px; }
+.final-plan-page .history-notes { margin: 0; font-style: italic; }
+.final-plan-page .history-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.final-plan-page .history-toggle { padding: 4px 8px; font-size: 0.8rem; background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text2); }
+.final-plan-page .history-toggle:hover { color: var(--brand); border-color: var(--brand); }
+.final-plan-page .history-profit { font-weight: 700; }
+.final-plan-page .history-profit.pos { color: var(--success); }
+.final-plan-page .history-profit.neg { color: var(--danger); }
+
+/* Mark as completed button */
+.final-plan-page .sel-event-complete {
+  margin-right: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background: rgba(15, 118, 110, 0.1);
+  border: 1px solid var(--brand);
+  color: var(--brand-deep);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.final-plan-page .sel-event-complete:hover { background: rgba(15, 118, 110, 0.2); }
+
+/* Post-event modal */
+.post-event-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.post-event-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+.post-event-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  background: var(--surface-strong, #fffdf8);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--line);
+}
+.post-event-dialog h3 { margin: 0 0 4px; font-size: 1.25rem; }
+.post-event-sub { margin: 0 0 16px; font-size: 0.9rem; color: var(--muted); }
+.post-event-dialog .field { margin-bottom: 12px; }
+.post-event-dialog .field label { display: block; margin-bottom: 4px; font-size: 0.9rem; }
+.post-event-dialog .field input,
+.post-event-dialog .field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+.post-event-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.post-event-actions .btn-block { width: 100%; }
+
+.final-plan-page .shopify-section { margin-top: 20px; }
+.final-plan-page .shopify-section .btn-block { width: 100%; }
+.final-plan-page .shopify-cta { font-weight: 700; margin-bottom: 4px; }
+.final-plan-page .shopify-status.connected { color: var(--success); font-weight: 600; margin-bottom: 8px; }
+.final-plan-page .shopify-connect-wrap { margin: 12px 0; }
+.final-plan-page .shopify-shop-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.final-plan-page .shopify-section .small { font-size: 0.8rem; margin-top: 4px; }
+
+.final-plan-page .shopify-insights { margin-top: 20px; }
+.final-plan-page .bring-list { margin: 8px 0 0; padding-left: 20px; }
+.final-plan-page .bring-list li { margin-bottom: 6px; }
+.final-plan-page .bring-list.warn { color: var(--amber); }
+.final-plan-page .profit-estimate-range { margin-top: 8px; font-size: 1.05rem; }
+
+/* Final Plan: screen transitions */
+.final-plan-page .screen {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 220ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.final-plan-page .screen.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}

@@ -1,0 +1,3 @@
+setup:
+  - project: vendor-atlas
+    config: dev_personal

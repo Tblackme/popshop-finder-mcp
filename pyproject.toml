@@ -20,6 +20,7 @@ dependencies = [
     "stripe>=7.0",
     "httpx>=0.27",
     "itsdangerous>=2.2",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]
@@ -39,10 +40,13 @@ vendor-atlas-mcp = "server:main"
 [tool.setuptools]
 py-modules = [
     "billing",
+    "db_runtime",
     "config",
+    "shopify_oauth",
     "server",
     "storage_events",
     "storage_markets",
+    "storage_shopify",
     "storage_users",
 ]
 

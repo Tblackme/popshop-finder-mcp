@@ -9,24 +9,22 @@
 <body>
   <div class="site-shell">
     <header class="topbar">
-      <div class="container nav">
+      <div class="container nav nav-journey">
         <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
         <nav class="nav-links">
           <a class="active" href="/">Home</a>
-          <a href="/features">Features</a>
-          <a href="/pricing">Pricing</a>
-          <a href="/about">About</a>
-          <a href="/find-my-next-market">Find My Next Market</a>
+          <a href="/dashboard">Plan</a>
+          <a href="/discover">Discover</a>
+          <a href="/final-plan">Profit</a>
         </nav>
         <div class="nav-actions" data-auth-nav></div>
         <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
       </div>
       <div class="container mobile-drawer" data-mobile-drawer>
         <a href="/">Home</a>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/about">About</a>
-        <a href="/find-my-next-market">Find My Next Market</a>
+        <a href="/dashboard">Plan</a>
+        <a href="/discover">Discover</a>
+        <a href="/final-plan">Profit</a>
         <div data-mobile-auth-nav></div>
       </div>
     </header>
@@ -35,22 +33,22 @@
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <span class="eyebrow">Market discovery built for real-world vendors</span>
-            <h1>Find your next best market without guessing.</h1>
-            <p class="lede">Vendor Atlas helps makers, artists, food vendors, and pop-up sellers discover events, compare opportunities, and keep the right markets saved inside one private dashboard.</p>
+            <span class="eyebrow">One connected home for vendors, organizers, and shoppers</span>
+            <h1>Run your side of the market in one place.</h1>
+            <p class="lede">Vendor Atlas helps vendors plan smarter events, organizers keep listings and applications moving, and shoppers follow the businesses and events they care about.</p>
             <div class="hero-actions">
               <a class="btn btn-primary" href="/signup">Get Started</a>
-              <a class="btn btn-secondary" href="/find-my-next-market">Find Markets</a>
+              <a class="btn btn-secondary" href="/signin">Sign In</a>
             </div>
           </div>
           <aside class="hero-panel">
-            <h3>Built like a modern vendor command center</h3>
-            <p class="muted">Search live and saved opportunities, save strong fits, and keep your next application plan organized.</p>
+            <h3>Choose the path that fits you</h3>
+            <p class="muted">Start with the role that matches your day-to-day work. Your dashboard, tools, and language will follow.</p>
             <div class="hero-stats">
-              <div class="stat"><strong>Search</strong><span>Filter by city, category, and event size.</span></div>
-              <div class="stat"><strong>Save</strong><span>Keep your best-fit markets in a private dashboard.</span></div>
-              <div class="stat"><strong>Compare</strong><span>Review price, traffic, and organizer details.</span></div>
-              <div class="stat"><strong>Plan</strong><span>Track where you want to apply next.</span></div>
+              <div class="stat"><strong>Vendor</strong><span>Plan events, discover markets, and track what was worth it.</span></div>
+              <div class="stat"><strong>Organizer</strong><span>Create events, review vendor applications, and watch listing health.</span></div>
+              <div class="stat"><strong>Shopper</strong><span>Save events, follow vendors, and keep upcoming outings in view.</span></div>
+              <div class="stat"><strong>Fast entry</strong><span>Sign in once and Vendor Atlas routes you to the right workspace.</span></div>
             </div>
           </aside>
         </div>
@@ -60,22 +58,32 @@
         <div class="container split-grid">
           <div>
             <div class="section-heading">
-              <h2>Made for real-world vendors</h2>
-              <p>Click a vendor type to see how Vendor Atlas fits actual market planning work.</p>
+              <h2>Pick the role that matches your day</h2>
+              <p>Each side of Vendor Atlas has its own focused workspace, but they all connect through the same events and vendor ecosystem.</p>
             </div>
-            <div class="bubble-grid">
-              <button class="bubble active" data-scenario="farmer">Farmers Market Vendor</button>
-              <button class="bubble" data-scenario="jewelry">Handmade Jewelry Seller</button>
-              <button class="bubble" data-scenario="vintage">Vintage Clothing Seller</button>
-              <button class="bubble" data-scenario="foodtruck">Food Truck Vendor</button>
-              <button class="bubble" data-scenario="artist">Local Artist</button>
-              <button class="bubble" data-scenario="boutique">Pop-Up Boutique Owner</button>
+            <div class="role-card-grid">
+              <a class="role-card" href="/signup?role=vendor">
+                <strong>I'm a Vendor</strong>
+                <span>Start planning, discover better-fit events, and track revenue, costs, and profit in one flow.</span>
+              </a>
+              <a class="role-card" href="/signup?role=market">
+                <strong>I run events</strong>
+                <span>Create listings, keep vendor applications moving, and stay on top of organizer analytics.</span>
+              </a>
+              <a class="role-card" href="/signup?role=shopper">
+                <strong>I'm a Shopper</strong>
+                <span>Discover events, follow favorite vendors, and save the outings you want to come back to.</span>
+              </a>
             </div>
           </div>
-          <div class="bubble-panel" data-scenario-panel>
-            <h3>Farmers Market Vendor</h3>
-            <p class="muted">Example scenario</p>
-            <p>A produce vendor can filter nearby weekend markets by city, compare traffic estimates, and keep a running shortlist of applications inside the dashboard.</p>
+          <div class="bubble-panel">
+            <h3>Need to get in fast?</h3>
+            <p class="muted">You can create an account, sign in with an existing one, or use the local temporary test access buttons on the sign-in page while developing.</p>
+            <div class="stack-row" style="margin-top:16px;">
+              <a class="btn btn-primary" href="/signup">Create account</a>
+              <a class="btn btn-secondary" href="/signin">Open sign in</a>
+            </div>
+            <p class="muted" style="margin-top:18px;">Vendors land in planning. Organizers land in event management. Shoppers land in discovery and following.</p>
           </div>
         </div>
       </section>
@@ -83,13 +91,35 @@
       <section>
         <div class="container">
           <div class="section-heading">
-            <h2>Everything you need to move from search to shortlist</h2>
-            <p>The platform combines event discovery, saved opportunities, and a simple member dashboard so you can spend less time juggling tabs and more time choosing better markets.</p>
+            <h2>One shared ecosystem, three focused experiences</h2>
+            <p>The same events and vendor data power every role, but each workspace stays focused so vendors can plan, organizers can run listings, and shoppers can follow what they care about without wading through the wrong tools.</p>
           </div>
           <div class="cards-3">
-            <article class="feature-card"><h3>Market discovery</h3><p class="muted">Search known event data and newly discovered opportunities by city, category, event size, and travel radius.</p></article>
-            <article class="feature-card"><h3>Saved market tracking</h3><p class="muted">Logged-in members can save promising markets and revisit applications later from one protected dashboard.</p></article>
-            <article class="feature-card"><h3>Vendor-friendly planning</h3><p class="muted">See booth price, traffic hints, dates, and organizer links in a format made for small vendor teams and solo sellers.</p></article>
+            <article class="feature-card" id="vendor-tools">
+              <span class="eyebrow">Vendor</span>
+              <h3>Plan, discover, and commit with confidence</h3>
+              <p class="muted">Vendors can answer quick planning questions, build a shortlist, move into Final Plan, and review route, inventory, and profit before they commit to an event.</p>
+              <div class="stack-row">
+                <a class="btn btn-primary" href="/enter/vendor" data-role-entry="vendor">Open Plan</a>
+                <a class="btn btn-secondary" href="/final-plan">Open Final Plan</a>
+              </div>
+            </article>
+            <article class="feature-card" id="organizer-tools">
+              <span class="eyebrow">Organizer</span>
+              <h3>Create listings and keep vendor review moving</h3>
+              <p class="muted">Organizers can publish events, review applications, keep replies visible, and track listing health from one workspace built for event management instead of vendor planning.</p>
+              <div class="stack-row">
+                <a class="btn btn-primary" href="/enter/market" data-role-entry="market">Open Organizer dashboard</a>
+              </div>
+            </article>
+            <article class="feature-card" id="shopper-tools">
+              <span class="eyebrow">Shopper</span>
+              <h3>Save favorites and follow the people you want to visit</h3>
+              <p class="muted">Shoppers can save events, follow vendors, use the shortlist and map as real navigation tools, and keep upcoming outings easy to revisit from one dashboard.</p>
+              <div class="stack-row">
+                <a class="btn btn-primary" href="/enter/shopper" data-role-entry="shopper">Open Shopper dashboard</a>
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -98,7 +128,13 @@
     <footer class="footer">
       <div class="container footer-grid">
         <div>Vendor Atlas</div>
-        <div>Find smarter markets. Save better fits. Plan with confidence.</div>
+        <div>Plan smarter, run better events, and keep the right people coming back.</div>
+        <div class="stack-row" style="margin-top:0;">
+          <a href="#vendor-tools">About</a>
+          <a href="/signin">Support</a>
+          <a href="#shopper-tools">Privacy</a>
+          <a href="#organizer-tools">Terms</a>
+        </div>
       </div>
     </footer>
   </div>

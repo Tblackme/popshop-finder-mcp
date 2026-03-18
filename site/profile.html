@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/dashboard">Plan</a>
+        <a href="/discover">Discover</a>
+        <a href="/final-plan">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/dashboard">Plan</a>
+      <a href="/discover">Discover</a>
+      <a href="/final-plan">Profit</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Profiles</span>
+        <h1>Saved preferences you can reuse.</h1>
+        <p>Create multiple profiles for different product lines, seasons, or travel plans.</p>
+      </div>
+    </section>
+    <section>
+      <div class="container" data-profile-app>
+        <div class="empty-state"><strong>Loading your profiles…</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
+

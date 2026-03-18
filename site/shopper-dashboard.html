@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shopper Dashboard | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a class="active" href="/shopper-dashboard">Shopper</a>
+        <a href="/discover">Discover</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/shopper-dashboard">Shopper</a>
+      <a href="/discover">Discover</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Shopper</span>
+        <h1>Find great events and the vendors worth visiting.</h1>
+        <p>Keep a personal shortlist of markets, follow favorite makers, and plan your next outing around the events that fit your style.</p>
+      </div>
+    </section>
+    <section>
+      <div class="container" data-shopper-dashboard-app>
+        <div class="empty-state"><strong>Loading your shopper dashboard…</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

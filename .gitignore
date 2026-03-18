@@ -11,11 +11,13 @@ build/
 .venv/
 venv/
 env/
+node_modules/
 
 # Environment and secrets
 .env
 .env.local
 .env.production
+doppler.yaml
 
 # Data and state
 /data/
@@ -39,3 +41,8 @@ docker-compose.override.yml
 # Fly.io / Railway
 fly.toml
 railway.json
+
+# Playwright
+playwright-report/
+test-results/
+.tmp_playwright/

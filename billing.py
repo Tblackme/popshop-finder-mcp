@@ -459,18 +459,6 @@ class UsageTracker:
 
 
 def create_billing_middleware(tracker: UsageTracker):
-    def _normalize_tool_result(result: Any) -> list[dict[str, Any]]:
-        if isinstance(result, str):
-            try:
-                return [{"type": "json", "json": json.loads(result)}]
-            except json.JSONDecodeError:
-                return [{"type": "text", "text": result}]
-
-        if isinstance(result, dict):
-            return [{"type": "json", "json": result}]
-
-        return [{"type": "text", "text": str(result)}]
-
     async def middleware(
         tool_name: str,
         arguments: dict[str, Any],
@@ -513,7 +501,7 @@ def create_billing_middleware(tracker: UsageTracker):
                 success=success,
                 error=error_msg,
             )
-            return {"error": error_msg}
+            return {"error": {"code": -32603, "message": error_msg}}
 
         duration_ms = (time.time() - start) * 1000
         tracker.record_usage(
@@ -523,7 +511,9 @@ def create_billing_middleware(tracker: UsageTracker):
             success=success,
             error=error_msg,
         )
-        return {"content": _normalize_tool_result(result)}
+        if isinstance(result, dict):
+            return result
+        return {"content": [{"type": "text", "text": str(result)}]}
 
     return middleware
 

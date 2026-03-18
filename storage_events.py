@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent / "vendor_atlas.db"
-DB_PATH = Path(os.environ.get("VENDOR_ATLAS_DB_PATH", str(DEFAULT_DB_PATH))).expanduser()
+from db_runtime import connect, sqlite_db_path
+
 DEMO_DATA_PATH = Path(
     os.environ.get("VENDOR_ATLAS_DEMO_DATA_PATH", str(Path(__file__).resolve().parent / "data" / "demo_markets.json"))
 ).expanduser()
@@ -35,11 +34,8 @@ class Event:
         return asdict(self)
 
 
-def _connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _connect():
+    return connect()
 
 
 def _normalize_event_size(vendor_count: int | None) -> str:
@@ -52,7 +48,7 @@ def _normalize_event_size(vendor_count: int | None) -> str:
     return "large"
 
 
-def _upsert_event_conn(conn: sqlite3.Connection, event: Event) -> None:
+def _upsert_event_conn(conn, event: Event) -> None:
     conn.execute(
         """
         INSERT INTO events (
@@ -105,7 +101,7 @@ def _upsert_event_conn(conn: sqlite3.Connection, event: Event) -> None:
     )
 
 
-def _event_from_row(row: sqlite3.Row) -> Event:
+def _event_from_row(row) -> Event:
     return Event(
         id=row["id"],
         name=row["name"],

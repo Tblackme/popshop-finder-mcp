@@ -32,6 +32,12 @@ class ServerConfig:
     sync_endpoint: str = ""     # URL to POST signals to / GET context from
     session_tracking_enabled: bool = True
 
+    # --- Shopify ---
+    shopify_api_key: str = ""
+    shopify_api_secret: str = ""
+    shopify_scopes: str = "read_products,read_inventory"
+    app_base_url: str = "http://localhost:3000"  # For OAuth redirect_uri
+
     @classmethod
     def from_env(cls) -> "ServerConfig":
         """Create a ServerConfig from environment variables."""
@@ -47,6 +53,10 @@ class ServerConfig:
             serper_tools=os.environ.get("SERPER_TOOLS", "all"),
             sync_endpoint=os.environ.get("SYNC_ENDPOINT", ""),
             session_tracking_enabled=os.environ.get("SESSION_TRACKING_ENABLED", "true").lower() not in ("false", "0", "no"),
+            shopify_api_key=os.environ.get("SHOPIFY_API_KEY", ""),
+            shopify_api_secret=os.environ.get("SHOPIFY_API_SECRET", ""),
+            shopify_scopes=os.environ.get("SHOPIFY_SCOPES", "read_products,read_inventory"),
+            app_base_url=os.environ.get("APP_BASE_URL", "http://localhost:3000").rstrip("/"),
         )
 
 

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: vendor-atlas
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SERVER_HOST
+        value: 0.0.0.0
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        value: https://your-render-service.onrender.com
+      - key: SERVER_TRANSPORT
+        value: sse

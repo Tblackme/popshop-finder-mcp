@@ -186,7 +186,8 @@ async def test_consumer_run_executes_existing_tool(consumer_client):
     assert payload["ok"] is True
 
     result = json.loads(payload["result"])
-    assert result["profile"]["category"] == "Home & Body"
+    assert result["status"] == "ok"
+    assert result["vendor_profile"]["business_type"] == "handmade goods"
 
 
 @pytest.mark.asyncio
@@ -277,7 +278,7 @@ def test_consumer_run_passes_x_api_key_to_billing(monkeypatch, consumer_client):
 
 
 @pytest.mark.asyncio
-async def test_billing_middleware_wraps_json_string_results_as_json_content():
+async def test_billing_middleware_wraps_string_results_as_text_content():
     middleware = create_billing_middleware(UsageTracker())
 
     async def json_string_handler(**_kwargs):
@@ -288,15 +289,15 @@ async def test_billing_middleware_wraps_json_string_results_as_json_content():
     assert payload == {
         "content": [
             {
-                "type": "json",
-                "json": {"status": "ok", "count": 2},
+                "type": "text",
+                "text": '{"status":"ok","count":2}',
             }
         ]
     }
 
 
 @pytest.mark.asyncio
-async def test_billing_middleware_wraps_dict_results_as_json_content():
+async def test_billing_middleware_returns_dict_results_as_is():
     middleware = create_billing_middleware(UsageTracker())
 
     async def dict_handler(**_kwargs):
@@ -304,14 +305,19 @@ async def test_billing_middleware_wraps_dict_results_as_json_content():
 
     payload = await middleware("dict_tool", {}, "", dict_handler)
 
-    assert payload == {
-        "content": [
-            {
-                "type": "json",
-                "json": {"status": "ok", "count": 2},
-            }
-        ]
-    }
+    assert payload == {"status": "ok", "count": 2}
+
+
+@pytest.mark.asyncio
+async def test_billing_middleware_returns_jsonrpc_error_on_handler_exception():
+    middleware = create_billing_middleware(UsageTracker())
+
+    async def failing_handler(**_kwargs):
+        raise RuntimeError("boom")
+
+    payload = await middleware("broken_tool", {}, "", failing_handler)
+
+    assert payload == {"error": {"code": -32603, "message": "boom"}}
 
 
 def test_consumer_run_returns_400_for_invalid_json_body(consumer_client):
@@ -350,6 +356,7 @@ def test_signup_signin_and_dashboard_flow(temp_user_storage):
         payload = signup.json()
         assert payload["ok"] is True
         assert payload["user"]["email"] == "liz@example.com"
+        assert payload["user"]["role"] == "vendor"
 
         auth_state = client.get("/api/auth/me")
         assert auth_state.status_code == 200
@@ -375,6 +382,934 @@ def test_dashboard_redirects_when_not_authenticated(temp_user_storage):
         response = client.get("/dashboard", follow_redirects=False)
         assert response.status_code == 302
         assert response.headers["location"] == "/signin"
+
+
+def test_signup_stores_market_role_and_role_home(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Organizer One",
+                "email": "organizer@example.com",
+                "username": "organizerone",
+                "password": "supersecure123",
+                "role": "market",
+            },
+        )
+
+        assert signup.status_code == 200
+        payload = signup.json()
+        assert payload["user"]["role"] == "market"
+
+        role_home = client.get("/api/role-home")
+        assert role_home.status_code == 200
+        assert role_home.json()["dashboard_path"] == "/market-dashboard"
+
+
+def test_signin_accepts_username_or_email(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Dual Login User",
+                "email": "dual@example.com",
+                "username": "dualuser",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+
+        client.post("/api/auth/logout")
+
+        username_signin = client.post(
+            "/api/auth/signin",
+            json={"identifier": "dualuser", "password": "supersecure123"},
+        )
+        assert username_signin.status_code == 200
+        assert username_signin.json()["user"]["username"] == "dualuser"
+
+        client.post("/api/auth/logout")
+
+        email_signin = client.post(
+            "/api/auth/signin",
+            json={"identifier": "dual@example.com", "password": "supersecure123"},
+        )
+        assert email_signin.status_code == 200
+        assert email_signin.json()["user"]["email"] == "dual@example.com"
+
+
+def test_dev_login_creates_temp_local_test_account(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        response = client.post("/api/auth/dev-login", json={"role": "market"})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["ok"] is True
+        assert payload["temporary"] is True
+        assert payload["user"]["username"] == "temp_market"
+        assert payload["user"]["role"] == "market"
+
+        auth_state = client.get("/api/auth/me")
+        assert auth_state.status_code == 200
+        assert auth_state.json()["authenticated"] is True
+        assert auth_state.json()["user"]["username"] == "temp_market"
+
+
+def test_signup_normalizes_username_and_checks_availability(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        available = client.get("/api/auth/username-availability", params={"username": "Fresh_Name"})
+        assert available.status_code == 200
+        assert available.json()["available"] is True
+        assert available.json()["normalized"] == "fresh_name"
+
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Case User",
+                "email": "case@example.com",
+                "username": "Fresh_Name",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+        assert signup.json()["user"]["username"] == "fresh_name"
+
+        unavailable = client.get("/api/auth/username-availability", params={"username": "fresh_name"})
+        assert unavailable.status_code == 200
+        assert unavailable.json()["available"] is False
+
+        duplicate = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Duplicate User",
+                "email": "dup@example.com",
+                "username": "FRESH_NAME",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert duplicate.status_code == 409
+
+
+def test_role_dashboard_redirects_vendor_away_from_market_and_shopper_pages(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Vendor User",
+                "email": "vendorrole@example.com",
+                "username": "vendorrole",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+
+        market_redirect = client.get("/market-dashboard", follow_redirects=False)
+        assert market_redirect.status_code == 302
+        assert market_redirect.headers["location"] == "/dashboard"
+
+        shopper_redirect = client.get("/shopper-dashboard", follow_redirects=False)
+        assert shopper_redirect.status_code == 302
+        assert shopper_redirect.headers["location"] == "/dashboard"
+
+
+def test_market_role_can_create_shared_event(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Market Host",
+                "email": "host@example.com",
+                "username": "markethost",
+                "password": "supersecure123",
+                "role": "market",
+            },
+        )
+        assert signup.status_code == 200
+
+        created = client.post(
+            "/api/market/events",
+            json={
+                "name": "Riverfront Makers Fest",
+                "city": "Austin",
+                "state": "TX",
+                "date": "2026-09-14",
+                "booth_price": 185,
+                "vendor_category": "Craft",
+            },
+        )
+        assert created.status_code == 200
+        payload = created.json()
+        assert payload["ok"] is True
+        assert payload["event"]["name"] == "Riverfront Makers Fest"
+
+        listing = client.get("/api/market/events")
+        assert listing.status_code == 200
+        assert any(event["name"] == "Riverfront Makers Fest" for event in listing.json()["events"])
+
+
+def test_shopper_follow_feed_updates_when_vendor_shares_event(temp_user_storage, monkeypatch):
+    importlib.reload(storage_events)
+
+    storage_events.upsert_event(
+        storage_events.Event(
+            id="follow-event-1",
+            name="Moonlight Makers Market",
+            city="Austin",
+            state="TX",
+            date="2026-04-20",
+            booth_price=120,
+            vendor_category="Jewelry",
+        )
+    )
+
+    with TestClient(server.create_app()) as vendor_client:
+        vendor_signup = vendor_client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Vendor Followed",
+                "email": "followedvendor@example.com",
+                "username": "followedvendor",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert vendor_signup.status_code == 200
+        vendor_user = vendor_signup.json()["user"]
+
+    with TestClient(server.create_app()) as shopper_client:
+        shopper_signup = shopper_client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Shopper Follow",
+                "email": "shopfollow@example.com",
+                "username": "shopfollow",
+                "password": "supersecure123",
+                "role": "shopper",
+            },
+        )
+        assert shopper_signup.status_code == 200
+
+        follow = shopper_client.post(f"/api/vendors/{vendor_user['id']}/follow", json={})
+        assert follow.status_code == 200
+        assert follow.json()["following"] is True
+
+    monkeypatch.setattr(
+        server,
+        "get_saved_markets_for_user",
+        lambda user_id: [
+            {
+                "id": "follow-event-1",
+                "name": "Moonlight Makers Market",
+                "city": "Austin",
+                "state": "TX",
+                "date": "2026-04-20",
+                "vendor_count": 80,
+                "estimated_traffic": 2500,
+                "booth_price": 120,
+                "application_link": "https://example.com/apply",
+                "organizer_contact": "hello@example.com",
+                "popularity_score": 86,
+                "source_url": "https://example.com/moonlight",
+                "vendor_category": "Jewelry",
+                "event_size": "medium",
+            }
+        ]
+        if user_id == int(vendor_user["id"])
+        else [],
+    )
+
+    with TestClient(server.create_app()) as vendor_client:
+        signin = vendor_client.post(
+            "/api/auth/signin",
+            json={"identifier": "followedvendor", "password": "supersecure123"},
+        )
+        assert signin.status_code == 200
+        shared = vendor_client.post(
+            "/api/vendor/follower-events",
+            json={"event_id": "follow-event-1", "visible_to_followers": True},
+        )
+        assert shared.status_code == 200
+        assert shared.json()["visible_to_followers"] is True
+
+    with TestClient(server.create_app()) as shopper_client:
+        signin = shopper_client.post(
+            "/api/auth/signin",
+            json={"identifier": "shopfollow", "password": "supersecure123"},
+        )
+        assert signin.status_code == 200
+        feed = shopper_client.get("/api/shopper/following")
+        assert feed.status_code == 200
+        payload = feed.json()
+        assert any(vendor["username"] == "followedvendor" for vendor in payload["vendors"])
+        assert any(event["id"] == "follow-event-1" for event in payload["events"])
+        assert any(notification["kind"] == "vendor_event_added" for notification in payload["notifications"])
+
+
+def test_market_organizer_can_follow_vendor_and_load_following_feed(temp_user_storage, monkeypatch):
+    importlib.reload(storage_events)
+
+    storage_events.upsert_event(
+        storage_events.Event(
+            id="organizer-follow-event",
+            name="Sunset Sidewalk Show",
+            city="Chicago",
+            state="IL",
+            date="2026-05-02",
+            booth_price=95,
+            vendor_category="Home Goods",
+        )
+    )
+
+    with TestClient(server.create_app()) as vendor_client:
+        vendor_signup = vendor_client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Vendor Public",
+                "email": "vendorpublic@example.com",
+                "username": "vendorpublic",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert vendor_signup.status_code == 200
+        vendor_user = vendor_signup.json()["user"]
+
+    with TestClient(server.create_app()) as organizer_client:
+        organizer_signup = organizer_client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Organizer Follow",
+                "email": "organizerfollow@example.com",
+                "username": "organizerfollow",
+                "password": "supersecure123",
+                "role": "market",
+            },
+        )
+        assert organizer_signup.status_code == 200
+
+        follow = organizer_client.post(f"/api/vendors/{vendor_user['id']}/follow", json={})
+        assert follow.status_code == 200
+        assert follow.json()["following"] is True
+
+    monkeypatch.setattr(
+        server,
+        "get_saved_markets_for_user",
+        lambda user_id: [
+            {
+                "id": "organizer-follow-event",
+                "name": "Sunset Sidewalk Show",
+                "city": "Chicago",
+                "state": "IL",
+                "date": "2026-05-02",
+                "vendor_count": 45,
+                "estimated_traffic": 1800,
+                "booth_price": 95,
+                "application_link": "https://example.com/apply-organizer",
+                "organizer_contact": "events@example.com",
+                "popularity_score": 82,
+                "source_url": "https://example.com/sunset-show",
+                "vendor_category": "Home Goods",
+                "event_size": "medium",
+            }
+        ]
+        if user_id == int(vendor_user["id"])
+        else [],
+    )
+
+    with TestClient(server.create_app()) as vendor_client:
+        signin = vendor_client.post(
+            "/api/auth/signin",
+            json={"identifier": "vendorpublic", "password": "supersecure123"},
+        )
+        assert signin.status_code == 200
+        shared = vendor_client.post(
+            "/api/vendor/follower-events",
+            json={"event_id": "organizer-follow-event", "visible_to_followers": True},
+        )
+        assert shared.status_code == 200
+        assert shared.json()["visible_to_followers"] is True
+
+    with TestClient(server.create_app()) as organizer_client:
+        signin = organizer_client.post(
+            "/api/auth/signin",
+            json={"identifier": "organizerfollow", "password": "supersecure123"},
+        )
+        assert signin.status_code == 200
+        feed = organizer_client.get("/api/shopper/following")
+        assert feed.status_code == 200
+        payload = feed.json()
+        assert any(vendor["username"] == "vendorpublic" for vendor in payload["vendors"])
+        assert any(event["id"] == "organizer-follow-event" for event in payload["events"])
+
+
+def test_new_product_pages_render(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        for path in (
+            "/history",
+            "/integrations",
+            "/business",
+            "/profile",
+            "/final-plan",
+            "/discover",
+            "/market-dashboard",
+            "/shopper-dashboard",
+        ):
+            response = client.get(path)
+            assert response.status_code in (200, 302)
+
+
+def test_event_detail_page_and_api_render_existing_event(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        events = client.get("/api/events").json()["events"]
+        assert events
+        event_id = events[0]["id"]
+
+        detail_page = client.get(f"/event-details/{event_id}")
+        assert detail_page.status_code == 200
+        assert "Event details" in detail_page.text
+
+        detail_api = client.get(f"/api/events/{event_id}")
+        assert detail_api.status_code == 200
+        payload = detail_api.json()
+        assert payload["ok"] is True
+        assert payload["event"]["id"] == event_id
+
+
+def test_events_and_users_api_indexes_return_smoke_shapes(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Smoke Vendor",
+                "email": "smokevendor@example.com",
+                "username": "smokevendor",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+
+        events_response = client.get("/api/events")
+        assert events_response.status_code == 200
+        events_payload = events_response.json()
+        assert events_payload["ok"] is True
+        assert isinstance(events_payload["events"], list)
+
+        users_response = client.get("/api/users")
+        assert users_response.status_code == 200
+        users_payload = users_response.json()
+        assert users_payload["ok"] is True
+        assert users_payload["authenticated"] is True
+        assert users_payload["current_user"]["username"] == "smokevendor"
+        assert any(user["username"] == "smokevendor" for user in users_payload["users"])
+
+
+def test_events_index_returns_ranked_fit_fields(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        response = client.get("/api/events")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["ok"] is True
+        assert payload["events"]
+        first = payload["events"][0]
+        assert "fit_score" in first
+        assert "worth_it_score" in first
+        assert "fit_reason" in first
+        assert "score_reasons" in first
+        assert "score_breakdown" in first
+
+
+def test_event_detail_reuses_ranked_fit_signal(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        events = client.get("/api/events").json()["events"]
+        assert events
+        event_id = events[0]["id"]
+
+        detail = client.get(f"/api/events/{event_id}")
+        assert detail.status_code == 200
+        payload = detail.json()
+        assert payload["ok"] is True
+        assert payload["event"]["fit_score"] >= 1
+        assert payload["event"]["worth_it_score"] == payload["event"]["fit_score"]
+        assert payload["event"]["fit_reason"]
+
+
+def test_marketplace_mvp_endpoints_support_event_vendor_application_and_save(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        events_response = client.get("/events")
+        assert events_response.status_code == 200
+        events_payload = events_response.json()
+        assert events_payload["ok"] is True
+        assert events_payload["count"] >= 1
+        event = events_payload["events"][0]
+
+        vendor_response = client.post(
+            "/vendors",
+            json={
+                "email": "mvpvendor@example.com",
+                "username": "mvpvendor",
+                "business_name": "MVP Vendor Goods",
+                "category": "Home",
+                "location": "Austin, TX",
+            },
+        )
+        assert vendor_response.status_code == 201
+        vendor_payload = vendor_response.json()
+        vendor = vendor_payload["vendor"]
+
+        vendor_detail = client.get(f"/vendors/{vendor['id']}")
+        assert vendor_detail.status_code == 200
+        assert vendor_detail.json()["vendor"]["business_name"] == "MVP Vendor Goods"
+
+        application_response = client.post(
+            "/applications",
+            json={
+                "event_id": event["id"],
+                "vendor_id": vendor["id"],
+                "status": "applied",
+                "message": "We would love to join this event.",
+            },
+        )
+        assert application_response.status_code == 201
+        application = application_response.json()["application"]
+        assert application["status"] == "applied"
+
+        applications_list = client.get("/applications", params={"vendor_id": vendor["id"]})
+        assert applications_list.status_code == 200
+        assert applications_list.json()["count"] == 1
+
+        user_id = vendor["user_id"]
+        saved_response = client.post(
+            "/saved-events",
+            json={
+                "user_id": user_id,
+                "event_id": event["id"],
+            },
+        )
+        assert saved_response.status_code == 201
+
+        saved_list = client.get("/saved-events", params={"user_id": user_id})
+        assert saved_list.status_code == 200
+        saved_payload = saved_list.json()
+        assert saved_payload["ok"] is True
+        assert saved_payload["count"] == 1
+        assert saved_payload["saved_events"][0]["event_id"] == event["id"]
+
+
+def test_marketplace_event_creation_and_filtering(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        vendor_seed = client.post(
+            "/vendors",
+            json={
+                "email": "organizerseed@example.com",
+                "username": "organizerseed",
+                "business_name": "Organizer Seed",
+                "category": "Art",
+                "location": "Dallas, TX",
+            },
+        )
+        assert vendor_seed.status_code == 201
+
+        organizer_event = client.post(
+            "/events",
+            json={
+                "organizer_id": client.get("/events").json()["events"][0]["organizer_id"],
+                "title": "Dallas Art Walk",
+                "description": "A downtown art walk.",
+                "category": "Art",
+                "location": "Dallas, TX",
+                "start_date": "2026-07-01",
+                "end_date": "2026-07-01",
+                "vendor_fee": 80,
+                "application_url": "https://example.com/dallas-art-walk/apply",
+            },
+        )
+        assert organizer_event.status_code == 201
+        created = organizer_event.json()["event"]
+
+        event_detail = client.get(f"/events/{created['id']}")
+        assert event_detail.status_code == 200
+        assert event_detail.json()["event"]["title"] == "Dallas Art Walk"
+
+        filtered = client.get(
+            "/events",
+            params={"category": "Art", "location": "Dallas", "vendor_fee": 100},
+        )
+        assert filtered.status_code == 200
+        payload = filtered.json()
+        assert any(item["id"] == created["id"] for item in payload["events"])
+
+
+def test_vendor_stats_profit_math_uses_revenue_minus_expenses_minus_vendor_fee(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        vendor_response = client.get("/vendors")
+        assert vendor_response.status_code == 404 or vendor_response.status_code == 405
+
+        marketplace_events = client.get("/events").json()["events"]
+        assert marketplace_events
+
+        vendor_create = client.post(
+            "/vendors",
+            json={
+                "email": "statsvendor@example.com",
+                "username": "statsvendor",
+                "business_name": "Stats Vendor",
+                "category": "Art",
+                "location": "Austin, TX",
+            },
+        )
+        assert vendor_create.status_code == 201
+        vendor = vendor_create.json()["vendor"]
+
+        application = client.post(
+            "/applications",
+            json={"event_id": marketplace_events[0]["id"], "vendor_id": vendor["id"], "status": "applied"},
+        )
+        assert application.status_code == 201
+
+        seeded_vendor = client.get("/api/analytics", follow_redirects=False)
+        assert seeded_vendor.status_code == 401
+
+
+def test_dev_vendor_can_load_role_analytics_and_vendor_stats(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        login = client.post("/api/auth/dev-login", json={"role": "vendor"})
+        assert login.status_code == 200
+
+        analytics = client.get("/api/analytics")
+        assert analytics.status_code == 200
+        payload = analytics.json()
+        assert payload["ok"] is True
+        assert payload["role"] == "vendor"
+        assert "summary" in payload
+
+        vendor_id = payload["vendor"]["id"]
+        vendor_stats = client.get("/vendor-stats", params={"vendor_id": vendor_id})
+        assert vendor_stats.status_code == 200
+        stats_payload = vendor_stats.json()
+        assert stats_payload["ok"] is True
+        assert "summary" in stats_payload
+        assert stats_payload["summary"]["event_count"] >= 1
+        assert stats_payload["summary"]["total_profit"] > 0
+        if stats_payload["events"]:
+            event = stats_payload["events"][0]
+            assert round(event["profit"], 2) == round((event["revenue"] or 0) - (event["expenses"] or 0) - (event["vendor_fee"] or 0), 2)
+
+
+def test_dev_market_and_shopper_can_load_role_analytics(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        market_login = client.post("/api/auth/dev-login", json={"role": "market"})
+        assert market_login.status_code == 200
+        market_analytics = client.get("/api/analytics")
+        assert market_analytics.status_code == 200
+        assert market_analytics.json()["role"] == "market"
+        client.post("/api/auth/logout")
+
+        shopper_login = client.post("/api/auth/dev-login", json={"role": "shopper"})
+        assert shopper_login.status_code == 200
+        shopper_analytics = client.get("/api/analytics")
+        assert shopper_analytics.status_code == 200
+        shopper_payload = shopper_analytics.json()
+        assert shopper_payload["role"] == "shopper"
+        assert "summary" in shopper_payload
+
+
+def test_market_and_shopper_dashboards_use_repo_backed_data(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        market_login = client.post("/api/auth/dev-login", json={"role": "market"})
+        assert market_login.status_code == 200
+        market_dashboard = client.get("/api/market-dashboard")
+        assert market_dashboard.status_code == 200
+        market_payload = market_dashboard.json()
+        assert market_payload["ok"] is True
+        assert isinstance(market_payload["events"], list)
+        assert isinstance(market_payload["applications"], list)
+        assert market_payload["analytics"]["applications"] == len(market_payload["applications"])
+        client.post("/api/auth/logout")
+
+        shopper_login = client.post("/api/auth/dev-login", json={"role": "shopper"})
+        assert shopper_login.status_code == 200
+        shopper_dashboard = client.get("/api/shopper-dashboard")
+        assert shopper_dashboard.status_code == 200
+        shopper_payload = shopper_dashboard.json()
+        assert shopper_payload["ok"] is True
+        assert isinstance(shopper_payload["events"], list)
+        assert isinstance(shopper_payload["featured_vendors"], list)
+        assert all("username" in vendor for vendor in shopper_payload["featured_vendors"])
+
+
+def test_market_organizer_can_update_own_event(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        login = client.post("/api/auth/dev-login", json={"role": "market"})
+        assert login.status_code == 200
+
+        created = client.post(
+            "/api/market/events",
+            json={
+                "name": "Editable Makers Fair",
+                "city": "Austin",
+                "state": "TX",
+                "date": "2026-05-01",
+                "booth_price": 140,
+                "vendor_category": "Craft",
+                "application_link": "https://example.com/original",
+            },
+        )
+        assert created.status_code == 200
+        event = created.json()["event"]
+
+        updated = client.put(
+            f"/api/market/events/{event['id']}",
+            json={
+                "name": "Edited Makers Fair",
+                "city": "Dallas",
+                "state": "TX",
+                "date": "2026-05-02",
+                "booth_price": 175,
+                "vendor_category": "Art",
+                "application_link": "https://example.com/updated",
+            },
+        )
+        assert updated.status_code == 200
+        payload = updated.json()
+        assert payload["ok"] is True
+        assert payload["event"]["name"] == "Edited Makers Fair"
+        assert payload["event"]["city"] == "Dallas"
+        assert payload["event"]["booth_price"] == 175.0
+
+        events = client.get("/api/market/events")
+        assert events.status_code == 200
+        assert any(item["name"] == "Edited Makers Fair" for item in events.json()["events"])
+
+
+def test_shopper_can_rsvp_event_and_event_detail_reports_it(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "RSVP Shopper",
+                "email": "rsvpshopper@example.com",
+                "username": "rsvpshopper",
+                "password": "supersecure123",
+                "role": "shopper",
+            },
+        )
+        assert signup.status_code == 200
+
+        events_response = client.get("/api/events")
+        assert events_response.status_code == 200
+        event_id = events_response.json()["events"][0]["id"]
+
+        rsvp = client.post(f"/api/events/{event_id}/rsvp", json={})
+        assert rsvp.status_code == 200
+        assert rsvp.json()["rsvped"] is True
+
+        detail = client.get(f"/api/events/{event_id}")
+        assert detail.status_code == 200
+        assert detail.json()["is_rsvped"] is True
+
+        dashboard = client.get("/api/shopper-dashboard")
+        assert dashboard.status_code == 200
+        assert any(item["id"] == event_id for item in dashboard.json()["rsvped_events"])
+
+        remove = client.delete(f"/api/events/{event_id}/rsvp")
+        assert remove.status_code == 200
+        assert remove.json()["rsvped"] is False
+
+
+def test_role_entry_redirects_to_signup_when_signed_in_as_different_role(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        login = client.post("/api/auth/dev-login", json={"role": "shopper"})
+        assert login.status_code == 200
+
+        response = client.get("/enter/market", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] == "/signup?role=market"
+
+
+def test_vendor_can_save_storefront_settings_and_shopify_me_reports_them(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        login = client.post("/api/auth/dev-login", json={"role": "vendor"})
+        assert login.status_code == 200
+
+        save = client.post(
+            "/api/shopify/storefront",
+            json={
+                "shop_domain": "https://Test-Shop.myshopify.com/products",
+                "storefront_token": "storefront_token_demo_12345",
+            },
+        )
+        assert save.status_code == 200
+        save_payload = save.json()
+        assert save_payload["ok"] is True
+        assert save_payload["storefront_connected"] is True
+        assert save_payload["shop"] == "test-shop.myshopify.com"
+
+        me = client.get("/api/shopify/me")
+        assert me.status_code == 200
+        payload = me.json()
+        assert payload["ok"] is True
+        assert payload["connected"] is False
+        assert payload["storefront_connected"] is True
+        assert payload["storefront_shop"] == "test-shop.myshopify.com"
+
+
+def test_shopify_storefront_setup_requires_vendor_and_valid_token(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        shopper_login = client.post("/api/auth/dev-login", json={"role": "shopper"})
+        assert shopper_login.status_code == 200
+        forbidden = client.post(
+            "/api/shopify/storefront",
+            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
+        )
+        assert forbidden.status_code == 403
+
+        client.post("/api/auth/logout")
+        vendor_login = client.post("/api/auth/dev-login", json={"role": "vendor"})
+        assert vendor_login.status_code == 200
+        invalid = client.post(
+            "/api/shopify/storefront",
+            json={"shop_domain": "demo-shop", "storefront_token": "short"},
+        )
+        assert invalid.status_code == 400
+        assert "Storefront access token" in invalid.json()["error"]
+
+
+def test_public_vendor_products_returns_empty_when_storefront_not_connected(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "get_shopify_connection", lambda user_id: None)
+    monkeypatch.setattr(server, "get_shopify_storefront_access_token", lambda user_id: None)
+
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Storefront Empty Vendor",
+                "email": "storefront-empty@example.com",
+                "username": "storefrontempty",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+        username = signup.json()["user"]["username"]
+
+        response = client.get(f"/api/vendors/{username}/products")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["ok"] is True
+        assert payload["connected"] is False
+        assert payload["products"] == []
+
+
+def test_public_vendor_products_returns_normalized_storefront_payload(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(
+        server,
+        "fetch_storefront_products",
+        lambda shop, token, limit=10: [
+            {
+                "id": "gid://shopify/Product/1",
+                "name": "Amber Candle",
+                "handle": "amber-candle",
+                "image": "https://cdn.example.com/candle.jpg",
+                "price": 24.0,
+                "product_url": f"https://{shop}/products/amber-candle",
+            }
+        ],
+    )
+
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Storefront Product Vendor",
+                "email": "storefront-products@example.com",
+                "username": "storefrontproducts",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+        username = signup.json()["user"]["username"]
+        save = client.post(
+            "/api/shopify/storefront",
+            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
+        )
+        assert save.status_code == 200
+
+        response = client.get(f"/api/vendors/{username}/products")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["ok"] is True
+        assert payload["connected"] is True
+        assert payload["shop"] == "demo-shop.myshopify.com"
+        assert payload["products"][0]["handle"] == "amber-candle"
+        assert payload["products"][0]["image"] == "https://cdn.example.com/candle.jpg"
+        assert payload["products"][0]["product_url"] == "https://demo-shop.myshopify.com/products/amber-candle"
+
+
+def test_public_vendor_products_returns_connected_empty_message(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "fetch_storefront_products", lambda shop, token, limit=10: [])
+
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Storefront Empty Connected Vendor",
+                "email": "storefront-empty-connected@example.com",
+                "username": "storefrontemptyconnected",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+        username = signup.json()["user"]["username"]
+        save = client.post(
+            "/api/shopify/storefront",
+            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
+        )
+        assert save.status_code == 200
+
+        response = client.get(f"/api/vendors/{username}/products")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["ok"] is True
+        assert payload["connected"] is True
+        assert payload["products"] == []
+        assert "no products are published yet" in payload["message"].lower()
+
+
+def test_public_vendor_products_handles_storefront_failures(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "fetch_storefront_products", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Storefront Failure Vendor",
+                "email": "storefront-failure@example.com",
+                "username": "storefrontfailure",
+                "password": "supersecure123",
+                "role": "vendor",
+            },
+        )
+        assert signup.status_code == 200
+        username = signup.json()["user"]["username"]
+        save = client.post(
+            "/api/shopify/storefront",
+            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
+        )
+        assert save.status_code == 200
+
+        response = client.get(f"/api/vendors/{username}/products")
+        assert response.status_code == 502
+        payload = response.json()
+        assert payload["ok"] is False
+        assert payload["connected"] is True
+        assert payload["products"] == []
+        assert "temporarily unavailable" in payload["error"].lower()
 
 
 def test_profile_and_saved_markets_require_auth(temp_user_storage):
@@ -414,6 +1349,83 @@ def test_availability_planner_updates_and_returns_recommendations(temp_user_stor
         assert payload["availability"]["weekdays"] == ["Saturday", "Sunday"]
         assert payload["availability"]["preferred_months"] == ["April", "May"]
         assert "recommended_markets" in payload
+
+
+def test_vendor_tracker_endpoint_seeds_and_persists_user_updates(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(
+        server,
+        "run_search_events",
+        lambda _filters: {
+            "events": [
+                {
+                    "id": "tracker-1",
+                    "name": "Spring Makers Market",
+                    "city": "Austin",
+                    "state": "TX",
+                    "date": "2026-04-12",
+                    "booth_price": 120,
+                    "estimated_traffic": 2400,
+                    "vendor_count": 85,
+                    "application_link": "https://example.com/apply/spring-makers",
+                    "popularity_score": 82,
+                },
+                {
+                    "id": "tracker-2",
+                    "name": "Summer Popup Row",
+                    "city": "Austin",
+                    "state": "TX",
+                    "date": "2026-06-07",
+                    "booth_price": 180,
+                    "estimated_traffic": 3100,
+                    "vendor_count": 95,
+                    "application_link": "https://example.com/apply/summer-popup",
+                    "popularity_score": 88,
+                },
+            ]
+        },
+    )
+
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Tracker User",
+                "email": "tracker@example.com",
+                "username": "trackeruser",
+                "password": "supersecure123",
+            },
+        )
+        assert signup.status_code == 200
+
+        seeded = client.get("/api/vendor-tracker")
+        assert seeded.status_code == 200
+        seeded_payload = seeded.json()
+        assert seeded_payload["ok"] is True
+        assert seeded_payload["tracker"]["application_calendar"][0]["name"] == "Summer Popup Row"
+        assert seeded_payload["tracker"]["booth_budget"][0]["event_name"] == "Spring Makers Market"
+
+        updated_tracker = seeded_payload["tracker"]
+        updated_tracker["application_calendar"][0]["status"] = "Watch"
+        updated_tracker["application_calendar"][0]["notes"] = "Waiting on organizer reply."
+        updated_tracker["booth_budget"][0]["projected_revenue"] = 900
+        updated_tracker["booth_budget"][0]["actual_revenue"] = 1100
+        updated_tracker["selection_criteria"]["notes"] = "Prefer markets with repeat series and clear setup instructions."
+
+        saved = client.post("/api/vendor-tracker", json=updated_tracker)
+        assert saved.status_code == 200
+        saved_payload = saved.json()
+        assert saved_payload["tracker"]["application_calendar"][0]["status"] == "Watch"
+        assert saved_payload["tracker"]["application_calendar"][0]["notes"] == "Waiting on organizer reply."
+        assert saved_payload["tracker"]["booth_budget"][0]["net_profit"] == 980.0
+        assert saved_payload["tracker"]["summary"]["total_actual_revenue"] == 1100.0
+        assert saved_payload["tracker"]["selection_criteria"]["notes"].startswith("Prefer markets")
+
+
+def test_vendor_tracker_alias_redirects_to_api(temp_user_storage):
+    with TestClient(server.create_app()) as client:
+        response = client.get("/vendor-tracker", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "/api/vendor-tracker"
 
 
 def test_kansas_city_listings_endpoint_combines_current_and_discovered(monkeypatch, consumer_client):
@@ -459,6 +1471,7 @@ def test_kansas_city_listings_endpoint_combines_current_and_discovered(monkeypat
     assert payload["more_count"] == 1
     assert payload["current_events"][0]["name"] == "Kansas City Night Market"
     assert payload["more_events"][0]["title"] == "Kansas City Makers Market"
+    assert "recurring_series" in payload
 
 
 def test_kansas_city_listing_evaluation_returns_ratings(monkeypatch, consumer_client):
@@ -559,6 +1572,50 @@ def test_find_market_endpoint_combines_search_and_discovery(monkeypatch, consume
     assert payload["discover_count"] == 1
     assert payload["search_results"][0]["name"] == "Austin Makers Market"
     assert payload["discovered_results"][0]["title"] == "Austin Popup Series"
+    assert payload["discovered_results"][0]["recurrence"]["is_recurring"] is True
+
+
+def test_dashboard_returns_recurrence_summary(temp_user_storage, monkeypatch):
+    with TestClient(server.create_app()) as client:
+        signup = client.post(
+            "/api/auth/signup",
+            json={
+                "name": "Repeat User",
+                "email": "repeat@example.com",
+                "username": "repeatuser",
+                "password": "supersecure123",
+            },
+        )
+        assert signup.status_code == 200
+
+        monkeypatch.setattr(
+            server,
+            "run_search_events",
+            lambda _filters: {
+                "events": [
+                    {
+                        "id": "series-1",
+                        "name": "Austin Night Market",
+                        "city": "Austin",
+                        "state": "TX",
+                        "date": "2026-05-10",
+                    },
+                    {
+                        "id": "series-2",
+                        "name": "Austin Night Market",
+                        "city": "Austin",
+                        "state": "TX",
+                        "date": "2026-06-14",
+                    },
+                ]
+            },
+        )
+
+        response = client.get("/api/dashboard")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["recurring_series"][0]["name"] == "Austin Night Market"
+        assert payload["recommended_markets"][0]["recurrence"]["is_recurring"] is True
 
 
 @pytest.mark.asyncio
@@ -1094,6 +2151,7 @@ def test_runtime_config_endpoint_returns_api_base_and_flags(consumer_client):
     payload = response.json()
     assert "api_base_url" in payload
     assert payload["api_base_url"] == "http://testserver"
+    assert payload["database"]["engine"] in {"sqlite", "postgres"}
     assert payload["product"]["pro_status"] == "coming_soon"
     assert payload["features"]["dashboard_search"] is True
 
@@ -1125,6 +2183,7 @@ def test_health_endpoint_reports_ok_and_tool_count(consumer_client):
     assert payload["protocol"] == server.PROTOCOL_VERSION
     assert payload["tools"] == len(server.ALL_TOOLS)
     assert payload["connected_clients"] == 0
+    assert payload["database"]["engine"] in {"sqlite", "postgres"}
 
 
 def test_consumer_tools_endpoint_lists_pipeline_tools(consumer_client):
@@ -1292,7 +2351,8 @@ def test_jsonrpc_tools_call_executes_registered_tool(consumer_client):
     assert payload["id"] == 3
     result_text = payload["result"]["content"][0]["text"]
     result = json.loads(result_text)
-    assert result["profile"]["category"] == "Home & Body"
+    assert result["status"] == "ok"
+    assert result["vendor_profile"]["business_type"] == "handmade goods"
 
 
 def test_jsonrpc_tools_call_passes_bearer_api_key_to_billing(monkeypatch, consumer_client):

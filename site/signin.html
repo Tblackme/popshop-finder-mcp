@@ -8,23 +8,45 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="container nav">
+    <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links"><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a></nav>
+      <nav class="nav-links"><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a></nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/find-my-next-market">Find My Next Market</a><div data-mobile-auth-nav></div></div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a><div data-mobile-auth-nav></div></div>
   </header>
   <main>
-    <section class="page-hero"><div class="container"><span class="eyebrow">Member sign in</span><h1>Welcome back.</h1><p>Sign in to access your private dashboard, saved markets, and profile settings.</p></div></section>
+    <section class="page-hero"><div class="container"><span class="eyebrow">Member sign in</span><h1>Welcome back.</h1><p>Sign in once and we'll take you to the right dashboard for your Vendor Atlas role.</p></div></section>
     <section><div class="container" style="max-width: 620px;"><div class="form-card">
       <form class="form-grid" data-signin-form>
-        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required></div>
+        <div class="field">
+          <label for="identifier">Username or Email</label>
+          <input id="identifier" name="identifier" required>
+          <small class="muted">Use whichever is easier to remember.</small>
+        </div>
         <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
         <button class="btn btn-primary btn-block" type="submit">Sign In</button>
         <div class="status" data-signin-status></div>
       </form>
+      <div class="form-card" style="margin-top:16px; background: rgba(255,255,255,0.55);">
+        <span class="eyebrow">Temporary test access</span>
+        <p class="muted" style="margin-top:8px;">For local testing only. This creates or reuses a temporary account and sends you straight to the right dashboard.</p>
+        <div class="stack-row" style="margin-top:14px;">
+          <button class="btn btn-secondary" type="button" data-dev-login="vendor">Test Vendor</button>
+          <button class="btn btn-secondary" type="button" data-dev-login="market">Test Organizer</button>
+          <button class="btn btn-secondary" type="button" data-dev-login="shopper">Test Shopper</button>
+        </div>
+      </div>
+      <div class="form-card" style="margin-top:16px; background: rgba(255,255,255,0.55);">
+        <span class="eyebrow">New here?</span>
+        <p class="muted" style="margin-top:8px;">Pick the path that fits you and we'll preselect it during sign-up.</p>
+        <div class="role-card-grid" style="margin-top:14px;">
+          <a class="role-card" href="/signup?role=vendor"><strong>I'm a Vendor</strong><span>Plan events, discover opportunities, and track business performance.</span></a>
+          <a class="role-card" href="/signup?role=market"><strong>I run events</strong><span>Create listings, review applications, and manage organizer analytics.</span></a>
+          <a class="role-card" href="/signup?role=shopper"><strong>I'm a Shopper</strong><span>Discover events, follow vendors, and save favorites.</span></a>
+        </div>
+      </div>
       <p class="muted">Need an account? <a href="/signup"><strong>Create one here</strong></a>.</p>
     </div></div></section>
   </main>
