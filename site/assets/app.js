@@ -1798,7 +1798,7 @@ async function setupDiscoverPage(auth) {
         </div>
         <div class="journey-float-bar${selectedCount > 0 ? " visible" : ""}" data-float-bar>
           <span class="float-bar-count">${selectedCount} event${selectedCount !== 1 ? "s" : ""} in your plan</span>
-          <a class="btn" href="/final-plan">View My Plan</a>
+          <a class="btn" href="/shopper-plan">View My Plan</a>
         </div>
       </div>
     `;
@@ -4131,6 +4131,7 @@ async function setupShopperDashboard() {
             ${socialSummaryTiles}
             <div class="stack-row" style="margin-top:16px;">
               <a class="btn btn-primary" href="/discover">Discover events</a>
+              <a class="btn btn-secondary" href="/shopper-plan">View My Plan</a>
               <button class="btn btn-secondary" type="button" disabled>${state.favorites.length} favorites saved</button>
               <button class="btn btn-secondary" type="button" disabled>${state.followingVendors.length} vendors followed</button>
             </div>

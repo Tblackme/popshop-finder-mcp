@@ -144,6 +144,7 @@ PUBLIC_PAGE_ROUTES = {
     "/business": "business.html",
     "/profile": "profile.html",
     "/final-plan": "final-plan.html",
+    "/shopper-plan": "shopper-plan.html",
     "/history": "history.html",
     "/integrations": "integrations.html",
     "/signin": "signin.html",

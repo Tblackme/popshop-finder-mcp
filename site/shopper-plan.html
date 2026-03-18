@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Plan | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .plan-page { padding: 32px 0 64px; }
+    .plan-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+    .plan-header h1 { margin: 0; }
+    .cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .cal-nav h2 { margin: 0; font-size: 20px; min-width: 180px; text-align: center; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .cal-day-name { background: var(--surface-strong); padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .cal-cell { background: var(--bg); min-height: 90px; padding: 6px; position: relative; }
+    .cal-cell.other-month { background: var(--surface); opacity: 0.5; }
+    .cal-cell.today .cal-date { background: var(--brand); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+    .cal-date { font-size: 12px; font-weight: 600; margin-bottom: 4px; line-height: 22px; }
+    .cal-event-chip { font-size: 10px; background: var(--brand); color: #fff; border-radius: 4px; padding: 2px 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .cal-event-chip.rsvp { background: var(--accent); }
+    .cal-event-chip.following { background: var(--success); }
+    .event-list { margin-top: 40px; }
+    .event-list h2 { margin-bottom: 16px; }
+    .event-row { display: flex; align-items: flex-start; gap: 16px; padding: 16px; background: var(--surface); border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .event-row-date { min-width: 56px; text-align: center; background: var(--brand); color: #fff; border-radius: 8px; padding: 8px 6px; }
+    .event-row-date .month { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .event-row-date .day { font-size: 22px; font-weight: 700; line-height: 1; }
+    .event-row-info { flex: 1; min-width: 180px; }
+    .event-row-info strong { display: block; margin-bottom: 2px; }
+    .event-row-info .meta { font-size: 13px; color: var(--muted); }
+    .event-row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .gcal-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+    .gcal-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .badge-rsvp { font-size: 11px; background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 6px; }
+    .badge-saved { font-size: 11px; background: var(--brand); color: #fff; border-radius: 4px; padding: 2px 6px; }
+    .badge-following { font-size: 11px; background: var(--success); color: #fff; border-radius: 4px; padding: 2px 6px; }
+    .export-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; padding: 16px; background: var(--surface); border-radius: 10px; align-items: center; }
+    .export-bar p { margin: 0; flex: 1; font-size: 14px; color: var(--muted); }
+    .empty-plan { text-align: center; padding: 64px 24px; }
+    .empty-plan p { color: var(--muted); margin-top: 8px; }
+    @media (max-width: 600px) {
+      .cal-cell { min-height: 60px; }
+      .cal-event-chip { display: none; }
+      .cal-cell.has-event::after { content: '●'; font-size: 8px; color: var(--brand); display: block; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/shopper-dashboard">Shopper</a>
+        <a href="/discover">Discover</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/shopper-dashboard">Shopper</a>
+      <a href="/discover">Discover</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="plan-page">
+      <div class="container">
+        <div class="plan-header">
+          <div>
+            <span class="eyebrow">Shopper</span>
+            <h1>My Plan</h1>
+          </div>
+          <a class="btn btn-secondary" href="/shopper-dashboard">← Back to dashboard</a>
+        </div>
+
+        <div id="plan-root">
+          <div class="empty-state"><strong>Loading your plan…</strong></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+  <script>
+  (async function () {
+    const root = document.getElementById("plan-root");
+
+    // ── helpers ────────────────────────────────────────────────────────────
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function gcalLink(event) {
+      const title = encodeURIComponent(event.name || event.title || "Event");
+      const location = encodeURIComponent([event.city, event.state].filter(Boolean).join(", ") || event.location || "");
+      const details = encodeURIComponent(event.description || event.fit_reason || "");
+      let dates = "";
+      if (event.date) {
+        const d = new Date(event.date);
+        if (!isNaN(d)) {
+          const y = d.getUTCFullYear();
+          const m = pad(d.getUTCMonth() + 1);
+          const day = pad(d.getUTCDate());
+          // next day for end
+          const end = new Date(d);
+          end.setUTCDate(end.getUTCDate() + 1);
+          const ey = end.getUTCFullYear();
+          const em = pad(end.getUTCMonth() + 1);
+          const ed = pad(end.getUTCDate());
+          dates = `${y}${m}${day}/${ey}${em}${ed}`;
+        }
+      }
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
+    }
+
+    function icsContent(events) {
+      const lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Vendor Atlas//Shopper Plan//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+      ];
+      events.forEach((event) => {
+        if (!event.date) return;
+        const d = new Date(event.date);
+        if (isNaN(d)) return;
+        const y = d.getUTCFullYear();
+        const m = pad(d.getUTCMonth() + 1);
+        const day = pad(d.getUTCDate());
+        const end = new Date(d);
+        end.setUTCDate(end.getUTCDate() + 1);
+        const ey = end.getUTCFullYear();
+        const em = pad(end.getUTCMonth() + 1);
+        const ed = pad(end.getUTCDate());
+        const uid = `va-${event.id || Math.random().toString(36).slice(2)}@vendoratlas`;
+        const loc = [event.city, event.state].filter(Boolean).join(", ") || event.location || "";
+        lines.push(
+          "BEGIN:VEVENT",
+          `UID:${uid}`,
+          `DTSTART;VALUE=DATE:${y}${m}${day}`,
+          `DTEND;VALUE=DATE:${ey}${em}${ed}`,
+          `SUMMARY:${(event.name || event.title || "Event").replace(/,/g, "\\,")}`,
+          loc ? `LOCATION:${loc.replace(/,/g, "\\,")}` : "",
+          "END:VEVENT",
+        ).filter(Boolean);
+      });
+      lines.push("END:VCALENDAR");
+      return lines.join("\r\n");
+    }
+
+    function downloadIcs(events) {
+      const blob = new Blob([icsContent(events)], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "vendor-atlas-plan.ics";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function formatMonthYear(year, month) {
+      return new Date(year, month, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+    }
+
+    function eventDateKey(event) {
+      if (!event.date) return null;
+      const d = new Date(event.date);
+      if (isNaN(d)) return null;
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    }
+
+    // ── state ───────────────────────────────────────────────────────────────
+    let year = new Date().getFullYear();
+    let month = new Date().getMonth();
+    let allEvents = []; // { ...event, _type: 'saved'|'rsvp'|'following' }
+
+    // ── fetch data ──────────────────────────────────────────────────────────
+    try {
+      const [dashPayload, savedPayload, followingPayload] = await Promise.all([
+        fetch("/api/shopper-dashboard", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+        fetch("/api/saved-markets", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+        fetch("/api/shopper/following", { credentials: "include" }).then((r) => r.json()).catch(() => ({})),
+      ]);
+
+      const seen = new Set();
+      function addEvent(ev, type) {
+        if (!ev || !ev.id) return;
+        const key = String(ev.id);
+        if (seen.has(key)) return;
+        seen.add(key);
+        allEvents.push({ ...ev, _type: type });
+      }
+
+      (savedPayload.saved_markets || []).forEach((e) => addEvent(e, "saved"));
+      (dashPayload.rsvped_events || []).forEach((e) => addEvent(e, "rsvp"));
+      (followingPayload.events || []).forEach((e) => addEvent(e, "following"));
+    } catch (err) {
+      // render with empty state
+    }
+
+    // ── render ──────────────────────────────────────────────────────────────
+    function render() {
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+      // build date → events map
+      const byDate = {};
+      allEvents.forEach((ev) => {
+        const key = eventDateKey(ev);
+        if (!key) return;
+        if (!byDate[key]) byDate[key] = [];
+        byDate[key].push(ev);
+      });
+
+      // calendar cells
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrev = new Date(year, month, 0).getDate();
+      const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      let calCells = DAY_NAMES.map((d) => `<div class="cal-day-name">${d}</div>`).join("");
+
+      // leading blanks
+      for (let i = 0; i < firstDay; i++) {
+        const d = daysInPrev - firstDay + i + 1;
+        calCells += `<div class="cal-cell other-month"><div class="cal-date">${d}</div></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${pad(month + 1)}-${pad(d)}`;
+        const dayEvents = byDate[key] || [];
+        const isToday = key === todayKey;
+        calCells += `
+          <div class="cal-cell${dayEvents.length ? " has-event" : ""}${isToday ? " today" : ""}">
+            <div class="cal-date">${d}</div>
+            ${dayEvents.slice(0, 3).map((ev) => `
+              <div class="cal-event-chip ${ev._type}" title="${(ev.name || ev.title || "").replace(/"/g, "&quot;")}">
+                ${(ev.name || ev.title || "Event").slice(0, 20)}
+              </div>
+            `).join("")}
+            ${dayEvents.length > 3 ? `<div class="cal-event-chip" style="background:var(--muted)">+${dayEvents.length - 3} more</div>` : ""}
+          </div>`;
+      }
+
+      // trailing blanks
+      const totalCells = firstDay + daysInMonth;
+      const trailingCount = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+      for (let i = 1; i <= trailingCount; i++) {
+        calCells += `<div class="cal-cell other-month"><div class="cal-date">${i}</div></div>`;
+      }
+
+      // sorted event list
+      const sorted = [...allEvents]
+        .filter((ev) => ev.date)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      const badgeMap = { saved: "badge-saved", rsvp: "badge-rsvp", following: "badge-following" };
+      const labelMap = { saved: "Saved", rsvp: "RSVP", following: "Following" };
+
+      const eventRows = sorted.map((ev) => {
+        const d = new Date(ev.date);
+        const monthStr = isNaN(d) ? "" : d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+        const dayStr = isNaN(d) ? "" : d.getUTCDate();
+        const loc = [ev.city, ev.state].filter(Boolean).join(", ") || ev.location || "";
+        return `
+          <div class="event-row">
+            <div class="event-row-date">
+              <div class="month">${monthStr}</div>
+              <div class="day">${dayStr}</div>
+            </div>
+            <div class="event-row-info">
+              <strong>${ev.name || ev.title || "Event"}</strong>
+              <div class="meta">${loc}${ev.date ? ` · ${new Date(ev.date).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })}` : ""}</div>
+              <span class="${badgeMap[ev._type] || "badge-saved"}">${labelMap[ev._type] || "Saved"}</span>
+            </div>
+            <div class="event-row-actions">
+              <a class="btn btn-secondary gcal-btn" href="${gcalLink(ev)}" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Add to Google Calendar
+              </a>
+              ${ev.id ? `<a class="btn btn-secondary" href="/event/${encodeURIComponent(ev.id)}">View</a>` : ""}
+            </div>
+          </div>`;
+      });
+
+      const hasEvents = sorted.length > 0;
+
+      root.innerHTML = `
+        ${hasEvents ? `
+          <div class="export-bar">
+            <p>${sorted.length} event${sorted.length !== 1 ? "s" : ""} in your plan</p>
+            <button class="btn btn-secondary" id="export-ics">Download .ics (Apple / Outlook)</button>
+            <a class="btn btn-primary" href="https://calendar.google.com/calendar/r" target="_blank" rel="noopener">Open Google Calendar</a>
+          </div>
+        ` : ""}
+
+        <div class="cal-nav">
+          <button class="btn btn-secondary" id="prev-month">← Prev</button>
+          <h2>${formatMonthYear(year, month)}</h2>
+          <button class="btn btn-secondary" id="next-month">Next →</button>
+        </div>
+
+        <div class="cal-grid">${calCells}</div>
+
+        <div class="event-list">
+          <h2>All planned events</h2>
+          ${hasEvents
+            ? eventRows.join("")
+            : `<div class="empty-plan">
+                <strong>No events in your plan yet.</strong>
+                <p>Save events or RSVP from the <a href="/discover">Discover</a> page and they'll appear here.</p>
+              </div>`
+          }
+        </div>
+      `;
+
+      document.getElementById("prev-month")?.addEventListener("click", () => {
+        month--;
+        if (month < 0) { month = 11; year--; }
+        render();
+      });
+      document.getElementById("next-month")?.addEventListener("click", () => {
+        month++;
+        if (month > 11) { month = 0; year++; }
+        render();
+      });
+      document.getElementById("export-ics")?.addEventListener("click", () => {
+        downloadIcs(sorted);
+      });
+    }
+
+    render();
+  })();
+  </script>
+</body>
+</html>
