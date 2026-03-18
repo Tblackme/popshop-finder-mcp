@@ -177,6 +177,21 @@
     let month = new Date().getMonth();
     let allEvents = []; // { ...event, _type: 'saved'|'rsvp'|'following' }
 
+    // ── auth check ──────────────────────────────────────────────────────────
+    const authRes = await fetch("/api/auth/me", { credentials: "include" }).then((r) => r.json()).catch(() => ({}));
+    if (!authRes.authenticated) {
+      root.innerHTML = `
+        <div class="empty-plan">
+          <strong>Sign in to view your plan</strong>
+          <p>You need a shopper account to save events and manage your calendar.</p>
+          <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="/signin?next=/shopper-plan">Sign in</a>
+            <a class="btn btn-secondary" href="/signup">Create account</a>
+          </div>
+        </div>`;
+      return;
+    }
+
     // ── fetch data ──────────────────────────────────────────────────────────
     try {
       const [dashPayload, savedPayload, followingPayload] = await Promise.all([
@@ -311,7 +326,10 @@
             ? eventRows.join("")
             : `<div class="empty-plan">
                 <strong>No events in your plan yet.</strong>
-                <p>Save events or RSVP from the <a href="/discover">Discover</a> page and they'll appear here.</p>
+                <p>Save events or RSVP from the <a href="/discover">Discover</a> page — they'll show up here on the calendar.</p>
+                <div style="margin-top:16px;">
+                  <a class="btn btn-primary" href="/discover">Browse events</a>
+                </div>
               </div>`
           }
         </div>
