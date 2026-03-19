@@ -216,7 +216,7 @@ EVENT_KEYWORDS = {
     "flea",
     "artisan",
 }
-PAGE_VERIFICATION_LIMIT = 10
+PAGE_VERIFICATION_LIMIT = 20
 
 
 class SearchResultsParser(HTMLParser):
@@ -432,10 +432,11 @@ async def _verify_candidate_page(
         response = await client.get(url, headers={"User-Agent": DISCOVERY_USER_AGENT})
         response.raise_for_status()
     except Exception:
-        return None
+        # Page unreachable (blocked/timeout) — keep if Serper already scored it
+        return event if int(event.get("precision_score", 0)) >= 2 else None
 
     page_score = _page_event_signal_score(response.text, city, keywords)
-    if page_score < 3:
+    if page_score < 1:
         return None
 
     extracted_event = _build_event_from_page(url, response.text)
@@ -499,7 +500,7 @@ async def _refine_discovered_events(
         )
         if key in accepted_keys:
             continue
-        if int(event.get("precision_score", 0)) >= 7:
+        if int(event.get("precision_score", 0)) >= 2:
             accepted.append(event)
 
     accepted.sort(key=lambda event: (-int(event.get("precision_score", 0)), event.get("title", "")))
