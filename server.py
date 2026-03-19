@@ -2579,10 +2579,10 @@ def create_app() -> FastAPI:
         config = get_config()
         user_id = _shopify_state_decode(state, config.session_secret)
         if not user_id or not code or not shop:
-            return RedirectResponse(url="/final-plan?shopify=error", status_code=302)
+            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
         query = dict(request.query_params)
         if not verify_hmac(query, config.shopify_api_secret):
-            return RedirectResponse(url="/final-plan?shopify=error", status_code=302)
+            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
         try:
             token_data = exchange_code_for_token(
                 shop,
@@ -2592,17 +2592,17 @@ def create_app() -> FastAPI:
             )
         except Exception as e:
             logger.exception("Shopify token exchange failed: %s", e)
-            return RedirectResponse(url="/final-plan?shopify=error", status_code=302)
+            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
         access_token = token_data.get("access_token")
         if not access_token:
-            return RedirectResponse(url="/final-plan?shopify=error", status_code=302)
+            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
         set_shopify_connection(user_id, shop, access_token)
         try:
             products = products_with_inventory(shop, access_token, limit=250)
             upsert_shopify_products(user_id, products)
         except Exception as e:
             logger.warning("Shopify initial product sync failed: %s", e)
-        return RedirectResponse(url="/final-plan?shopify=connected", status_code=302)
+        return RedirectResponse(url="/integrations?shopify=connected", status_code=302)
 
     @app.get("/api/shopify/me")
     async def handle_shopify_me(request: Request) -> JSONResponse:

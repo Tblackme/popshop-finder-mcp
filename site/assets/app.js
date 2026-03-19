@@ -4500,6 +4500,15 @@ async function setupIntegrationsPage() {
   render({ ...getShopifySnapshot(), status: "loading", error: "" });
   await shopifyLoadData();
   render(getShopifySnapshot());
+
+  const shopifyParam = new URLSearchParams(window.location.search).get("shopify");
+  if (shopifyParam === "connected") {
+    showToast("Shopify connected successfully!", "success");
+    window.history.replaceState({}, "", window.location.pathname);
+  } else if (shopifyParam === "error") {
+    showToast("Shopify connection failed. Please try again.", "error");
+    window.history.replaceState({}, "", window.location.pathname);
+  }
 }
 
 async function setupProfilePage() {
