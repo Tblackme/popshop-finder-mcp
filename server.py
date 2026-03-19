@@ -1615,29 +1615,15 @@ def create_app() -> FastAPI:
             return _validation_error("Vendor not found.", status_code=404)
 
         conn = get_shopify_connection(int(vendor["id"]))
-        storefront_token = get_shopify_storefront_access_token(int(vendor["id"]))
-        if not conn or not storefront_token:
-            return JSONResponse(
-                {
-                    "ok": True,
-                    "connected": False,
-                    "shop": "",
-                    "products": [],
-                    "message": "This vendor has not connected Shopify products yet.",
-                }
-            )
+        if not conn:
+            return JSONResponse({"ok": True, "connected": False, "shop": "", "products": [], "message": "This vendor has not connected Shopify yet."})
 
         shop_domain = conn.get("storefront_domain") or conn.get("shop_domain") or ""
         if not shop_domain:
-            return JSONResponse(
-                {
-                    "ok": True,
-                    "connected": False,
-                    "shop": "",
-                    "products": [],
-                    "message": "This vendor has not connected Shopify products yet.",
-                }
-            )
+            return JSONResponse({"ok": True, "connected": False, "shop": "", "products": [], "message": "This vendor has not connected Shopify yet."})
+
+        # Use storefront token if available, otherwise use tokenless access (supports products/collections)
+        storefront_token = get_shopify_storefront_access_token(int(vendor["id"])) or ""
         try:
             products = fetch_storefront_products(shop_domain, storefront_token, limit=10)
         except Exception as exc:

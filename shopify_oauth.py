@@ -214,7 +214,7 @@ def products_with_inventory(
 
 def fetch_storefront_products(
     shop: str,
-    storefront_access_token: str,
+    storefront_access_token: str = "",
     limit: int = 10,
 ) -> list[dict[str, Any]]:
     """
@@ -265,14 +265,14 @@ def fetch_storefront_products(
       }
     }
     """
+    headers = {"Content-Type": "application/json"}
+    if storefront_access_token:
+        headers["X-Shopify-Storefront-Access-Token"] = storefront_access_token
     with httpx.Client() as client:
         response = client.post(
             url,
             json={"query": query, "variables": {"first": safe_limit}},
-            headers={
-                "X-Shopify-Storefront-Access-Token": storefront_access_token,
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=20.0,
         )
         response.raise_for_status()
