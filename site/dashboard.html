@@ -5,6 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      padding-bottom: 3rem;
+    }
+    @media (max-width: 720px) {
+      .dash-grid { grid-template-columns: 1fr; }
+    }
+    .dash-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: 0 2px 16px rgba(12,31,29,.07);
+    }
+    .dash-card.full { grid-column: 1 / -1; }
+    .dash-card h3 { margin: 0 0 .1rem; font-size: 1rem; }
+    .dash-card .eyebrow { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .shopify-banner {
+      background: linear-gradient(135deg, #0f766e 0%, #0b5b55 100%);
+      color: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .shopify-banner h2 { margin: 0 0 .25rem; color: #fff; font-size: 1.15rem; }
+    .shopify-banner p { margin: 0; opacity: .85; font-size: .9rem; }
+    .shopify-banner .banner-actions { margin-left: auto; display: flex; gap: .6rem; flex-wrap: wrap; }
+    .shopify-banner .btn-white { background: #fff; color: var(--brand); font-weight: 700; border-radius: 9px; padding: .5rem 1.1rem; border: none; cursor: pointer; font-size: .9rem; }
+    .shopify-banner .btn-outline { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); border-radius: 9px; padding: .5rem 1.1rem; cursor: pointer; font-size: .9rem; }
+    .shopify-banner input.banner-input { background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.4); color: #fff; border-radius: 9px; padding: .45rem .85rem; font-size: .9rem; width: 180px; }
+    .shopify-banner input.banner-input::placeholder { color: rgba(255,255,255,.6); }
+    .product-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: .65rem;
+      margin-top: .85rem;
+    }
+    .product-mini-card {
+      background: rgba(19,38,35,.04);
+      border-radius: var(--radius-md);
+      padding: .65rem .75rem;
+      font-size: .83rem;
+    }
+    .product-mini-card .pname { font-weight: 600; margin-bottom: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-mini-card .pprice { color: var(--brand); font-weight: 700; }
+    .product-mini-card .pstock { color: var(--muted); font-size: .75rem; }
+    .stat-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .stat-chip { background: rgba(15,118,110,.08); border-radius: 99px; padding: .3rem .9rem; font-size: .82rem; font-weight: 600; color: var(--brand); }
+    .event-row { display: flex; align-items: center; gap: .75rem; padding: .65rem 0; border-bottom: 1px solid var(--line); }
+    .event-row:last-child { border-bottom: none; }
+    .event-row-main { flex: 1; min-width: 0; }
+    .event-row-main strong { display: block; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-row-meta { font-size: .78rem; color: var(--muted); }
+    .quick-links { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .85rem; }
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -12,35 +73,192 @@
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
       <nav class="nav-links">
         <a href="/">Home</a>
-        <a class="active" href="/dashboard">Plan</a>
+        <a class="active" href="/dashboard">Dashboard</a>
         <a href="/discover">Discover</a>
         <a href="/final-plan">Profit</a>
+        <a href="/business">Business</a>
       </nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a><div data-mobile-auth-nav></div></div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/discover">Discover</a>
+      <a href="/final-plan">Profit</a>
+      <a href="/business">Business</a>
+      <div data-mobile-auth-nav></div>
+    </div>
   </header>
-  <main data-dashboard-root>
+
+  <main>
     <section class="page-hero">
       <div class="container">
-        <span class="eyebrow">Your market assistant</span>
-        <h1 data-dashboard-welcome>Welcome back.</h1>
-        <p>Pick one thing to do. We will guide you step by step.</p>
+        <span class="eyebrow">Vendor dashboard</span>
+        <h1 id="dash-welcome">Welcome back.</h1>
+        <p>Your events, shop, and earnings in one place.</p>
       </div>
     </section>
+
     <section>
       <div class="container">
-        <div class="dashboard-card">
-          <span class="eyebrow">Saved markets</span>
-          <p class="muted">Your saved markets, recommendations, and next steps will load here.</p>
-        </div>
-        <div data-guided-dashboard>
-          <div class="empty-state"><strong>Loading your assistant...</strong></div>
+        <div class="dash-grid">
+
+          <!-- Shopify banner — full width -->
+          <div id="shopify-banner-slot">
+            <div class="shopify-banner">
+              <div>
+                <h2>🛍️ Shopify store</h2>
+                <p>Loading…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Saved markets -->
+          <div class="dash-card">
+            <span class="eyebrow">Saved markets</span>
+            <h3>Your shortlist</h3>
+            <div id="saved-markets-slot">
+              <div class="empty-state" style="padding:1rem 0"><strong>Loading…</strong></div>
+            </div>
+            <div class="quick-links">
+              <a class="btn btn-primary" href="/discover">Browse events</a>
+              <a class="btn btn-secondary" href="/final-plan">Profit plan</a>
+            </div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="dash-card">
+            <span class="eyebrow">Vendor tools</span>
+            <h3>Quick actions</h3>
+            <div class="quick-links" style="margin-top:.85rem;">
+              <a class="btn btn-primary" href="/discover">Find markets</a>
+              <a class="btn btn-secondary" href="/final-plan">Profit calculator</a>
+              <a class="btn btn-secondary" href="/business">Business analytics</a>
+              <a class="btn btn-secondary" href="/integrations">Integrations</a>
+              <a class="btn btn-secondary" href="/profile">Edit profile</a>
+              <a class="btn btn-secondary" id="dash-shop-link" href="/shop" style="display:none">My public shop</a>
+            </div>
+            <div style="margin-top:1.25rem;" id="dash-plan-slot">
+              <div data-guided-dashboard style="display:none"></div>
+              <a class="btn btn-ghost" href="/final-plan" style="margin-top:.5rem;">Open planning wizard →</a>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
   </main>
+
   <script src="/assets/app.js"></script>
+  <script>
+    (async function () {
+      // Auth check
+      let me = null;
+      try {
+        const r = await fetch("/api/auth/me", { credentials: "include" });
+        if (!r.ok) { window.location.href = "/signin"; return; }
+        me = await r.json();
+        if (me.role && me.role !== "vendor") {
+          window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
+          return;
+        }
+      } catch (_) { window.location.href = "/signin"; return; }
+
+      document.getElementById("dash-welcome").textContent =
+        `Hi ${escapeHtml(me.display_name || me.username || "there")}, here's your dashboard.`;
+
+      // Set shop link
+      if (me.username) {
+        const shopLink = document.getElementById("dash-shop-link");
+        shopLink.href = "/shop/" + encodeURIComponent(me.username);
+        shopLink.style.display = "";
+      }
+
+      // Load everything in parallel
+      const [shopifyMe, shopifyProducts, dashboard] = await Promise.all([
+        fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch("/api/dashboard", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+
+      renderShopifyBanner(shopifyMe, shopifyProducts, me);
+      renderSavedMarkets(dashboard);
+    })();
+
+    function renderShopifyBanner(shopify, products, me) {
+      const slot = document.getElementById("shopify-banner-slot");
+      if (!shopify) {
+        slot.innerHTML = `
+          <div class="shopify-banner">
+            <div>
+              <h2>🛍️ Connect your Shopify store</h2>
+              <p>Show your products on your public vendor page and track inventory before events.</p>
+            </div>
+            <div class="banner-actions">
+              <input class="banner-input" id="banner-shop-input" placeholder="yourstore">
+              <button class="btn-white" id="banner-connect-btn">Connect</button>
+              <a class="btn-outline" href="/integrations">Settings</a>
+            </div>
+          </div>`;
+        document.getElementById("banner-connect-btn")?.addEventListener("click", () => {
+          const val = (document.getElementById("banner-shop-input")?.value || "").trim();
+          if (val) window.location.href = "/api/shopify/connect?shop=" + encodeURIComponent(val);
+        });
+        return;
+      }
+
+      const shopName = String(shopify.shop || "").replace(".myshopify.com", "");
+      const shopUrl = me?.username ? "/shop/" + encodeURIComponent(me.username) : "#";
+      slot.innerHTML = `
+        <div class="shopify-banner">
+          <div style="flex:1;min-width:0;">
+            <h2>🛍️ ${escapeHtml(shopName)} <span style="font-size:.75rem;font-weight:500;opacity:.8;">connected</span></h2>
+            <p>${products.length} product${products.length === 1 ? "" : "s"} synced · <a href="${shopUrl}" style="color:#fff;text-decoration:underline;opacity:.9;">View public shop →</a></p>
+            ${products.length ? `
+              <div class="product-mini-grid">
+                ${products.slice(0, 4).map(p => `
+                  <div class="product-mini-card" style="background:rgba(255,255,255,.12);color:#fff;">
+                    <div class="pname" style="color:#fff;">${escapeHtml(p.name)}</div>
+                    <div class="pprice" style="color:rgba(255,255,255,.9);">${p.price > 0 ? "$" + Number(p.price).toFixed(2) : "Free"}</div>
+                    <div class="pstock" style="color:rgba(255,255,255,.6);">Stock: ${p.inventory_quantity ?? "—"}</div>
+                  </div>`).join("")}
+              </div>` : ""}
+          </div>
+          <div class="banner-actions">
+            <button class="btn-white" id="banner-sync-btn">Sync products</button>
+            <a class="btn-outline" href="${shopUrl}">My shop</a>
+            <a class="btn-outline" href="/integrations">Settings</a>
+          </div>
+        </div>`;
+
+      document.getElementById("banner-sync-btn")?.addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true; btn.textContent = "Syncing…";
+        try {
+          await fetch("/api/shopify/sync", { method: "POST", credentials: "include" });
+          btn.textContent = "Synced ✓";
+        } catch (_) { btn.textContent = "Sync products"; btn.disabled = false; }
+        setTimeout(() => { if (!btn.disabled) return; btn.textContent = "Sync products"; btn.disabled = false; }, 3000);
+      });
+    }
+
+    function renderSavedMarkets(dashboard) {
+      const slot = document.getElementById("saved-markets-slot");
+      const markets = dashboard?.saved_markets || [];
+      if (!markets.length) {
+        slot.innerHTML = `<p class="muted" style="font-size:.88rem;margin:.5rem 0;">No saved markets yet. Browse Discover to save events to your shortlist.</p>`;
+        return;
+      }
+      slot.innerHTML = markets.slice(0, 4).map(e => `
+        <div class="event-row">
+          <div class="event-row-main">
+            <strong>${escapeHtml(e.name || e.title || "Event")}</strong>
+            <div class="event-row-meta">${escapeHtml([e.city, e.state].filter(Boolean).join(", "))}${e.date ? " · " + escapeHtml(e.date) : ""}</div>
+          </div>
+          <a class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .75rem;" href="${e.id ? "/event/" + e.id : "/discover"}">View</a>
+        </div>`).join("");
+    }
+  </script>
 </body>
 </html>
