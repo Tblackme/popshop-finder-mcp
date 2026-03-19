@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Shop | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--line); margin-bottom: 2rem; }
+    .tab-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: .65rem 1.1rem; font-size: .93rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; margin-bottom: -2px; border-radius: 4px 4px 0 0;
+      transition: color .15s;
+    }
+    .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .form-section { margin-bottom: 2rem; }
+    .form-section h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin: 0 0 1rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: .35rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: .83rem; font-weight: 600; color: var(--text); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: .55rem .8rem; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+      font-size: .93rem; background: var(--bg); color: var(--text);
+      transition: border-color .15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--brand);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-hint { font-size: .75rem; color: var(--muted); margin-top: .15rem; }
+    .save-bar { display: flex; align-items: center; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .save-status { font-size: .85rem; color: var(--muted); }
+    .save-status.ok { color: var(--success, #15803d); }
+    .save-status.err { color: var(--error, #dc2626); }
+
+    .product-list { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.5rem; }
+    .product-row {
+      background: var(--surface); border-radius: var(--radius-md);
+      padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+    }
+    .product-thumb {
+      width: 56px; height: 56px; border-radius: var(--radius-sm);
+      object-fit: cover; background: #e8e2d8; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; overflow: hidden;
+    }
+    .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .product-info { flex: 1; min-width: 0; }
+    .product-info strong { display: block; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-info .product-meta { font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+    .product-price-tag { font-weight: 700; color: var(--brand); font-size: .95rem; white-space: nowrap; }
+    .product-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+    .stock-badge {
+      font-size: .72rem; padding: .15rem .55rem; border-radius: 99px; font-weight: 600;
+      background: rgba(2,122,72,.1); color: var(--brand);
+    }
+    .stock-badge.out { background: rgba(220,38,38,.08); color: #dc2626; }
+
+    .add-product-form {
+      background: var(--surface); border-radius: var(--radius-lg);
+      padding: 1.5rem; margin-top: 1rem;
+      box-shadow: 0 2px 12px rgba(12,31,29,.07);
+    }
+    .add-product-form h4 { margin: 0 0 1rem; font-size: 1rem; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 1000; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg); border-radius: var(--radius-lg); padding: 2rem;
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(12,31,29,.18);
+    }
+    .modal h4 { margin: 0 0 1.25rem; }
+    .modal-footer { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+
+    .empty-products { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .empty-products .icon { font-size: 2.5rem; margin-bottom: .5rem; }
+
+    .public-shop-link {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .85rem; color: var(--brand); font-weight: 600; text-decoration: none;
+    }
+    .public-shop-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a class="active" href="/my-shop">My Shop</a>
+        <a href="/discover">Discover</a>
+        <a href="/final-plan">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/my-shop">My Shop</a>
+      <a href="/discover">Discover</a>
+      <a href="/final-plan">Profit</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Vendor setup</span>
+        <h1>My shop</h1>
+        <p id="shop-subtitle">Manage your vendor profile and product listings.</p>
+        <a id="public-shop-link" class="public-shop-link" href="#" style="display:none">View public page →</a>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="profile">Vendor profile</button>
+          <button class="tab-btn" data-tab="products">Products <span id="product-count-badge"></span></button>
+        </div>
+
+        <!-- PROFILE TAB -->
+        <div class="tab-panel active" id="tab-profile">
+          <form id="profile-form" autocomplete="off">
+
+            <div class="form-section">
+              <h3>Basic info</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="f-name">Display name *</label>
+                  <input id="f-name" name="name" type="text" placeholder="Jane Smith" required>
+                </div>
+                <div class="form-group">
+                  <label for="f-business">Business name</label>
+                  <input id="f-business" name="business_name" type="text" placeholder="Sunlit Clay Studio">
+                </div>
+                <div class="form-group full">
+                  <label for="f-bio">Bio / tagline <span id="ai-bio-btn" style="display:none;margin-left:.5rem;"><button type="button" class="btn btn-ghost" id="generate-bio-btn" style="font-size:.75rem;padding:.2rem .6rem;">✨ Generate</button></span></label>
+                  <textarea id="f-bio" name="bio" rows="2" placeholder="Hand-thrown ceramics made in Austin, TX."></textarea>
+                  <div id="bio-suggestions" style="display:none;margin-top:.5rem;"></div>
+                </div>
+                <div class="form-group">
+                  <label for="f-location">City / location</label>
+                  <input id="f-location" name="location" type="text" placeholder="Austin, TX">
+                </div>
+                <div class="form-group">
+                  <label for="f-category">Category</label>
+                  <select id="f-category" name="category">
+                    <option value="">— Select —</option>
+                    <option value="Handmade Jewelry">Handmade Jewelry</option>
+                    <option value="Ceramics">Ceramics</option>
+                    <option value="Art & Prints">Art & Prints</option>
+                    <option value="Apparel">Apparel</option>
+                    <option value="Vintage & Thrift">Vintage & Thrift</option>
+                    <option value="Food & Treats">Food & Treats</option>
+                    <option value="Home & Body">Home & Body</option>
+                    <option value="Candles & Soap">Candles & Soap</option>
+                    <option value="Plants & Flowers">Plants & Flowers</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Woodworking">Woodworking</option>
+                    <option value="Leather Goods">Leather Goods</option>
+                    <option value="Stickers & Paper">Stickers & Paper</option>
+                    <option value="Other Handmade">Other Handmade</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f-subcategory">Subcategory / specialty</label>
+                  <input id="f-subcategory" name="subcategory" type="text" placeholder="e.g. Layered gold necklaces">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Selling style</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="f-price-range">Price range</label>
+                  <select id="f-price-range" name="price_range">
+                    <option value="">— Select —</option>
+                    <option value="low">Budget-friendly (under $25)</option>
+                    <option value="mid">Mid-range ($25–$100)</option>
+                    <option value="high">Premium ($100+)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f-max-booth">Max booth fee ($)</label>
+                  <input id="f-max-booth" name="max_booth_price" type="number" min="0" step="5" placeholder="150">
+                </div>
+                <div class="form-group">
+                  <label for="f-goal">Main goal</label>
+                  <select id="f-goal" name="main_goal">
+                    <option value="">— Select —</option>
+                    <option value="sell_out">Sell out inventory</option>
+                    <option value="grow_audience">Grow my audience</option>
+                    <option value="test_ideas">Test new products</option>
+                    <option value="community">Connect with community</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f-env">Preferred environment</label>
+                  <select id="f-env" name="preferred_env">
+                    <option value="">— Select —</option>
+                    <option value="indoor">Indoor only</option>
+                    <option value="outdoor">Outdoor only</option>
+                    <option value="either">Either works</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f-experience">Experience level</label>
+                  <select id="f-experience" name="experience_level">
+                    <option value="">— Select —</option>
+                    <option value="early_stage">Just getting started</option>
+                    <option value="experienced">Experienced vendor</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f-risk">Risk tolerance</label>
+                  <select id="f-risk" name="risk_tolerance">
+                    <option value="">— Select —</option>
+                    <option value="low">Low — want sure things</option>
+                    <option value="medium">Medium — willing to experiment</option>
+                    <option value="high">High — growth over safety</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Links & social</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="f-instagram">Instagram URL</label>
+                  <input id="f-instagram" name="instagram_url" type="url" placeholder="https://instagram.com/yourhandle">
+                </div>
+                <div class="form-group">
+                  <label for="f-tiktok">TikTok URL</label>
+                  <input id="f-tiktok" name="tiktok_url" type="url" placeholder="https://tiktok.com/@yourhandle">
+                </div>
+                <div class="form-group full">
+                  <label for="f-website">Website</label>
+                  <input id="f-website" name="website_url" type="url" placeholder="https://yoursite.com">
+                </div>
+              </div>
+            </div>
+
+            <div class="save-bar">
+              <button type="submit" class="btn btn-primary">Save profile</button>
+              <span class="save-status" id="profile-save-status"></span>
+            </div>
+          </form>
+        </div>
+
+        <!-- PRODUCTS TAB -->
+        <div class="tab-panel" id="tab-products">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+            <div>
+              <h2 style="margin:0;font-size:1.15rem;">Your products</h2>
+              <p style="margin:.2rem 0 0;font-size:.85rem;color:var(--muted);">Add products manually — no Shopify required.</p>
+            </div>
+            <button class="btn btn-primary" id="add-product-btn">+ Add product</button>
+          </div>
+
+          <div id="product-list" class="product-list"></div>
+
+          <div id="empty-products" class="empty-products" style="display:none;">
+            <div class="icon">📦</div>
+            <strong>No products yet</strong>
+            <p style="margin:.4rem 0 1rem;font-size:.9rem;">Add your first product to show shoppers what you sell.</p>
+            <button class="btn btn-primary" id="empty-add-btn">+ Add your first product</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Product modal -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal">
+      <h4 id="modal-title">Add product</h4>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="p-name">Product name *</label>
+          <input id="p-name" type="text" placeholder="e.g. Ceramic mug – speckled blue">
+        </div>
+        <div class="form-group full">
+          <label for="p-description">Description</label>
+          <textarea id="p-description" rows="2" placeholder="Short description for shoppers…"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="p-price">Price ($)</label>
+          <input id="p-price" type="number" min="0" step="0.01" placeholder="28.00">
+        </div>
+        <div class="form-group">
+          <label for="p-category">Category</label>
+          <input id="p-category" type="text" placeholder="e.g. Ceramics">
+        </div>
+        <div class="form-group full">
+          <label for="p-image">Image URL</label>
+          <input id="p-image" type="url" placeholder="https://…/photo.jpg">
+          <span class="form-hint">Link to a hosted image (Instagram, your website, etc.)</span>
+        </div>
+        <div class="form-group full">
+          <label for="p-link">Buy link</label>
+          <input id="p-link" type="url" placeholder="https://yoursite.com/product">
+          <span class="form-hint">Where shoppers can buy this product</span>
+        </div>
+        <div class="form-group">
+          <label>
+            <input id="p-in-stock" type="checkbox" checked style="margin-right:.4rem;">
+            In stock
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-save">Save product</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+  (async function () {
+    // Auth check
+    let me = null;
+    try {
+      const r = await fetch("/api/auth/me", { credentials: "include" });
+      if (!r.ok) { window.location.href = "/signin"; return; }
+      me = await r.json();
+      if (me.role && me.role !== "vendor") {
+        window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
+        return;
+      }
+    } catch (_) { window.location.href = "/signin"; return; }
+
+    if (me.username) {
+      const link = document.getElementById("public-shop-link");
+      link.href = "/shop/" + encodeURIComponent(me.username);
+      link.style.display = "";
+    }
+
+    // --- Tabs ---
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // --- Load and render profile ---
+    let profileData = null;
+    try {
+      const r = await fetch("/api/vendor/shop-profile", { credentials: "include" });
+      if (r.ok) profileData = await r.json();
+    } catch (_) {}
+
+    if (profileData) {
+      const u = profileData.user || {};
+      const p = profileData.profile || {};
+      setVal("f-name", u.name || "");
+      setVal("f-bio", u.bio || "");
+      setVal("f-business", p.business_name || "");
+      setVal("f-location", p.location || "");
+      setVal("f-category", p.category || "");
+      setVal("f-subcategory", p.subcategory || "");
+      setVal("f-price-range", p.price_range || "");
+      setVal("f-max-booth", p.max_booth_price ?? "");
+      setVal("f-goal", p.main_goal || "");
+      setVal("f-env", p.preferred_env || "");
+      setVal("f-experience", p.experience_level || "");
+      setVal("f-risk", p.risk_tolerance || "");
+      setVal("f-instagram", p.instagram_url || "");
+      setVal("f-tiktok", p.tiktok_url || "");
+      setVal("f-website", p.website_url || "");
+    }
+
+    // --- Profile save ---
+    document.getElementById("profile-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const status = document.getElementById("profile-save-status");
+      const btn = e.target.querySelector("[type=submit]");
+      btn.disabled = true;
+      status.textContent = "Saving…";
+      status.className = "save-status";
+      try {
+        const payload = {
+          name: getVal("f-name"),
+          bio: getVal("f-bio"),
+          business_name: getVal("f-business"),
+          location: getVal("f-location"),
+          category: getVal("f-category"),
+          subcategory: getVal("f-subcategory"),
+          price_range: getVal("f-price-range"),
+          max_booth_price: getVal("f-max-booth") ? parseFloat(getVal("f-max-booth")) : null,
+          main_goal: getVal("f-goal"),
+          preferred_env: getVal("f-env"),
+          experience_level: getVal("f-experience"),
+          risk_tolerance: getVal("f-risk"),
+          instagram_url: getVal("f-instagram"),
+          tiktok_url: getVal("f-tiktok"),
+          website_url: getVal("f-website"),
+        };
+        const r = await fetch("/api/vendor/shop-profile", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (r.ok) {
+          status.textContent = "Saved ✓";
+          status.className = "save-status ok";
+        } else {
+          throw new Error("Server error");
+        }
+      } catch (_) {
+        status.textContent = "Save failed — try again.";
+        status.className = "save-status err";
+      }
+      btn.disabled = false;
+      setTimeout(() => { status.textContent = ""; }, 3500);
+    });
+
+    // --- Products ---
+    let products = [];
+    let editingId = null;
+
+    async function loadProducts() {
+      try {
+        const r = await fetch("/api/vendor/products", { credentials: "include" });
+        if (r.ok) {
+          const d = await r.json();
+          products = d.products || [];
+        }
+      } catch (_) {}
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const list = document.getElementById("product-list");
+      const empty = document.getElementById("empty-products");
+      const badge = document.getElementById("product-count-badge");
+      badge.textContent = products.length ? `(${products.length})` : "";
+
+      if (!products.length) {
+        list.innerHTML = "";
+        empty.style.display = "";
+        return;
+      }
+      empty.style.display = "none";
+      list.innerHTML = products.map(p => `
+        <div class="product-row" data-id="${p.id}">
+          <div class="product-thumb">
+            ${p.image_url
+              ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none'">`
+              : "🛍️"
+            }
+          </div>
+          <div class="product-info">
+            <strong>${escapeHtml(p.name)}</strong>
+            <div class="product-meta">
+              ${p.category ? escapeHtml(p.category) + " · " : ""}
+              <span class="stock-badge ${p.in_stock ? "" : "out"}">${p.in_stock ? "In stock" : "Out of stock"}</span>
+            </div>
+          </div>
+          <div class="product-price-tag">${p.price !== null && p.price !== undefined ? "$" + Number(p.price).toFixed(2) : "—"}</div>
+          <div class="product-actions">
+            <button class="btn btn-secondary edit-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;">Edit</button>
+            <button class="btn btn-ghost delete-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;color:var(--error,#dc2626);">Delete</button>
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.addEventListener("click", () => openModal(parseInt(btn.dataset.id)));
+      });
+      list.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", () => confirmDelete(parseInt(btn.dataset.id)));
+      });
+    }
+
+    function openModal(id = null) {
+      editingId = id;
+      const modal = document.getElementById("product-modal");
+      document.getElementById("modal-title").textContent = id ? "Edit product" : "Add product";
+      if (id) {
+        const p = products.find(x => x.id === id);
+        if (p) {
+          setVal("p-name", p.name);
+          setVal("p-description", p.description);
+          setVal("p-price", p.price !== null ? p.price : "");
+          setVal("p-category", p.category);
+          setVal("p-image", p.image_url);
+          setVal("p-link", p.product_url);
+          document.getElementById("p-in-stock").checked = p.in_stock;
+        }
+      } else {
+        ["p-name","p-description","p-price","p-category","p-image","p-link"].forEach(id => setVal(id, ""));
+        document.getElementById("p-in-stock").checked = true;
+      }
+      modal.classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("product-modal").classList.remove("open");
+      editingId = null;
+    }
+
+    document.getElementById("add-product-btn").addEventListener("click", () => openModal());
+    document.getElementById("empty-add-btn").addEventListener("click", () => openModal());
+    document.getElementById("modal-cancel").addEventListener("click", closeModal);
+    document.getElementById("product-modal").addEventListener("click", e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById("modal-save").addEventListener("click", async () => {
+      const name = getVal("p-name").trim();
+      if (!name) { alert("Product name is required."); return; }
+      const btn = document.getElementById("modal-save");
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+      const payload = {
+        name,
+        description: getVal("p-description"),
+        price: getVal("p-price") !== "" ? parseFloat(getVal("p-price")) : null,
+        category: getVal("p-category"),
+        image_url: getVal("p-image"),
+        product_url: getVal("p-link"),
+        in_stock: document.getElementById("p-in-stock").checked,
+      };
+      try {
+        let r;
+        if (editingId) {
+          r = await fetch(`/api/vendor/products/${editingId}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          r = await fetch("/api/vendor/products", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+        if (r.ok) {
+          closeModal();
+          await loadProducts();
+        } else {
+          alert("Could not save product. Try again.");
+        }
+      } catch (_) {
+        alert("Network error. Try again.");
+      }
+      btn.disabled = false;
+      btn.textContent = "Save product";
+    });
+
+    async function confirmDelete(id) {
+      const p = products.find(x => x.id === id);
+      if (!p) return;
+      if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+      try {
+        const r = await fetch(`/api/vendor/products/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (r.ok) await loadProducts();
+      } catch (_) {}
+    }
+
+    await loadProducts();
+
+    // --- AI features (shown only when enabled) ---
+    let aiContentEnabled = false;
+    try {
+      const r = await fetch("/api/config");
+      if (r.ok) {
+        const cfg = await r.json();
+        aiContentEnabled = !!(cfg.ai_content);
+      }
+    } catch (_) {}
+
+    if (aiContentEnabled) {
+      document.getElementById("ai-bio-btn").style.display = "";
+
+      document.getElementById("generate-bio-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("generate-bio-btn");
+        btn.disabled = true;
+        btn.textContent = "Generating…";
+        const sugBox = document.getElementById("bio-suggestions");
+        sugBox.style.display = "none";
+        sugBox.innerHTML = "";
+        try {
+          const r = await fetch("/api/ai/content/bio", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              category: getVal("f-category"),
+              location: getVal("f-location"),
+              style: "friendly",
+            }),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            const suggestions = d.suggestions || [];
+            if (suggestions.length) {
+              sugBox.style.display = "";
+              sugBox.innerHTML = `<p style="font-size:.78rem;color:var(--muted);margin:0 0 .4rem;">Click a suggestion to use it:</p>` +
+                suggestions.map((s, i) =>
+                  `<button type="button" class="bio-chip" data-idx="${i}" style="display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:.55rem .8rem;font-size:.88rem;cursor:pointer;margin-bottom:.4rem;color:var(--text);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--line)'">${escapeHtml(s)}</button>`
+                ).join("");
+              sugBox.querySelectorAll(".bio-chip").forEach(chip => {
+                chip.addEventListener("click", () => {
+                  setVal("f-bio", chip.textContent.trim());
+                  sugBox.style.display = "none";
+                });
+              });
+            }
+          }
+        } catch (_) {}
+        btn.disabled = false;
+        btn.textContent = "✨ Generate";
+      });
+    }
+
+    // --- AI product description in modal ---
+    if (aiContentEnabled) {
+      // Add generate button next to description label in modal
+      const descLabel = document.querySelector("label[for='p-description']");
+      if (descLabel) {
+        const genBtn = document.createElement("button");
+        genBtn.type = "button";
+        genBtn.id = "gen-desc-btn";
+        genBtn.style.cssText = "font-size:.72rem;padding:.15rem .5rem;margin-left:.5rem;";
+        genBtn.className = "btn btn-ghost";
+        genBtn.textContent = "✨ Generate";
+        descLabel.appendChild(genBtn);
+
+        genBtn.addEventListener("click", async () => {
+          const name = getVal("p-name").trim();
+          if (!name) { alert("Enter a product name first."); return; }
+          genBtn.disabled = true;
+          genBtn.textContent = "Generating…";
+          try {
+            const r = await fetch("/api/ai/content/product-description", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name,
+                category: getVal("p-category"),
+                price: getVal("p-price") ? parseFloat(getVal("p-price")) : null,
+              }),
+            });
+            if (r.ok) {
+              const d = await r.json();
+              if (d.description) setVal("p-description", d.description);
+            }
+          } catch (_) {}
+          genBtn.disabled = false;
+          genBtn.textContent = "✨ Generate";
+        });
+      }
+    }
+
+    // helpers
+    function setVal(id, val) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = val ?? "";
+    }
+    function getVal(id) {
+      return (document.getElementById(id)?.value || "");
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+  })();
+  </script>
+</body>
+</html>

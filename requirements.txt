@@ -5,3 +5,5 @@ stripe>=7.0
 httpx>=0.27
 itsdangerous>=2.2
 psycopg[binary]>=3.2
+# AI add-on (optional — only needed when AI_*_ENABLED=true)
+anthropic>=0.40

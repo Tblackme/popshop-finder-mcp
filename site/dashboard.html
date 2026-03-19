@@ -72,21 +72,19 @@
     <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
       <nav class="nav-links">
-        <a href="/">Home</a>
         <a class="active" href="/dashboard">Dashboard</a>
+        <a href="/my-shop">My Shop</a>
         <a href="/discover">Discover</a>
         <a href="/final-plan">Profit</a>
-        <a href="/business">Business</a>
       </nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
     <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/">Home</a>
       <a href="/dashboard">Dashboard</a>
+      <a href="/my-shop">My Shop</a>
       <a href="/discover">Discover</a>
       <a href="/final-plan">Profit</a>
-      <a href="/business">Business</a>
       <div data-mobile-auth-nav></div>
     </div>
   </header>
@@ -94,15 +92,19 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <span class="eyebrow">Vendor dashboard</span>
+        <span class="eyebrow">Vendor dashboard — free tools</span>
         <h1 id="dash-welcome">Welcome back.</h1>
-        <p>Your events, shop, and earnings in one place.</p>
+        <p>Your shop, events, and profit tracker — all manual, all free, no AI required.</p>
       </div>
     </section>
 
     <section>
       <div class="container">
         <div class="dash-grid">
+          <!-- Vendor planning assistant (used by setupDashboard in app.js) -->
+          <div data-dashboard-root>
+            <div data-guided-dashboard></div>
+          </div>
 
           <!-- Shopify banner — full width -->
           <div id="shopify-banner-slot">
@@ -127,17 +129,26 @@
             </div>
           </div>
 
+          <!-- My Shop card -->
+          <div class="dash-card">
+            <span class="eyebrow">My shop</span>
+            <h3>Products &amp; profile</h3>
+            <div id="dash-shop-summary" style="margin:.6rem 0 1rem;font-size:.88rem;color:var(--muted);">Loading…</div>
+            <div class="quick-links">
+              <a class="btn btn-primary" href="/my-shop">Manage shop</a>
+              <a class="btn btn-secondary" id="dash-shop-link" href="#" style="display:none">View public page</a>
+            </div>
+          </div>
+
           <!-- Quick actions -->
           <div class="dash-card">
             <span class="eyebrow">Vendor tools</span>
             <h3>Quick actions</h3>
             <div class="quick-links" style="margin-top:.85rem;">
-              <a class="btn btn-primary" href="/discover">Find markets</a>
-              <a class="btn btn-secondary" href="/final-plan">Profit calculator</a>
-              <a class="btn btn-secondary" href="/business">Business analytics</a>
-              <a class="btn btn-secondary" href="/integrations">Integrations</a>
-              <a class="btn btn-secondary" href="/profile">Edit profile</a>
-              <a class="btn btn-secondary" id="dash-shop-link" href="/shop" style="display:none">My public shop</a>
+              <a class="btn btn-primary" href="/discover">Browse events</a>
+              <a class="btn btn-secondary" href="/final-plan">Profit planner</a>
+              <a class="btn btn-secondary" href="/my-shop">My shop</a>
+              <a class="btn btn-secondary" href="/profile">Scoring profiles</a>
             </div>
             <div style="margin-top:1.25rem;" id="dash-plan-slot">
                 <a class="btn btn-ghost" href="/final-plan" style="margin-top:.5rem;">Open planning wizard →</a>
@@ -175,14 +186,16 @@
       }
 
       // Load everything in parallel
-      const [shopifyMe, shopifyProducts, dashboard] = await Promise.all([
+      const [shopifyMe, shopifyProducts, dashboard, myProducts] = await Promise.all([
         fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
         fetch("/api/dashboard", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/vendor/products", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
       renderShopifyBanner(shopifyMe, shopifyProducts, me);
       renderSavedMarkets(dashboard);
+      renderShopSummary(myProducts, me);
     })();
 
     function renderShopifyBanner(shopify, products, me) {
@@ -240,6 +253,17 @@
         } catch (_) { btn.textContent = "Sync products"; btn.disabled = false; }
         setTimeout(() => { if (!btn.disabled) return; btn.textContent = "Sync products"; btn.disabled = false; }, 3000);
       });
+    }
+
+    function renderShopSummary(data, me) {
+      const el = document.getElementById("dash-shop-summary");
+      if (!el) return;
+      const count = data?.products?.length ?? 0;
+      if (count === 0) {
+        el.innerHTML = `<span>No products added yet.</span> <a href="/my-shop" style="color:var(--brand);font-weight:600;">Set up your shop →</a>`;
+      } else {
+        el.innerHTML = `<strong>${count}</strong> product${count === 1 ? "" : "s"} listed · <a href="/my-shop" style="color:var(--brand);">Manage →</a>`;
+      }
     }
 
     function renderSavedMarkets(dashboard) {

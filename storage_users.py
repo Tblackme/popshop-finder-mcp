@@ -194,6 +194,48 @@ def init_users_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS vendor_profiles (
+                user_id INTEGER PRIMARY KEY,
+                business_name TEXT,
+                category TEXT,
+                subcategory TEXT,
+                location TEXT,
+                price_range TEXT,
+                main_goal TEXT,
+                preferred_env TEXT,
+                experience_level TEXT,
+                risk_tolerance TEXT,
+                max_booth_price REAL,
+                instagram_url TEXT,
+                tiktok_url TEXT,
+                website_url TEXT,
+                banner_color TEXT DEFAULT '#0f766e',
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS vendor_products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                price REAL,
+                image_url TEXT,
+                product_url TEXT,
+                category TEXT,
+                in_stock INTEGER NOT NULL DEFAULT 1,
+                display_order INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -853,3 +895,207 @@ def get_notifications_for_user(user_id: int, limit: int = 20) -> list[dict[str, 
         }
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Vendor extended profile
+# ---------------------------------------------------------------------------
+
+def get_vendor_profile(user_id: int) -> dict[str, Any]:
+    """Return extended vendor profile, defaulting empty if not yet saved."""
+    init_users_db()
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM vendor_profiles WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row:
+        return {key: row[key] for key in row.keys()}
+    return {
+        "user_id": user_id,
+        "business_name": "",
+        "category": "",
+        "subcategory": "",
+        "location": "",
+        "price_range": "",
+        "main_goal": "",
+        "preferred_env": "",
+        "experience_level": "",
+        "risk_tolerance": "",
+        "max_booth_price": None,
+        "instagram_url": "",
+        "tiktok_url": "",
+        "website_url": "",
+        "banner_color": "#0f766e",
+        "updated_at": "",
+    }
+
+
+def upsert_vendor_profile(user_id: int, fields: dict[str, Any]) -> dict[str, Any]:
+    init_users_db()
+    allowed = {
+        "business_name", "category", "subcategory", "location",
+        "price_range", "main_goal", "preferred_env", "experience_level",
+        "risk_tolerance", "max_booth_price", "instagram_url", "tiktok_url",
+        "website_url", "banner_color",
+    }
+    clean = {k: v for k, v in fields.items() if k in allowed}
+    if not clean:
+        return get_vendor_profile(user_id)
+    conn = _connect()
+    try:
+        cols = ", ".join(clean.keys())
+        placeholders = ", ".join("?" for _ in clean)
+        update_clause = ", ".join(f"{k} = excluded.{k}" for k in clean)
+        conn.execute(
+            f"""
+            INSERT INTO vendor_profiles (user_id, {cols}, updated_at)
+            VALUES (?, {placeholders}, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                {update_clause},
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, *clean.values()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_vendor_profile(user_id)
+
+
+# ---------------------------------------------------------------------------
+# Vendor manual products
+# ---------------------------------------------------------------------------
+
+def _product_from_row(row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "name": row["name"],
+        "description": row["description"] or "",
+        "price": float(row["price"]) if row["price"] is not None else None,
+        "image_url": row["image_url"] or "",
+        "product_url": row["product_url"] or "",
+        "category": row["category"] or "",
+        "in_stock": bool(row["in_stock"]),
+        "display_order": int(row["display_order"] or 0),
+        "created_at": row["created_at"] or "",
+        "updated_at": row["updated_at"] or "",
+    }
+
+
+def list_vendor_products(user_id: int) -> list[dict[str, Any]]:
+    init_users_db()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM vendor_products
+            WHERE user_id = ?
+            ORDER BY display_order ASC, created_at ASC
+            """,
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [_product_from_row(r) for r in rows]
+
+
+def list_vendor_products_by_username(username: str) -> list[dict[str, Any]]:
+    init_users_db()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT vp.* FROM vendor_products vp
+            JOIN users u ON u.id = vp.user_id
+            WHERE LOWER(u.username) = LOWER(?)
+            ORDER BY vp.display_order ASC, vp.created_at ASC
+            """,
+            (username.strip(),),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [_product_from_row(r) for r in rows]
+
+
+def create_vendor_product(user_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+    init_users_db()
+    name = str(payload.get("name", "")).strip()
+    if not name:
+        raise ValueError("Product name is required.")
+    conn = _connect()
+    try:
+        cursor = conn.execute(
+            """
+            INSERT INTO vendor_products
+                (user_id, name, description, price, image_url, product_url, category, in_stock, display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                name,
+                str(payload.get("description", "")).strip(),
+                float(payload["price"]) if payload.get("price") is not None else None,
+                str(payload.get("image_url", "")).strip(),
+                str(payload.get("product_url", "")).strip(),
+                str(payload.get("category", "")).strip(),
+                1 if payload.get("in_stock", True) else 0,
+                int(payload.get("display_order", 0)),
+            ),
+        )
+        product_id = cursor.lastrowid
+        conn.commit()
+        row = conn.execute("SELECT * FROM vendor_products WHERE id = ?", (product_id,)).fetchone()
+    finally:
+        conn.close()
+    return _product_from_row(row)
+
+
+def update_vendor_product(product_id: int, user_id: int, payload: dict[str, Any]) -> dict[str, Any] | None:
+    init_users_db()
+    allowed = {"name", "description", "price", "image_url", "product_url", "category", "in_stock", "display_order"}
+    clean: dict[str, Any] = {}
+    for k, v in payload.items():
+        if k not in allowed:
+            continue
+        if k == "in_stock":
+            clean[k] = 1 if v else 0
+        elif k == "price":
+            clean[k] = float(v) if v is not None else None
+        elif k == "display_order":
+            clean[k] = int(v or 0)
+        else:
+            clean[k] = str(v).strip()
+    conn = _connect()
+    try:
+        if clean:
+            set_clause = ", ".join(f"{k} = ?" for k in clean)
+            conn.execute(
+                f"UPDATE vendor_products SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+                (*clean.values(), product_id, user_id),
+            )
+            conn.commit()
+        row = conn.execute(
+            "SELECT * FROM vendor_products WHERE id = ? AND user_id = ?", (product_id, user_id)
+        ).fetchone()
+    finally:
+        conn.close()
+    return _product_from_row(row) if row else None
+
+
+def delete_vendor_product(product_id: int, user_id: int) -> bool:
+    init_users_db()
+    conn = _connect()
+    try:
+        result = conn.execute(
+            "DELETE FROM vendor_products WHERE id = ? AND user_id = ?", (product_id, user_id)
+        )
+        deleted = result.rowcount > 0
+        conn.commit()
+    finally:
+        conn.close()
+    return deleted

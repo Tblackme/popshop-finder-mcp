@@ -104,6 +104,13 @@ from storage_users import (
     update_user_profile,
     upsert_availability_for_user,
     upsert_vendor_tracker_for_user,
+    get_vendor_profile,
+    upsert_vendor_profile,
+    list_vendor_products,
+    list_vendor_products_by_username,
+    create_vendor_product,
+    update_vendor_product,
+    delete_vendor_product,
 )
 from shopify_oauth import (
     build_authorize_url,
@@ -143,6 +150,7 @@ PUBLIC_PAGE_ROUTES = {
     "/find-my-next-market": "find-market.html",
     "/business": "business.html",
     "/profile": "profile.html",
+    "/my-shop": "my-shop.html",
     "/final-plan": "final-plan.html",
     "/shopper-plan": "shopper-plan.html",
     "/history": "history.html",
@@ -379,6 +387,7 @@ def _dev_login_enabled(request: Request) -> bool:
 def _serialize_vendor_profile(vendor: dict[str, Any], viewer: dict[str, Any] | None = None) -> dict[str, Any]:
     vendor_id = int(vendor["id"])
     upcoming_events = _apply_recurrence_signals(get_vendor_visible_events(vendor_id, visible_only=True))
+    extended = get_vendor_profile(vendor_id)
     payload = {
         "id": vendor_id,
         "name": vendor.get("name", ""),
@@ -388,6 +397,7 @@ def _serialize_vendor_profile(vendor: dict[str, Any], viewer: dict[str, Any] | N
         "upcoming_events": upcoming_events,
         "profile_url": f"/u/{vendor.get('username', '')}",
         "followers_visible_events_count": len(upcoming_events),
+        "profile": extended,
     }
     if viewer and _normalized_role(viewer) == "shopper":
         payload["is_following"] = is_following_vendor(int(viewer["id"]), vendor_id)
@@ -1253,6 +1263,28 @@ def create_app() -> FastAPI:
     from storage_shopify import init_shopify_db
     init_shopify_db()
 
+    # AI infrastructure — init tables and register routes if enabled
+    cfg = get_config()
+    app.state.config = cfg
+    _ai_flags = {
+        "ai_enabled": cfg.ai_enabled,
+        "ai_match": cfg.ai_enabled and cfg.ai_match_enabled,
+        "ai_content": cfg.ai_enabled and cfg.ai_content_enabled,
+        "ai_discovery": cfg.ai_enabled and cfg.ai_discovery_enabled,
+    }
+    app.state.ai_flags = _ai_flags
+    if cfg.ai_enabled:
+        from storage_ai import init_ai_db
+        init_ai_db()
+        from server_ai import register_ai_routes
+        register_ai_routes(app)
+        logger.info(
+            "AI routes registered — match=%s content=%s discovery=%s",
+            cfg.ai_match_enabled,
+            cfg.ai_content_enabled,
+            cfg.ai_discovery_enabled,
+        )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -1306,6 +1338,14 @@ def create_app() -> FastAPI:
                 saved = await _run_discovery("periodic")
                 logger.info("[discovery:periodic] complete — %d events processed", saved)
         asyncio.create_task(_run())
+
+    # AI add-on router — mounted only when the module is available
+    try:
+        from ai.router import router as ai_router
+        app.include_router(ai_router)
+        logger.info("AI add-on layer loaded — routes available at /api/ai/*")
+    except ImportError:
+        logger.info("AI add-on layer not loaded (ai/ module not found)")
 
     @app.exception_handler(404)
     async def custom_not_found(request: Request, _exc: Any) -> JSONResponse:
@@ -1436,6 +1476,23 @@ def create_app() -> FastAPI:
                 "serper_configured": bool(cfg.serper_api_key),
             }
         )
+
+    @app.get("/api/config")
+    async def handle_app_config(request: Request) -> JSONResponse:
+        """
+        Public endpoint — returns feature flags for the current deployment.
+        The frontend reads this once on load to decide which UI surfaces to show.
+        No sensitive keys are exposed here.
+        """
+        flags = getattr(app.state, "ai_flags", {})
+        return JSONResponse({
+            "ok": True,
+            "free_tier": True,           # core platform always free
+            "ai_enabled": bool(flags.get("ai_enabled")),
+            "ai_matching": bool(flags.get("ai_match")),
+            "ai_content": bool(flags.get("ai_content")),
+            "ai_discovery": bool(flags.get("ai_discovery")),
+        })
 
     @app.get("/api/debug/env")
     async def handle_debug_env() -> JSONResponse:
@@ -1632,18 +1689,29 @@ def create_app() -> FastAPI:
         if not vendor or _normalized_role(vendor) != "vendor":
             return _validation_error("Vendor not found.", status_code=404)
 
+        # Always include manual products
+        manual_products = list_vendor_products_by_username(username)
+
         conn = get_shopify_connection(int(vendor["id"]))
-        if not conn:
-            return JSONResponse({"ok": True, "connected": False, "shop": "", "products": [], "message": "This vendor has not connected Shopify yet."})
+        shop_domain = ""
+        if conn:
+            shop_domain = conn.get("storefront_domain") or conn.get("shop_domain") or ""
 
-        shop_domain = conn.get("storefront_domain") or conn.get("shop_domain") or ""
-        if not shop_domain:
-            return JSONResponse({"ok": True, "connected": False, "shop": "", "products": [], "message": "This vendor has not connected Shopify yet."})
+        if not conn or not shop_domain:
+            # Return manual products only
+            return JSONResponse({
+                "ok": True,
+                "connected": False,
+                "shop": "",
+                "products": manual_products,
+                "source": "manual",
+                "message": "This vendor's products." if manual_products else "This vendor hasn't added products yet.",
+            })
 
-        # Use storefront token if available, otherwise use tokenless access (supports products/collections)
+        # Try Shopify storefront
         storefront_token = get_shopify_storefront_access_token(int(vendor["id"])) or ""
         try:
-            products = fetch_storefront_products(shop_domain, storefront_token, limit=10)
+            shopify_products = fetch_storefront_products(shop_domain, storefront_token, limit=10)
         except Exception as exc:
             logger.warning("Shopify storefront fetch failed for @%s: %s", vendor.get("username"), exc)
             return JSONResponse(
@@ -1652,20 +1720,20 @@ def create_app() -> FastAPI:
                     "connected": True,
                     "shop": shop_domain,
                     "products": [],
-                    "message": "Try again soon while this vendor's Shopify products refresh.",
-                    "error": "Products are temporarily unavailable right now.",
+                    "source": "shopify",
+                    "error": "Shopify storefront is temporarily unavailable. Try again later.",
                 },
                 status_code=502,
             )
-        return JSONResponse(
-            {
-                "ok": True,
-                "connected": True,
-                "shop": shop_domain,
-                "products": products,
-                "message": "Products are ready to browse." if products else "This vendor's storefront is connected, but no products are published yet.",
-            }
-        )
+        all_products = shopify_products or manual_products
+        return JSONResponse({
+            "ok": True,
+            "connected": True,
+            "shop": shop_domain,
+            "products": all_products,
+            "source": "shopify" if shopify_products else "manual",
+            "message": "Products are ready to browse." if all_products else "No products are published yet.",
+        })
 
     @app.post("/api/vendors/{vendor_id}/follow")
     async def handle_follow_vendor(request: Request, vendor_id: int) -> JSONResponse:
@@ -2289,6 +2357,101 @@ def create_app() -> FastAPI:
 
         updated = update_user_profile(int(user["id"]), name, interests, bio)
         return JSONResponse({"ok": True, "user": updated})
+
+    @app.get("/api/vendor/shop-profile")
+    async def handle_vendor_shop_profile_get(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        profile = get_vendor_profile(int(user["id"]))
+        return JSONResponse({"ok": True, "profile": profile, "user": user})
+
+    @app.post("/api/vendor/shop-profile")
+    async def handle_vendor_shop_profile_update(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        # Update basic user fields if provided
+        name = str(body.get("name", user.get("name", ""))).strip()
+        bio = str(body.get("bio", user.get("bio", ""))).strip()
+        interests = str(body.get("interests", user.get("interests", ""))).strip()
+        if name:
+            update_user_profile(int(user["id"]), name, interests, bio)
+        # Update extended profile fields
+        ext_fields = {
+            k: body[k] for k in (
+                "business_name", "category", "subcategory", "location",
+                "price_range", "main_goal", "preferred_env", "experience_level",
+                "risk_tolerance", "max_booth_price", "instagram_url", "tiktok_url",
+                "website_url", "banner_color",
+            ) if k in body
+        }
+        profile = upsert_vendor_profile(int(user["id"]), ext_fields)
+        updated_user = get_user_by_id(int(user["id"]))
+        return JSONResponse({"ok": True, "profile": profile, "user": updated_user})
+
+    @app.get("/api/vendor/products")
+    async def handle_my_products(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        products = list_vendor_products(int(user["id"]))
+        return JSONResponse({"ok": True, "products": products})
+
+    @app.post("/api/vendor/products")
+    async def handle_create_product(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        try:
+            product = create_vendor_product(int(user["id"]), body)
+        except ValueError as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "product": product}, status_code=201)
+
+    @app.patch("/api/vendor/products/{product_id}")
+    async def handle_update_product(request: Request, product_id: int) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        product = update_vendor_product(product_id, int(user["id"]), body)
+        if not product:
+            return _validation_error("Product not found.", status_code=404)
+        return JSONResponse({"ok": True, "product": product})
+
+    @app.delete("/api/vendor/products/{product_id}")
+    async def handle_delete_product(request: Request, product_id: int) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        deleted = delete_vendor_product(product_id, int(user["id"]))
+        if not deleted:
+            return _validation_error("Product not found.", status_code=404)
+        return JSONResponse({"ok": True})
 
     @app.get("/api/saved-markets")
     async def handle_saved_markets(request: Request) -> JSONResponse:

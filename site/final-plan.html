@@ -1,1777 +1,569 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vendor Atlas | Final Plan</title>
-<link rel="stylesheet" href="/assets/styles.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/final-plan.css">
-<style>
-/* Official Vendor Atlas palette (cream, teal, amber). See site/DESIGN.md */
-body.final-plan-page {
-  --surface2: var(--surface-strong);
-  --surface3: rgba(19, 38, 35, 0.06);
-  --border: var(--line);
-  --border2: rgba(19, 38, 35, 0.18);
-  --text2: var(--muted);
-  --text3: rgba(19, 38, 35, 0.5);
-  --accent: var(--brand);
-  --accent2: var(--brand-deep);
-  --accent-glow: rgba(15, 118, 110, 0.12);
-  --gold: var(--accent);
-  --gold-dim: rgba(232, 159, 71, 0.15);
-  --green: var(--success);
-  --green-dim: rgba(2, 122, 72, 0.12);
-  --red: var(--danger);
-  --red-dim: rgba(180, 35, 24, 0.1);
-  --amber: var(--accent);
-  --amber-dim: rgba(232, 159, 71, 0.12);
-  --radius: 16px;
-  --radius-sm: 10px;
-  --radius-xs: 6px;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profit Planner | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    /* ── PAGE LAYOUT ── */
+    .profit-hero { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--line); }
+    .profit-hero .eyebrow { font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600; }
+    .profit-hero h1 { margin:.25rem 0 .4rem; font-size: 2rem; }
+    .profit-hero p { color: var(--muted); margin: 0; }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    .planner-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      padding: 2rem 0 4rem;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .planner-grid { grid-template-columns: 1fr; } }
 
-html { scroll-behavior: smooth; }
+    /* ── SUMMARY SIDEBAR ── */
+    .summary-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: 0 2px 16px rgba(12,31,29,.07);
+      position: sticky;
+      top: 80px;
+    }
+    .summary-card h3 { margin: 0 0 1rem; font-size: 1rem; }
+    .summary-stat { display: flex; justify-content: space-between; align-items: baseline; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+    .summary-stat:last-of-type { border-bottom: none; }
+    .summary-stat .label { font-size: .85rem; color: var(--muted); }
+    .summary-stat .value { font-weight: 700; font-size: 1.05rem; }
+    .value.positive { color: var(--success, #15803d); }
+    .value.negative { color: var(--danger, #dc2626); }
+    .summary-total { background: rgba(15,118,110,.07); border-radius: var(--radius-md); padding: 1rem; margin-top: 1rem; text-align: center; }
+    .summary-total .total-label { font-size: .8rem; color: var(--muted); margin-bottom: .2rem; }
+    .summary-total .total-value { font-size: 1.8rem; font-weight: 800; }
+    .summary-total .total-value.positive { color: var(--brand); }
+    .summary-total .total-value.negative { color: var(--danger, #dc2626); }
+    .roi-bar { margin-top: 1rem; }
+    .roi-bar-label { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-bottom: .35rem; }
+    .roi-bar-track { background: var(--line); border-radius: 99px; height: 8px; overflow: hidden; }
+    .roi-bar-fill { height: 100%; border-radius: 99px; background: var(--brand); transition: width .4s; }
 
-body.final-plan-page {
-  font-family: var(--font-body);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-  font-size: 15px;
-  line-height: 1.6;
-}
+    /* ── EVENT CARDS ── */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .section-header h2 { font-size: 1.15rem; margin: 0; }
 
-/* ── NOISE TEXTURE ── */
-body.final-plan-page::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none; z-index: 0; opacity: 0.08;
-}
+    .event-plan-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 8px rgba(12,31,29,.06);
+      transition: box-shadow .2s;
+    }
+    .event-plan-card:hover { box-shadow: 0 4px 20px rgba(12,31,29,.1); }
+    .event-card-header { display: flex; align-items: flex-start; gap: .75rem; }
+    .event-card-icon { font-size: 1.6rem; flex-shrink: 0; line-height: 1; margin-top: .1rem; }
+    .event-card-title { flex: 1; min-width: 0; }
+    .event-card-title strong { display: block; font-size: .97rem; }
+    .event-card-title .event-meta { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
+    .event-card-profit { text-align: right; flex-shrink: 0; }
+    .event-card-profit .profit-label { font-size: .7rem; color: var(--muted); }
+    .event-card-profit .profit-val { font-size: 1.15rem; font-weight: 800; }
 
-/* ── LAYOUT ── */
-.app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .event-card-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: .75rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+    }
+    @media (max-width: 500px) { .event-card-inputs { grid-template-columns: 1fr 1fr; } }
+    .input-group { display: flex; flex-direction: column; gap: .25rem; }
+    .input-group label { font-size: .75rem; font-weight: 600; color: var(--muted); }
+    .input-group input {
+      padding: .45rem .7rem;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      background: var(--bg);
+      color: var(--text);
+      width: 100%;
+    }
+    .input-group input:focus { outline: none; border-color: var(--brand); }
+    .input-group input.fee-locked { background: rgba(15,118,110,.06); color: var(--brand); font-weight: 600; }
 
-/* ── NAV ── */
-.nav {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 28px; height: 60px;
-  background: rgba(247, 242, 234, 0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-.nav-logo {
-  font-family: var(--font-display);
-  font-weight: 800; font-size: 17px;
-  letter-spacing: -0.02em;
-  display: flex; align-items: center; gap: 8px;
-}
-.nav-logo-mark {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
-}
-.nav-tabs { display: flex; gap: 4px; }
-.nav-tab {
-  padding: 6px 14px; border-radius: 8px;
-  font-size: 13px; font-weight: 500;
-  cursor: pointer; border: none;
-  background: transparent; color: var(--text2);
-  transition: all 0.2s;
-  font-family: var(--font-body);
-}
-.nav-tab:hover { color: var(--text); background: var(--surface2); }
-.nav-tab.active { background: var(--surface3); color: var(--text); }
-.nav-right { display: flex; align-items: center; gap: 10px; }
-.badge {
-  background: var(--accent); color: white;
-  font-size: 11px; font-weight: 600;
-  padding: 2px 7px; border-radius: 20px;
-  font-family: var(--font-mono);
-}
+    .event-card-actions { display: flex; gap: .5rem; margin-top: .85rem; align-items: center; }
+    .event-notes { flex: 1; }
+    .event-notes input { width: 100%; padding: .4rem .65rem; border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: .82rem; background: var(--bg); color: var(--text); }
+    .event-notes input:focus { outline: none; border-color: var(--brand); }
+    .delete-event-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .78rem; padding: .3rem .5rem; border-radius: 4px; }
+    .delete-event-btn:hover { color: var(--danger, #dc2626); background: rgba(220,38,38,.06); }
 
-/* ── SCREENS ── */
-.screen { display: none; flex-direction: column; flex: 1; }
-.screen.active { display: flex; }
+    /* ── ADD EVENT FORM ── */
+    .add-event-section {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-top: .5rem;
+      box-shadow: 0 1px 8px rgba(12,31,29,.06);
+    }
+    .add-event-section h3 { margin: 0 0 1rem; font-size: .95rem; font-weight: 700; }
+    .add-event-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media (max-width: 500px) { .add-event-grid { grid-template-columns: 1fr; } }
+    .add-event-grid .full { grid-column: 1 / -1; }
+    .add-event-grid input, .add-event-grid select {
+      width: 100%; padding: .5rem .75rem;
+      border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+      font-size: .9rem; background: var(--bg); color: var(--text);
+    }
+    .add-event-grid input:focus, .add-event-grid select:focus { outline: none; border-color: var(--brand); }
+    .add-event-grid label { font-size: .78rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: .25rem; }
 
-/* ══════════════════════════════════════════
-   DISCOVERY SCREEN
-══════════════════════════════════════════ */
-.discovery-header {
-  padding: 32px 28px 20px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06) 0%, transparent 100%);
-}
-.discovery-title {
-  font-family: var(--font-display);
-  font-size: 28px; font-weight: 800;
-  letter-spacing: -0.03em; margin-bottom: 4px;
-}
-.discovery-title span { color: var(--accent2); }
-.discovery-sub { color: var(--text2); font-size: 14px; }
+    /* ── EMPTY STATE ── */
+    .empty-plan { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .empty-plan .icon { font-size: 2.5rem; margin-bottom: .75rem; }
 
-/* Search + mode bar */
-.search-bar-wrap {
-  display: flex; gap: 12px; margin-top: 18px; align-items: center;
-}
-.search-input-wrap {
-  flex: 1; position: relative;
-}
-.search-input-wrap svg {
-  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  color: var(--text3);
-}
-.search-input {
-  width: 100%; padding: 11px 14px 11px 40px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text);
-  font-family: var(--font-body); font-size: 14px;
-  outline: none; transition: border-color 0.2s;
-}
-.search-input:focus { border-color: var(--accent); }
-.search-input::placeholder { color: var(--text3); }
+    /* ── SAVED MARKETS IMPORT ── */
+    .import-bar {
+      background: rgba(15,118,110,.07);
+      border-radius: var(--radius-md);
+      padding: .85rem 1rem;
+      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .import-bar p { margin: 0; font-size: .85rem; flex: 1; min-width: 0; }
+    .import-bar strong { color: var(--brand); }
 
-.mode-toggle {
-  display: flex; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 3px; gap: 2px;
-}
-.mode-btn {
-  padding: 7px 14px; border-radius: 7px; border: none;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  font-family: var(--font-body); transition: all 0.2s;
-  color: var(--text2); background: transparent;
-  display: flex; align-items: center; gap: 5px;
-}
-.mode-btn.active { background: var(--accent); color: white; }
+    /* ── PAST STATS ── */
+    .stats-row { display: flex; gap: .65rem; flex-wrap: wrap; margin-top: 1.5rem; }
+    .stat-chip {
+      background: var(--surface); border-radius: var(--radius-md);
+      padding: .75rem 1rem; flex: 1; min-width: 130px;
+      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+      text-align: center;
+    }
+    .stat-chip .chip-val { font-size: 1.25rem; font-weight: 800; color: var(--brand); }
+    .stat-chip .chip-label { font-size: .75rem; color: var(--muted); margin-top: .15rem; }
 
-/* Filter chips */
-.filter-row {
-  display: flex; gap: 8px; padding: 14px 28px;
-  overflow-x: auto; border-bottom: 1px solid var(--border);
-  scrollbar-width: none;
-}
-.filter-row::-webkit-scrollbar { display: none; }
-.chip {
-  padding: 6px 14px; border-radius: 20px;
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; border: 1px solid var(--border);
-  background: var(--surface2); color: var(--text2);
-  white-space: nowrap; transition: all 0.18s;
-  font-family: var(--font-body);
-  display: flex; align-items: center; gap: 5px;
-}
-.chip:hover { border-color: var(--accent); color: var(--accent2); }
-.chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent2); }
-.chip-dot { width: 7px; height: 7px; border-radius: 50%; }
-
-/* Category tabs */
-.cat-tabs {
-  display: flex; gap: 6px; padding: 14px 28px 0;
-  overflow-x: auto; scrollbar-width: none;
-}
-.cat-tabs::-webkit-scrollbar { display: none; }
-.cat-tab {
-  padding: 7px 16px; border-radius: 8px 8px 0 0;
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; border: 1px solid transparent;
-  background: transparent; color: var(--text3);
-  transition: all 0.2s; font-family: var(--font-body);
-  border-bottom: none;
-}
-.cat-tab:hover { color: var(--text2); }
-.cat-tab.active {
-  background: var(--surface2); color: var(--text);
-  border-color: var(--border); border-bottom-color: var(--surface2);
-}
-
-/* Main area */
-.discovery-body {
-  display: flex; flex: 1; gap: 0;
-}
-.events-panel { flex: 1; overflow-y: auto; padding: 20px 28px 40px; }
-.sidebar { width: 300px; border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; flex-shrink: 0; }
-
-/* Group headers */
-.group-header {
-  display: flex; align-items: center; gap: 10px;
-  margin: 24px 0 12px; font-family: var(--font-display);
-  font-size: 13px; font-weight: 700; letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.group-header:first-child { margin-top: 0; }
-.group-dot { width: 8px; height: 8px; border-radius: 50%; }
-.group-count {
-  margin-left: auto; font-family: var(--font-mono);
-  font-size: 11px; color: var(--text3);
-}
-
-/* Event cards */
-.events-grid { display: flex; flex-direction: column; gap: 8px; }
-
-.event-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-  animation: fadeUp 0.3s ease both;
-}
-.event-card:hover {
-  border-color: var(--border2);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-.event-card.selected { border-color: var(--accent); background: rgba(15, 118, 110, 0.06); }
-.event-card::before {
-  content: '';
-  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-  border-radius: 3px 0 0 3px;
-}
-.event-card.best::before { background: var(--green); }
-.event-card.worth::before { background: var(--gold); }
-.event-card.notideal::before { background: var(--border2); }
-
-.card-top { display: flex; align-items: flex-start; gap: 12px; }
-.card-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
-}
-.card-main { flex: 1; min-width: 0; }
-.card-name {
-  font-family: var(--font-display);
-  font-weight: 700; font-size: 15px;
-  letter-spacing: -0.01em; margin-bottom: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.card-loc { color: var(--text2); font-size: 12px; display: flex; align-items: center; gap: 4px; }
-.card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-
-.fit-score {
-  font-family: var(--font-mono);
-  font-size: 20px; font-weight: 500;
-  line-height: 1;
-}
-.fit-score.high { color: var(--green); }
-.fit-score.med  { color: var(--gold); }
-.fit-score.low  { color: var(--text3); }
-.fit-label { font-size: 10px; color: var(--text3); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
-
-.card-pills { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-.pill {
-  padding: 3px 8px; border-radius: 5px;
-  font-size: 11px; font-weight: 500;
-  background: var(--surface3); color: var(--text2);
-}
-.pill.green { background: var(--green-dim); color: var(--green); }
-.pill.gold  { background: var(--gold-dim); color: var(--gold); }
-.pill.red   { background: var(--red-dim); color: var(--red); }
-.pill.accent{ background: var(--accent-glow); color: var(--accent2); }
-
-.card-footer { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.card-stat { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text2); }
-.card-stat strong { color: var(--text); font-weight: 600; }
-.card-add-btn {
-  margin-left: auto; padding: 5px 12px;
-  background: var(--surface3); border: 1px solid var(--border);
-  border-radius: 6px; font-size: 12px; font-weight: 600;
-  cursor: pointer; color: var(--text2); transition: all 0.15s;
-  font-family: var(--font-body);
-}
-.card-add-btn:hover { background: var(--accent); border-color: var(--accent); color: white; }
-.card-add-btn.added { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-
-/* SIDEBAR */
-.sidebar-title {
-  font-family: var(--font-display); font-size: 13px;
-  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text2); margin-bottom: 14px;
-}
-.pref-group { margin-bottom: 22px; }
-.pref-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
-.pref-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.pref-chip {
-  padding: 5px 10px; border-radius: 6px;
-  font-size: 11px; font-weight: 600;
-  cursor: pointer; border: 1px solid var(--border);
-  background: var(--surface2); color: var(--text3);
-  transition: all 0.15s; font-family: var(--font-body);
-}
-.pref-chip:hover { color: var(--text2); border-color: var(--border2); }
-.pref-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent2); }
-
-.range-wrap { display: flex; flex-direction: column; gap: 6px; }
-.range-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
-input[type=range] {
-  width: 100%; accent-color: var(--accent);
-  height: 3px;
-}
-
-.plan-counter {
-  position: sticky; bottom: 0;
-  background: linear-gradient(180deg, transparent, var(--bg) 30%);
-  padding: 20px 0 0;
-  margin-top: 20px;
-}
-.plan-counter-card {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: var(--radius); padding: 16px;
-  cursor: pointer; transition: opacity 0.2s;
-}
-.plan-counter-card:hover { opacity: 0.9; }
-.plan-counter-title { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
-.plan-counter-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
-.plan-counter-nums { display: flex; gap: 14px; margin-top: 10px; }
-.pcn { text-align: center; }
-.pcn-val { font-family: var(--font-mono); font-size: 20px; font-weight: 500; }
-.pcn-lab { font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
-
-/* ══════════════════════════════════════════
-   FINAL PLAN SCREEN
-══════════════════════════════════════════ */
-.plan-screen {
-  background: var(--bg);
-}
-.plan-hero {
-  padding: 36px 32px 28px;
-  border-bottom: 1px solid var(--border);
-  position: relative; overflow: hidden;
-}
-.plan-hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 60% 100% at 80% 50%, rgba(15, 118, 110, 0.12), transparent);
-  pointer-events: none;
-}
-.plan-hero-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent2); margin-bottom: 8px;
-  display: flex; align-items: center; gap: 6px;
-}
-.plan-hero-label::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent); }
-.plan-hero-title {
-  font-family: var(--font-display); font-size: 34px;
-  font-weight: 800; letter-spacing: -0.03em;
-  line-height: 1.1; margin-bottom: 8px;
-}
-.plan-hero-title em { font-style: normal; color: var(--accent2); }
-.plan-hero-sub { color: var(--text2); font-size: 14px; max-width: 500px; }
-
-/* Summary KPIs */
-.summary-kpis {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 12px; padding: 24px 32px;
-  border-bottom: 1px solid var(--border);
-}
-.kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px;
-  position: relative; overflow: hidden;
-}
-.kpi-icon { font-size: 22px; margin-bottom: 8px; }
-.kpi-val {
-  font-family: var(--font-mono); font-size: 26px;
-  font-weight: 500; line-height: 1; margin-bottom: 4px;
-}
-.kpi-val.green { color: var(--green); }
-.kpi-val.gold  { color: var(--gold); }
-.kpi-val.accent{ color: var(--accent2); }
-.kpi-val.amber { color: var(--amber); }
-.kpi-lab { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-.kpi-card::after {
-  content: ''; position: absolute;
-  bottom: -20px; right: -20px;
-  width: 60px; height: 60px; border-radius: 50%;
-  opacity: 0.06;
-}
-.kpi-card:nth-child(1)::after { background: var(--accent); }
-.kpi-card:nth-child(2)::after { background: var(--green); }
-.kpi-card:nth-child(3)::after { background: var(--gold); }
-.kpi-card:nth-child(4)::after { background: var(--red); }
-
-/* Plan body */
-.plan-body {
-  display: grid; grid-template-columns: 1fr 360px;
-  gap: 0; flex: 1;
-}
-.plan-main { padding: 28px 32px 60px; overflow-y: auto; border-right: 1px solid var(--border); }
-.plan-aside { padding: 28px 24px 60px; overflow-y: auto; }
-
-.section-head {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px;
-}
-.section-num {
-  width: 26px; height: 26px; border-radius: 7px;
-  background: var(--surface3); border: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-  color: var(--text2); flex-shrink: 0;
-}
-.section-title {
-  font-family: var(--font-display); font-size: 16px;
-  font-weight: 700; letter-spacing: -0.01em;
-}
-.plan-section { margin-bottom: 36px; }
-
-/* Route map placeholder */
-.map-placeholder {
-  width: 100%; height: 200px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 8px;
-  margin-bottom: 16px; position: relative; overflow: hidden;
-  cursor: pointer; transition: border-color 0.2s;
-}
-.map-placeholder:hover { border-color: var(--accent); }
-.map-grid {
-  position: absolute; inset: 0;
-  background-image: linear-gradient(var(--border) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 30px 30px;
-  opacity: 0.5;
-}
-.map-pin {
-  position: absolute; font-size: 20px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-  animation: float 3s ease-in-out infinite;
-}
-.map-center-label {
-  position: relative; z-index: 1;
-  font-size: 12px; color: var(--text2); font-weight: 500;
-  background: var(--surface); border: 1px solid var(--border);
-  padding: 6px 12px; border-radius: 6px;
-}
-
-/* Route list */
-.route-list { display: flex; flex-direction: column; gap: 0; }
-.route-item {
-  display: flex; gap: 14px; align-items: flex-start;
-  position: relative;
-}
-.route-item::before {
-  content: '';
-  position: absolute; left: 19px; top: 38px; bottom: -14px;
-  width: 2px; background: var(--border2);
-}
-.route-item:last-child::before { display: none; }
-.route-num {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--surface3); border: 2px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-size: 13px; font-weight: 500;
-  flex-shrink: 0; color: var(--text);
-}
-.route-num.first { border-color: var(--green); color: var(--green); }
-.route-info { flex: 1; padding-bottom: 20px; }
-.route-name { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
-.route-meta { color: var(--text2); font-size: 12px; display: flex; gap: 10px; }
-.route-travel {
-  font-size: 11px; color: var(--text3);
-  display: flex; align-items: center; gap: 4px;
-  margin-top: 4px; font-family: var(--font-mono);
-}
-
-/* Selected event cards */
-.sel-event-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px; margin-bottom: 10px;
-  display: flex; gap: 14px; align-items: flex-start;
-  transition: border-color 0.2s;
-}
-.sel-event-card:hover { border-color: var(--border2); }
-.sel-event-icon {
-  width: 44px; height: 44px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-.sel-event-body { flex: 1; }
-.sel-event-name { font-weight: 700; font-size: 14px; font-family: var(--font-display); letter-spacing: -0.01em; margin-bottom: 3px; }
-.sel-event-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text2); margin-bottom: 8px; }
-.sel-event-why {
-  font-size: 12px; color: var(--text2);
-  background: var(--surface2); border-radius: 6px;
-  padding: 7px 10px; border-left: 2px solid var(--accent);
-  font-style: italic; line-height: 1.5;
-}
-.sel-event-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
-.sel-event-fee { font-family: var(--font-mono); font-size: 15px; color: var(--text); }
-.sel-event-remove {
-  font-size: 11px; color: var(--text3); cursor: pointer;
-  padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border);
-  background: none; font-family: var(--font-body); transition: all 0.15s;
-}
-.sel-event-remove:hover { color: var(--red); border-color: var(--red); }
-
-/* Profit snapshot */
-.profit-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.profit-row {
-  display: flex; justify-content: space-between;
-  align-items: center; padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-}
-.profit-row:last-child { border-bottom: none; }
-.profit-row.total {
-  background: var(--surface2);
-  font-weight: 700; font-size: 15px;
-}
-.profit-row.total .profit-val { color: var(--green); font-family: var(--font-mono); font-size: 18px; }
-.profit-label { color: var(--text2); }
-.profit-val { font-family: var(--font-mono); font-weight: 500; }
-.profit-val.neg { color: var(--red); }
-.profit-val.pos { color: var(--green); }
-
-/* Prep list */
-.prep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.prep-item {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 10px 12px;
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; cursor: pointer; transition: all 0.15s;
-}
-.prep-item:hover { border-color: var(--border2); }
-.prep-item.checked {
-  background: var(--green-dim); border-color: var(--green);
-  color: var(--green);
-}
-.prep-check {
-  width: 18px; height: 18px; border-radius: 5px;
-  border: 1.5px solid var(--border2); flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; transition: all 0.15s;
-}
-.prep-item.checked .prep-check { background: var(--green); border-color: var(--green); color: white; }
-
-/* Advice */
-.advice-cards { display: flex; flex-direction: column; gap: 8px; }
-.advice-card {
-  border-radius: var(--radius-sm); padding: 14px 16px;
-  border: 1px solid var(--border);
-  display: flex; gap: 12px; align-items: flex-start;
-}
-.advice-card.tip { background: rgba(15, 118, 110, 0.06); border-color: rgba(15, 118, 110, 0.25); }
-.advice-card.warn { background: var(--amber-dim); border-color: rgba(251,191,36,0.25); }
-.advice-card.good { background: var(--green-dim); border-color: rgba(52,211,153,0.25); }
-.advice-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-.advice-text { font-size: 13px; line-height: 1.6; }
-.advice-text strong { display: block; margin-bottom: 2px; font-size: 13px; }
-.advice-text.tip strong { color: var(--accent2); }
-.advice-text.warn strong { color: var(--amber); }
-.advice-text.good strong { color: var(--green); }
-
-/* ASIDE */
-.action-buttons { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
-.action-btn {
-  padding: 13px 18px; border-radius: var(--radius-sm);
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  border: 1px solid var(--border); font-family: var(--font-body);
-  display: flex; align-items: center; gap: 8px;
-  transition: all 0.18s; text-align: left;
-}
-.action-btn.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-color: transparent; color: white;
-}
-.action-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.action-btn.secondary { background: var(--surface2); color: var(--text); }
-.action-btn.secondary:hover { background: var(--surface3); border-color: var(--border2); }
-.action-btn.ghost { background: transparent; color: var(--text2); }
-.action-btn.ghost:hover { color: var(--text); background: var(--surface2); }
-
-.aside-section { margin-bottom: 28px; }
-.aside-section-title {
-  font-family: var(--font-display); font-size: 12px;
-  font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--text3); margin-bottom: 12px;
-}
-
-/* Risk meter */
-.risk-meter { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.risk-label { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
-.risk-bar-wrap { height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-.risk-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green), var(--gold), var(--red)); width: 38%; transition: width 0.6s ease; }
-.risk-indicator { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
-.risk-val { font-family: var(--font-mono); font-size: 22px; font-weight: 500; color: var(--gold); margin-top: 6px; }
-.risk-desc { font-size: 12px; color: var(--text2); margin-top: 4px; }
-
-/* Season timeline */
-.timeline { position: relative; padding-left: 20px; }
-.timeline::before { content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--border2); border-radius: 2px; }
-.tl-item { position: relative; margin-bottom: 14px; }
-.tl-dot {
-  position: absolute; left: -16px; top: 3px;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--accent); border: 2px solid var(--bg);
-}
-.tl-dot.green { background: var(--green); }
-.tl-dot.gold  { background: var(--gold); }
-.tl-month { font-size: 11px; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
-.tl-name { font-size: 13px; font-weight: 500; margin-top: 1px; }
-.tl-fee { font-size: 11px; color: var(--text2); font-family: var(--font-mono); }
-
-/* ── ANIMATIONS ── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-/* ── EMPTY / LOADING STATES ── */
-.empty-state {
-  text-align: center; padding: 60px 20px;
-  color: var(--text2);
-}
-.empty-state h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 6px; }
-.empty-state p { font-size: 13px; }
-
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-</style>
+    .profit-tip {
+      background: rgba(232,159,71,.1);
+      border-left: 3px solid rgba(232,159,71,.7);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: .7rem 1rem;
+      font-size: .85rem;
+      margin-top: 1rem;
+    }
+    .profit-tip strong { display: block; margin-bottom: .2rem; }
+  </style>
 </head>
-<body class="final-plan-page">
-<header class="topbar">
-  <div class="container nav nav-journey">
-    <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-    <nav class="nav-links">
-      <a href="/">Home</a>
-      <a href="/dashboard">Plan</a>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/my-shop">My Shop</a>
+        <a href="/discover">Discover</a>
+        <a class="active" href="/final-plan">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/my-shop">My Shop</a>
       <a href="/discover">Discover</a>
-      <a class="active" href="/final-plan">Profit</a>
-    </nav>
-  </div>
-</header>
-<div class="app">
-
-  <!-- IN-PAGE NAV -->
-  <nav class="nav">
-    <div class="nav-logo">
-      <div class="nav-logo-mark">📍</div>
-      Vendor Atlas
+      <a href="/final-plan">Profit</a>
+      <div data-mobile-auth-nav></div>
     </div>
-    <div class="nav-tabs">
-      <button class="nav-tab active" onclick="showScreen('discovery')">Discover</button>
-      <button class="nav-tab" onclick="showScreen('plan')">Final Plan</button>
-    </div>
-    <div class="nav-right">
-      <span class="badge" id="plan-badge">0 events</span>
-    </div>
-  </nav>
+  </header>
 
-  <!-- ══════ DISCOVERY SCREEN ══════ -->
-  <div class="screen active" id="screen-discovery">
-
-    <div class="discovery-header">
-      <div class="discovery-title">Find Your Next <span>Best Market</span></div>
-      <div class="discovery-sub">108 events loaded · Kansas City & surrounding area</div>
-      <div class="search-bar-wrap">
-        <div class="search-input-wrap">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input class="search-input" placeholder="Search by name, city, or keyword…" id="search-input" oninput="filterEvents()">
-        </div>
-        <div class="mode-toggle">
-          <button class="mode-btn active" id="mode-local" onclick="setMode('local')">📍 Local</button>
-          <button class="mode-btn" id="mode-travel" onclick="setMode('travel')">✈️ Travel</button>
-        </div>
+  <main>
+    <section class="profit-hero">
+      <div class="container">
+        <span class="eyebrow">Profit planner</span>
+        <h1>Plan your events.</h1>
+        <p>Track revenue, expenses, and profit for every market you do.</p>
       </div>
-    </div>
+    </section>
 
-    <!-- Filter chips -->
-    <div class="filter-row" id="filter-chips">
-      <div class="chip active" data-filter="all" onclick="setTypeFilter(this,'all')">All Events</div>
-      <div class="chip" data-filter="market" onclick="setTypeFilter(this,'market')">🛍️ Markets</div>
-      <div class="chip" data-filter="vintage" onclick="setTypeFilter(this,'vintage')">🪞 Vintage</div>
-      <div class="chip" data-filter="oddity" onclick="setTypeFilter(this,'oddity')">💀 Oddity</div>
-      <div class="chip" data-filter="convention" onclick="setTypeFilter(this,'convention')">🎪 Conventions</div>
-      <div class="chip" data-filter="craft" onclick="setTypeFilter(this,'craft')">🧵 Craft</div>
-      <div class="chip" data-filter="flea" onclick="setTypeFilter(this,'flea')">🔍 Flea</div>
-      <div class="chip" data-filter="outdoor" onclick="setFeatureFilter(this,'outdoor')">☀️ Outdoor</div>
-      <div class="chip" data-filter="indoor" onclick="setFeatureFilter(this,'indoor')">🏠 Indoor</div>
-      <div class="chip" data-filter="electric" onclick="setFeatureFilter(this,'electric')">⚡ Electric</div>
-      <div class="chip" data-filter="free" onclick="setFeatureFilter(this,'free')">Free Entry</div>
-    </div>
+    <section>
+      <div class="container">
 
-    <!-- Category tabs -->
-    <div class="cat-tabs">
-      <button class="cat-tab active" onclick="setSort(this,'fit')">Best Fit</button>
-      <button class="cat-tab" onclick="setSort(this,'date')">By Date</button>
-      <button class="cat-tab" onclick="setSort(this,'fee')">By Fee</button>
-      <button class="cat-tab" onclick="setSort(this,'traffic')">By Traffic</button>
-      <button class="cat-tab" onclick="setSort(this,'distance')">By Distance</button>
-    </div>
-
-    <div class="discovery-body">
-      <!-- Events panel -->
-      <div class="events-panel" id="events-panel"></div>
-
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="sidebar-title">Your Preferences</div>
-
-        <div class="pref-group">
-          <div class="pref-label">Booth Budget</div>
-          <div class="range-wrap">
-            <div class="range-row"><span>$0</span><span id="fee-val">≤ $100</span><span>$500+</span></div>
-            <input type="range" min="0" max="500" value="100" oninput="updateFeeFilter(this)" step="25">
-          </div>
+        <!-- Past performance stats -->
+        <div id="stats-section" style="display:none;margin-top:1.5rem;">
+          <span class="eyebrow">Past performance</span>
+          <div class="stats-row" id="stats-row"></div>
         </div>
 
-        <div class="pref-group">
-          <div class="pref-label">Max Distance</div>
-          <div class="range-wrap">
-            <div class="range-row"><span>0mi</span><span id="dist-val">≤ 50mi</span><span>200mi</span></div>
-            <input type="range" min="0" max="200" value="50" oninput="updateDistFilter(this)" step="10">
-          </div>
-        </div>
+        <div class="planner-grid" style="margin-top:1.5rem;">
 
-        <div class="pref-group">
-          <div class="pref-label">Audience Type</div>
-          <div class="pref-chips">
-            <div class="pref-chip active" onclick="togglePref(this)">Art lovers</div>
-            <div class="pref-chip active" onclick="togglePref(this)">Collectors</div>
-            <div class="pref-chip" onclick="togglePref(this)">Families</div>
-            <div class="pref-chip" onclick="togglePref(this)">Tourists</div>
-            <div class="pref-chip" onclick="togglePref(this)">Teens</div>
-            <div class="pref-chip" onclick="togglePref(this)">Foodies</div>
-          </div>
-        </div>
+          <!-- Left: event list + add form -->
+          <div>
+            <div class="section-header">
+              <h2>Your event plan</h2>
+              <span id="event-count" style="font-size:.82rem;color:var(--muted);"></span>
+            </div>
 
-        <div class="pref-group">
-          <div class="pref-label">Setup Style</div>
-          <div class="pref-chips">
-            <div class="pref-chip active" onclick="togglePref(this)">Easy setup</div>
-            <div class="pref-chip" onclick="togglePref(this)">Table only</div>
-            <div class="pref-chip" onclick="togglePref(this)">Full tent</div>
-          </div>
-        </div>
+            <!-- Import from saved markets -->
+            <div id="import-bar" class="import-bar" style="display:none;">
+              <p>You have <strong id="saved-count">0</strong> saved markets. Import them into your profit plan?</p>
+              <button class="btn btn-primary" id="import-btn" style="font-size:.85rem;padding:.4rem .9rem;">Import saved markets</button>
+            </div>
 
-        <div class="plan-counter">
-          <div class="plan-counter-card" onclick="showScreen('plan')">
-            <div class="plan-counter-title">View Your Plan →</div>
-            <div class="plan-counter-sub">Review selected events</div>
-            <div class="plan-counter-nums">
-              <div class="pcn"><div class="pcn-val" id="pc-events">0</div><div class="pcn-lab">Events</div></div>
-              <div class="pcn"><div class="pcn-val" id="pc-fees">$0</div><div class="pcn-lab">Fees</div></div>
-              <div class="pcn"><div class="pcn-val" id="pc-profit">$0</div><div class="pcn-lab">Est. Profit</div></div>
+            <div id="event-list"></div>
+
+            <div id="empty-plan" class="empty-plan" style="display:none;">
+              <div class="icon">📋</div>
+              <strong>No events planned yet</strong>
+              <p style="margin:.4rem 0 1rem;font-size:.9rem;">Add events below to start calculating profit.</p>
+            </div>
+
+            <!-- Add event form -->
+            <div class="add-event-section">
+              <h3>+ Add an event</h3>
+              <div class="add-event-grid">
+                <div>
+                  <label>Event name *</label>
+                  <input id="new-name" type="text" placeholder="Summer Night Market">
+                </div>
+                <div>
+                  <label>Date</label>
+                  <input id="new-date" type="date">
+                </div>
+                <div>
+                  <label>Location</label>
+                  <input id="new-location" type="text" placeholder="Austin, TX">
+                </div>
+                <div>
+                  <label>Booth fee ($)</label>
+                  <input id="new-fee" type="number" min="0" step="5" placeholder="125">
+                </div>
+                <div>
+                  <label>Expected revenue ($)</label>
+                  <input id="new-revenue" type="number" min="0" step="10" placeholder="500">
+                </div>
+                <div>
+                  <label>Other expenses ($)</label>
+                  <input id="new-expenses" type="number" min="0" step="5" placeholder="80">
+                </div>
+              </div>
+              <div style="margin-top:.85rem;">
+                <button class="btn btn-primary" id="add-event-btn">Add to plan</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right: summary sidebar -->
+          <div>
+            <div class="summary-card">
+              <h3>Summary</h3>
+              <div class="summary-stat">
+                <span class="label">Events planned</span>
+                <span class="value" id="sum-events">0</span>
+              </div>
+              <div class="summary-stat">
+                <span class="label">Total booth fees</span>
+                <span class="value" id="sum-fees">$0</span>
+              </div>
+              <div class="summary-stat">
+                <span class="label">Expected revenue</span>
+                <span class="value" id="sum-revenue">$0</span>
+              </div>
+              <div class="summary-stat">
+                <span class="label">Other expenses</span>
+                <span class="value" id="sum-expenses">$0</span>
+              </div>
+              <div class="summary-total">
+                <div class="total-label">Projected profit</div>
+                <div class="total-value positive" id="sum-profit">$0</div>
+              </div>
+              <div class="roi-bar">
+                <div class="roi-bar-label">
+                  <span>ROI</span>
+                  <span id="roi-pct">—</span>
+                </div>
+                <div class="roi-bar-track">
+                  <div class="roi-bar-fill" id="roi-fill" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="profit-tip" id="profit-tip" style="display:none;">
+                <strong>💡 Quick tip</strong>
+                <span id="profit-tip-text"></span>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem;">
+              <a class="btn btn-secondary" href="/discover" style="display:block;text-align:center;">Browse more events →</a>
+            </div>
+            <div style="margin-top:.5rem;">
+              <a class="btn btn-ghost" href="/business" style="display:block;text-align:center;">View past analytics →</a>
             </div>
           </div>
+
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
-  <!-- ══════ FINAL PLAN SCREEN ══════ -->
-  <div class="screen" id="screen-plan" style="overflow-y:auto;">
+  <script src="/assets/app.js"></script>
+  <script>
+  (async function () {
+    const STORAGE_KEY = "vendorAtlasProfitPlan_v2";
 
-    <div class="plan-hero">
-      <div class="plan-hero-label">Your 2026 Season</div>
-      <div class="plan-hero-title">Ready to <em>Sell.</em></div>
-      <div class="plan-hero-sub">Here's everything you need — events, route, budget, and smart advice — all in one place.</div>
-    </div>
-
-    <!-- Summary KPIs -->
-    <div class="summary-kpis" id="plan-kpis"></div>
-
-    <div class="plan-body">
-      <div class="plan-main" id="plan-main"></div>
-      <div class="plan-aside" id="plan-aside"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Post-event modal (filled by JS) -->
-<div id="post-event-modal" class="post-event-modal" style="display:none;">
-  <div class="post-event-backdrop" onclick="closePostEventModal()"></div>
-  <div class="post-event-dialog">
-    <h3 id="pe-modal-title">Log this event</h3>
-    <p class="post-event-sub">Enter what you spent and earned so we can track your profit.</p>
-    <form id="post-event-form" onsubmit="submitPostEvent(event)">
-      <input type="hidden" id="pe-event-id">
-      <input type="hidden" id="pe-event-title">
-      <input type="hidden" id="pe-event-date">
-      <div class="field"><label for="pe-booth-fee">Booth fee ($)</label><input type="number" id="pe-booth-fee" min="0" step="1" required></div>
-      <div class="field"><label for="pe-revenue">Revenue ($)</label><input type="number" id="pe-revenue" min="0" step="1" required></div>
-      <div class="field"><label for="pe-costs">Other costs ($)</label><input type="number" id="pe-costs" min="0" step="1" value="0"></div>
-      <div class="field"><label for="pe-rating">Rate this event (1–5)</label><input type="number" id="pe-rating" min="1" max="5" placeholder="Optional"></div>
-      <div class="field"><label for="pe-notes">Notes</label><textarea id="pe-notes" rows="2" placeholder="Optional"></textarea></div>
-      <div class="post-event-actions">
-        <button type="button" class="action-btn ghost" onclick="closePostEventModal()">Cancel</button>
-        <button id="pe-submit" type="submit" class="action-btn primary">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="toast" class="toast" aria-live="polite"></div>
-
-<script src="/assets/app.js"></script>
-<script>
-// ════════════════════════════════════════
-// DATA — 108 MOCK EVENTS
-// ════════════════════════════════════════
-const ALL_EVENTS = [
-  // MARKETS
-  {id:1,title:"Art Garden KC – First Fridays",type:"market",city:"Kansas City, MO",date:"2026-04-03",fee:10,traffic:"high",audience:"Art lovers",indoor:false,electric:true,setup:"easy",parking:"good",distance:8,fitScore:96,icon:"🌿"},
-  {id:2,title:"Strawberry Swing Indie Craft Fair",type:"craft",city:"Kansas City, MO",date:"2026-06-14",fee:75,traffic:"high",audience:"Art lovers, Collectors",indoor:false,electric:false,setup:"easy",parking:"good",distance:10,fitScore:94,icon:"🍓"},
-  {id:3,title:"City Market Sunday Street Fair",type:"market",city:"Kansas City, MO",date:"2026-04-05",fee:10,traffic:"high",audience:"Tourists, Families",indoor:false,electric:false,setup:"easy",parking:"fair",distance:9,fitScore:91,icon:"🏙️"},
-  {id:4,title:"Summer Swing at Aubrey Vineyards",type:"craft",city:"Overland Park, KS",date:"2026-07-12",fee:85,traffic:"med",audience:"Art lovers",indoor:false,electric:true,setup:"moderate",parking:"great",distance:22,fitScore:89,icon:"🍇"},
-  {id:5,title:"First Fridays – Crossroads Arts",type:"market",city:"Kansas City, MO",date:"2026-05-01",fee:10,traffic:"high",audience:"Art lovers",indoor:false,electric:true,setup:"easy",parking:"fair",distance:8,fitScore:93,icon:"🎨"},
-  {id:6,title:"Parkville Fall Fest Market",type:"market",city:"Parkville, MO",date:"2026-10-10",fee:45,traffic:"med",audience:"Families, Collectors",indoor:false,electric:false,setup:"easy",parking:"good",distance:18,fitScore:82,icon:"🍂"},
-  {id:7,title:"West Bottoms Antique Weekend",type:"vintage",city:"Kansas City, MO",date:"2026-05-02",fee:35,traffic:"med",audience:"Collectors",indoor:true,electric:true,setup:"easy",parking:"fair",distance:10,fitScore:78,icon:"🏚️"},
-  {id:8,title:"Overland Park Farmers Market",type:"market",city:"Overland Park, KS",date:"2026-05-09",fee:25,traffic:"high",audience:"Families, Foodies",indoor:false,electric:false,setup:"easy",parking:"great",distance:22,fitScore:74,icon:"🥕"},
-  {id:9,title:"KC Local Craft Fair",type:"craft",city:"Kansas City, MO",date:"2026-08-22",fee:50,traffic:"med",audience:"Art lovers",indoor:false,electric:true,setup:"moderate",parking:"good",distance:11,fitScore:80,icon:"🎀"},
-  {id:10,title:"River Market Art Walk",type:"market",city:"Kansas City, MO",date:"2026-06-07",fee:20,traffic:"med",audience:"Tourists, Art lovers",indoor:false,electric:false,setup:"easy",parking:"fair",distance:9,fitScore:84,icon:"🎭"},
-  // VINTAGE
-  {id:11,title:"Flea Market at The Yard",type:"flea",city:"Kansas City, MO",date:"2026-04-18",fee:30,traffic:"med",audience:"Collectors",indoor:false,electric:false,setup:"easy",parking:"good",distance:12,fitScore:68,icon:"🔍"},
-  {id:12,title:"Retro Revival Vintage Market",type:"vintage",city:"Lee's Summit, MO",date:"2026-05-16",fee:40,traffic:"med",audience:"Collectors, Teens",indoor:true,electric:true,setup:"easy",parking:"great",distance:28,fitScore:72,icon:"📻"},
-  {id:13,title:"Antique Alley Spring Show",type:"vintage",city:"Wamego, KS",date:"2026-05-23",fee:55,traffic:"high",audience:"Collectors",indoor:true,electric:true,setup:"moderate",parking:"good",distance:85,fitScore:65,icon:"🏺"},
-  {id:14,title:"Midtown Vintage Pop-Up",type:"vintage",city:"Kansas City, MO",date:"2026-06-20",fee:35,traffic:"low",audience:"Collectors, Teens",indoor:true,electric:true,setup:"easy",parking:"fair",distance:7,fitScore:61,icon:"💎"},
-  {id:15,title:"Prairie Village Antique Show",type:"vintage",city:"Prairie Village, KS",date:"2026-07-18",fee:45,traffic:"med",audience:"Collectors",indoor:false,electric:false,setup:"easy",parking:"good",distance:19,fitScore:70,icon:"🌾"},
-  // ODDITY / ALTERNATIVE
-  {id:16,title:"Kansas City Oddities & Curiosities",type:"oddity",city:"Kansas City, MO",date:"2026-09-19",fee:120,traffic:"high",audience:"Collectors, Teens",indoor:true,electric:true,setup:"moderate",parking:"good",distance:10,fitScore:88,icon:"💀"},
-  {id:17,title:"Beggars Bazaar Holiday PopUp",type:"oddity",city:"Kansas City, MO",date:"2026-11-01",fee:50,traffic:"med",audience:"Art lovers, Collectors",indoor:true,electric:true,setup:"easy",parking:"fair",distance:9,fitScore:83,icon:"🕯️"},
-  {id:18,title:"Dark Arts Market",type:"oddity",city:"Independence, MO",date:"2026-10-24",fee:65,traffic:"med",audience:"Collectors, Teens",indoor:true,electric:true,setup:"moderate",parking:"good",distance:16,fitScore:77,icon:"🦇"},
-  {id:19,title:"Haunted Hollow Vendor Faire",type:"oddity",city:"Olathe, KS",date:"2026-10-17",fee:55,traffic:"med",audience:"Families, Teens",indoor:false,electric:true,setup:"easy",parking:"great",distance:29,fitScore:71,icon:"🎃"},
-  {id:20,title:"Strange & Unusual Expo",type:"oddity",city:"Lenexa, KS",date:"2026-08-08",fee:80,traffic:"high",audience:"Collectors",indoor:true,electric:true,setup:"moderate",parking:"great",distance:26,fitScore:75,icon:"🔮"},
-  // CONVENTIONS
-  {id:21,title:"KC Fan Expo",type:"convention",city:"Kansas City, MO",date:"2026-06-27",fee:200,traffic:"high",audience:"Teens, Collectors",indoor:true,electric:true,setup:"complex",parking:"good",distance:10,fitScore:62,icon:"🦸"},
-  {id:22,title:"Missouri Craft Brewers Fest",type:"convention",city:"Kansas City, MO",date:"2026-07-25",fee:150,traffic:"high",audience:"Foodies",indoor:false,electric:true,setup:"moderate",parking:"fair",distance:9,fitScore:55,icon:"🍺"},
-  {id:23,title:"KC Comic Con",type:"convention",city:"Kansas City, MO",date:"2026-09-12",fee:225,traffic:"high",audience:"Teens",indoor:true,electric:true,setup:"complex",parking:"good",distance:10,fitScore:58,icon:"💥"},
-  {id:24,title:"Maker Faire Kansas City",type:"convention",city:"Kansas City, MO",date:"2026-09-26",fee:100,traffic:"high",audience:"Families, Teens",indoor:true,electric:true,setup:"moderate",parking:"good",distance:11,fitScore:73,icon:"⚙️"},
-  {id:25,title:"Art & Soul Weekend",type:"convention",city:"Overland Park, KS",date:"2026-10-03",fee:95,traffic:"med",audience:"Art lovers",indoor:true,electric:true,setup:"moderate",parking:"great",distance:24,fitScore:79,icon:"✨"},
-  // CRAFT
-  {id:26,title:"Holiday Swing – Waldo",type:"craft",city:"Kansas City, MO",date:"2026-11-29",fee:75,traffic:"high",audience:"Art lovers, Families",indoor:false,electric:false,setup:"moderate",parking:"good",distance:10,fitScore:92,icon:"🎄"},
-  {id:27,title:"Holiday Swing – Crossroads",type:"craft",city:"Kansas City, MO",date:"2026-12-20",fee:75,traffic:"high",audience:"Art lovers",indoor:false,electric:false,setup:"moderate",parking:"fair",distance:8,fitScore:90,icon:"❄️"},
-  {id:28,title:"Spring Craft Bazaar",type:"craft",city:"Shawnee, KS",date:"2026-03-28",fee:35,traffic:"med",audience:"Families",indoor:true,electric:true,setup:"easy",parking:"great",distance:32,fitScore:76,icon:"🌸"},
-  {id:29,title:"Blue Springs Artisan Market",type:"craft",city:"Blue Springs, MO",date:"2026-05-30",fee:40,traffic:"med",audience:"Families, Art lovers",indoor:false,electric:false,setup:"easy",parking:"good",distance:25,fitScore:78,icon:"💙"},
-  {id:30,title:"Liberty Arts & Crafts Show",type:"craft",city:"Liberty, MO",date:"2026-08-15",fee:50,traffic:"med",audience:"Families",indoor:false,electric:true,setup:"easy",parking:"good",distance:20,fitScore:74,icon:"🗽"},
-  // More events to reach 108
-  ...[
-    ["Waldo Block Party Market","market","Kansas City, MO","2026-07-04",15,"high","Families, Art lovers",false,false,"easy","good",11,85,"🎆"],
-    ["Leawood Farmers Market","market","Leawood, KS","2026-04-11",20,"high","Families",false,false,"easy","great",27,71,"🌻"],
-    ["Crossroads Second Saturdays","market","Kansas City, MO","2026-04-12",30,"med","Art lovers",false,true,"easy","fair",8,81,"🔵"],
-    ["Lawrence Artists Guild Show","craft","Lawrence, KS","2026-05-09",45,"med","Art lovers, Collectors",false,false,"moderate","good",42,77,"🎓"],
-    ["Brookside Art Annual","craft","Kansas City, MO","2026-05-16",60,"high","Art lovers",false,false,"moderate","good",9,86,  "🌺"],
-    ["Plaza Art Fair","craft","Kansas City, MO","2026-09-26",80,"high","Art lovers",false,false,"moderate","fair",8,88,"🏛️"],
-    ["Independence Flea Market","flea","Independence, MO","2026-04-25",25,"med","Collectors",false,false,"easy","good",16,63,"🔎"],
-    ["KC East Side Swap Meet","flea","Kansas City, MO","2026-05-23",20,"low","Collectors",false,false,"easy","fair",14,52,"🔁"],
-    ["Olathe Antique & Flea","flea","Olathe, KS","2026-06-13",30,"med","Collectors, Families",false,false,"easy","great",29,66,"🏠"],
-    ["Vintage Vault KC","vintage","Kansas City, MO","2026-07-11",40,"med","Collectors, Teens",true,true,"easy","fair",10,69,"🗄️"],
-    ["Raytown Craft Fair","craft","Raytown, MO","2026-08-01",35,"low","Families",false,false,"easy","good",18,58,"🏡"],
-    ["Fall Harvest Artisan Fair","market","Lenexa, KS","2026-09-19",40,"med","Families",false,true,"easy","great",27,75,"🍁"],
-    ["KC Northland Market","market","Kansas City, MO","2026-06-28",25,"med","Families, Art lovers",false,false,"easy","good",15,72,"⬆️"],
-    ["Merriam Craft Beer & Makers","market","Merriam, KS","2026-07-18",50,"med","Foodies, Art lovers",false,true,"moderate","good",31,70,"🍻"],
-    ["Gardner Art Walk","market","Gardner, KS","2026-08-29",30,"low","Art lovers",false,false,"easy","good",38,61,"🖼️"],
-    ["KC Oddities Mini Market","oddity","Kansas City, MO","2026-06-06",45,"med","Collectors, Teens",true,true,"easy","fair",9,81,"🧿"],
-    ["Weird Wares Pop-Up","oddity","Westport, MO","2026-07-19",40,"low","Teens, Collectors",true,true,"easy","fair",8,73,"🌀"],
-    ["Cryptid Craft Market","oddity","Lawrence, KS","2026-08-22",55,"med","Teens, Collectors",false,true,"moderate","good",42,69,"👾"],
-    ["Midwest Maker Expo","convention","KC Convention Ctr","2026-10-17",175,"high","Families, Teens",true,true,"complex","good",10,67,"🏭"],
-    ["KC Holiday Market","market","Crown Center KC","2026-12-05",65,"high","Families, Tourists",true,true,"easy","good",9,85,"🎅"],
-    ["Westport Indie Craft","craft","Westport, MO","2026-11-14",40,"med","Art lovers",false,false,"easy","fair",8,80,"🧶"],
-    ["Leawood Arts Fair","craft","Leawood, KS","2026-09-05",55,"med","Art lovers",false,false,"moderate","great",27,78,"🖌️"],
-    ["Overland Park Fall Market","market","Overland Park, KS","2026-10-24",30,"med","Families",false,false,"easy","great",22,73,"🍄"],
-    ["Northland Holiday Bazaar","craft","Kansas City, MO","2026-12-12",45,"med","Families, Art lovers",true,true,"easy","good",16,77,"🎁"],
-    ["Oak Park Mall Pop-Up","market","Overland Park, KS","2026-11-21",70,"high","Families",true,true,"easy","great",23,74,"🛒"],
-    ["Crossroads Holiday Walk","market","Kansas City, MO","2026-12-06",20,"high","Art lovers, Tourists",false,true,"easy","fair",8,87,"🕯️"],
-    ["KC Night Market","market","Kansas City, MO","2026-08-14",35,"high","Teens, Art lovers",false,true,"easy","fair",9,82,"🌙"],
-    ["Shawnee Mission Artisan Show","craft","Shawnee, KS","2026-09-12",50,"med","Art lovers",false,false,"moderate","good",33,76,"🌠"],
-    ["Zona Rosa Holiday Market","market","Kansas City, MO","2026-11-28",55,"high","Families",false,true,"easy","great",17,78,"🌹"],
-    ["Hyland Village Market","market","Overland Park, KS","2026-05-23",25,"med","Families",false,false,"easy","great",24,69,"🌴"],
-    ["KC Rock & Gem Show","oddity","KCI Expo Ctr","2026-04-11",90,"high","Collectors",true,true,"complex","good",20,72,"💎"],
-    ["Quirk Market Westside","oddity","Kansas City, MO","2026-05-30",35,"med","Teens, Art lovers",true,true,"easy","fair",7,79,"🃏"],
-    ["Art in the Park – Loose Park","craft","Kansas City, MO","2026-06-21",40,"high","Families, Art lovers",false,false,"easy","good",9,83,"🌳"],
-    ["Bannister Antique Mall Show","vintage","Kansas City, MO","2026-07-25",30,"med","Collectors",true,true,"easy","good",14,64,"🪑"],
-    ["Riverside Artwalk","craft","Riverside, MO","2026-06-21",0,"med","Art lovers, Families",false,false,"easy","good",14,80,"🎨"],
-    ["Westside Local Market","market","Kansas City, MO","2026-07-11",20,"med","Art lovers",false,false,"easy","fair",7,76,"🏘️"],
-    ["Olathe Heritage Festival","market","Olathe, KS","2026-08-08",35,"high","Families",false,false,"easy","great",30,72,"🏅"],
-    ["KC Jazz & Art Fest","market","18th & Vine KC","2026-09-05",30,"high","Art lovers, Foodies",false,true,"easy","fair",10,79,"🎷"],
-    ["Mission Farmers Market","market","Mission, KS","2026-04-18",15,"med","Families",false,false,"easy","good",28,67,"🌾"],
-    ["Basehor Craft & Vendor Fair","craft","Basehor, KS","2026-10-03",40,"med","Families",false,false,"easy","good",45,63,"🌻"],
-    ["Peculiar Market Days","flea","Peculiar, MO","2026-05-09",20,"low","Collectors, Families",false,false,"easy","good",38,54,"🔦"],
-    ["De Soto Fall Fine Arts","craft","De Soto, KS","2026-10-17",45,"med","Art lovers",false,false,"moderate","good",44,70,"🍂"],
-    ["KC Zine Fest","convention","Kansas City, MO","2026-04-19",30,"med","Teens, Art lovers",true,false,"easy","fair",9,68,"📓"],
-    ["Lathrop Country Craft Fair","craft","Lathrop, MO","2026-09-19",25,"low","Families",false,false,"easy","great",55,52,"🐄"],
-    ["SugarCreek Arts Weekend","market","Sugar Creek, MO","2026-08-22",25,"med","Families",false,false,"easy","good",18,65,"🍬"],
-    ["Grain Valley Vendor Day","market","Grain Valley, MO","2026-05-16",20,"low","Families",false,false,"easy","great",29,57,"🌾"],
-    ["KC Sci-Fi Con","convention","KCI Expo Ctr","2026-11-07",180,"high","Teens, Collectors",true,true,"complex","good",20,60,"🚀"],
-    ["Midwest Vintage Expo","vintage","Overland Park, KS","2026-08-29",60,"high","Collectors",true,true,"moderate","great",22,71,"🕰️"],
-    ["Raytown Holiday Fair","craft","Raytown, MO","2026-12-05",35,"med","Families",true,true,"easy","good",18,65,"🎄"],
-    ["Northtown Oddities Bazaar","oddity","Kansas City, MO","2026-09-26",55,"med","Collectors, Teens",true,true,"moderate","fair",15,75,"🔭"],
-    ["Midland Maker Market","market","Kansas City, MO","2026-10-31",30,"med","Art lovers, Teens",false,true,"easy","good",8,81,"🎭"],
-    ["West Port Artisan Sunday","market","Westport, MO","2026-04-26",15,"med","Art lovers",false,false,"easy","fair",8,77,"🌿"],
-    ["Shawnee Holiday Arts","craft","Shawnee, KS","2026-12-13",40,"med","Families, Art lovers",true,true,"easy","good",32,73,"⛄"],
-    ["Plaza Holiday Market","market","Country Club Plaza","2026-11-28",50,"high","Tourists, Families",false,true,"moderate","fair",8,82,"✨"],
-    ["Waldo Arts Walking Tour","market","Waldo, KC MO","2026-10-04",10,"med","Art lovers",false,false,"easy","fair",10,74,"🚶"],
-    ["Blue Springs Fall Craft","craft","Blue Springs, MO","2026-10-10",40,"med","Families",false,false,"easy","good",25,70,"🍁"],
-    ["KC Urban Maker Market","market","Kansas City, MO","2026-07-26",25,"med","Teens, Art lovers",false,true,"easy","fair",9,78,"🏙️"],
-    ["Lenexa Spinach Festival Mkt","market","Lenexa, KS","2026-05-09",30,"high","Families, Foodies",false,false,"easy","great",26,71,"🥬"],
-    ["Belton Antique Show","vintage","Belton, MO","2026-06-06",30,"med","Collectors",false,false,"easy","good",36,61,"🪟"],
-    ["Harrisonville Heritage Days","flea","Harrisonville, MO","2026-08-01",20,"med","Families, Collectors",false,false,"easy","good",48,56,"🏚️"],
-    ["Leawood Artisan Holiday","craft","Leawood, KS","2026-12-06",55,"med","Art lovers",false,false,"moderate","great",27,75,"🎀"],
-    ["KC Night Owl Market","oddity","Kansas City, MO","2026-10-03",40,"med","Teens, Collectors",false,true,"easy","fair",8,77,"🦉"],
-    ["Excelsior Springs Art Walk","market","Excelsior Springs, MO","2026-09-13",25,"low","Art lovers, Tourists",false,false,"easy","good",42,62,"💦"],
-    ["Overland Park Holiday Craft","craft","Overland Park, KS","2026-11-21",50,"high","Families",true,true,"easy","great",22,76,"🎁"],
-    ["KC Indie Designer Market","market","Kansas City, MO","2026-04-25",35,"med","Teens, Art lovers",true,true,"easy","fair",9,79,"👗"],
-    ["Stillwell Market Days","flea","Stilwell, KS","2026-07-12",15,"low","Families, Collectors",false,false,"easy","good",42,51,"🌲"],
-    ["Lee's Summit Makers Fair","craft","Lee's Summit, MO","2026-06-28",45,"med","Families, Art lovers",false,true,"easy","good",28,75,"⚒️"],
-    ["Oak Street Gallery Pop-Up","market","Kansas City, MO","2026-08-08",20,"low","Art lovers",true,true,"easy","fair",9,67,"🖼️"],
-    ["Crown Center Holiday Shops","market","Crown Center KC","2026-11-27",75,"high","Families, Tourists",true,true,"easy","good",9,80,"🏰"],
-    ["Crossroads Alley Art Night","market","Kansas City, MO","2026-09-04",15,"med","Art lovers, Teens",false,true,"easy","fair",8,78,"🎇"],
-    ["KC Earth Day Market","market","Kansas City, MO","2026-04-22",10,"med","Families, Art lovers",false,false,"easy","fair",8,76,"🌍"],
-    ["Midwest Oddities Roadshow","oddity","Wichita, KS","2026-08-15",110,"high","Collectors, Teens",true,true,"complex","good",190,74,"🗺️"],
-    ["Tulsa Maker Market","market","Tulsa, OK","2026-07-04",60,"high","Art lovers, Families",false,true,"moderate","good",250,70,"🛢️"],
-    ["Omaha Handmade Market","craft","Omaha, NE","2026-09-12",70,"high","Art lovers",false,false,"moderate","good",185,72,"🌽"],
-    ["St Louis Art Fair","craft","Clayton, MO","2026-06-05",100,"high","Art lovers, Collectors",false,false,"moderate","fair",250,82,"🦁"],
-    ["Chicago Renegade Craft","craft","Chicago, IL","2026-10-17",150,"high","Art lovers, Teens",true,false,"moderate","fair",500,78,"🌆"],
-    ["Denver Holiday Oddities","oddity","Denver, CO","2026-12-05",130,"high","Collectors, Teens",true,true,"moderate","good",600,73,"🏔️"],
-    ["Minneapolis Vintage Market","vintage","Minneapolis, MN","2026-08-22",80,"high","Collectors",true,true,"moderate","good",440,68,"❄️"],
-    ["Dallas Indie Craft Fest","craft","Dallas, TX","2026-09-19",120,"high","Art lovers",false,true,"moderate","good",490,75,"⭐"],
-  ].map((e,i) => {
-    if(Array.isArray(e)) {
-      // Handle both array and object formats
-      if(e.length === 15) {
-        return {id:31+i,title:e[0],type:e[1],city:e[2],date:e[3],fee:e[4],traffic:e[5],audience:e[6],indoor:e[7],electric:e[8],setup:e[9],parking:e[10],distance:e[11],fitScore:e[12],icon:e[13]};
-      }
-      return {id:31+i,title:e[0],type:e[1],city:e[2],date:e[3],fee:e[4],traffic:e[5],audience:e[6],indoor:e[7],electric:e[8],setup:e[9],parking:e[10],distance:e[11],fitScore:e[12],icon:e[13]};
-    }
-    return {...e, id:31+i};
-  })
-];
-
-// Fix any malformed events
-const EVENTS = ALL_EVENTS.filter(e => e && e.title).map(e => ({
-  ...e,
-  indoor: typeof e.indoor === 'boolean' ? e.indoor : (e.indoor_ === true),
-  electric: typeof e.electric === 'boolean' ? e.electric : (e.electric_ === true),
-}));
-
-// ════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════
-let state = {
-  screen: 'discovery',
-  typeFilter: 'all',
-  featureFilters: [],
-  searchQuery: '',
-  maxFee: 100,
-  maxDist: 50,
-  sortBy: 'fit',
-  travelMode: 'local',
-  selectedIds: new Set(['2', '5', '26', '27', '16']), // pre-selected (in-page discovery)
-  prepChecked: new Set(),
-};
-
-// Events selected on Discover page (journey flow)
-let planFromDiscover = [];
-try {
-  const raw = localStorage.getItem('vendorAtlasPlanSelectedEvents');
-  if (raw) planFromDiscover = JSON.parse(raw);
-} catch (e) {}
-
-if ((!Array.isArray(planFromDiscover) || planFromDiscover.length === 0) && typeof getSelectedEvents === 'function') {
-  try {
-    planFromDiscover = getSelectedEvents();
-  } catch (e) {}
-}
-if (!Array.isArray(planFromDiscover) || planFromDiscover.length === 0) {
-  try {
-    const rawAppState = localStorage.getItem('vendorAtlasAppState');
-    if (rawAppState) {
-      const parsedAppState = JSON.parse(rawAppState);
-      if (Array.isArray(parsedAppState?.selectedEvents)) {
-        planFromDiscover = parsedAppState.selectedEvents;
-      }
-    }
-  } catch (e) {}
-}
-
-function planId(value) {
-  return String(value == null ? '' : value);
-}
-
-function selectedHas(id) {
-  return state.selectedIds.has(planId(id));
-}
-
-function toStoredPlanEvent(event) {
-  if (!event) return null;
-  return {
-    id: planId(event.id),
-    title: event.title || event.name || 'Event',
-    name: event.name || event.title || 'Event',
-    location: event.location || [event.city, event.state].filter(Boolean).join(', ') || '',
-    city: event.city || '',
-    state: event.state || '',
-    date: event.date || '2026-01-01',
-    vendor_fee: Number(event.vendor_fee ?? event.fee ?? 0) || 0,
-    booth_price: Number(event.booth_price ?? event.vendor_fee ?? event.fee ?? 0) || 0,
-    fit_score: Number(event.fit_score ?? event.fitScore ?? 75) || 0,
-    fit_reason: event.fit_reason || event.fitReason || '',
-    distance_miles: Number(event.distance_miles ?? event.distance ?? 25) || 0,
-    event_type: event.event_type || event.type || '',
-    estimated_traffic: event.estimated_traffic || event.traffic || '',
-    audience_type: event.audience_type || '',
-    indoor_outdoor: event.indoor_outdoor || (event.indoor ? 'indoor' : 'outdoor') || '',
-    electricity: Boolean(event.electricity ?? event.electric),
-    setup_difficulty: event.setup_difficulty || event.setup || '',
-    parking_accessibility: event.parking_accessibility || '',
-    application_link: event.application_link || event.apply_url || event.url || '',
-    sourceLabel: event.sourceLabel || event.source || 'Final Plan',
-  };
-}
-
-function syncPlanSelection(events) {
-  const deduped = [];
-  const seen = new Set();
-  (events || []).forEach((event) => {
-    const stored = toStoredPlanEvent(event);
-    if (!stored || !stored.id || seen.has(stored.id)) return;
-    seen.add(stored.id);
-    deduped.push(stored);
-  });
-  planFromDiscover = deduped;
-  state.selectedIds = new Set(deduped.map((event) => planId(event.id)));
-  try {
-    localStorage.setItem('vendorAtlasPlanSelectedEvents', JSON.stringify(deduped));
-    localStorage.setItem('vendorAtlasPlanSelectedIds', JSON.stringify(deduped.map((event) => event.id)));
-  } catch (e) {}
-  if (typeof setSelectedEvents === 'function') {
+    // Load saved plan from localStorage
+    let plan = [];
     try {
-      setSelectedEvents(deduped);
-    } catch (e) {}
-  }
-}
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) plan = JSON.parse(raw);
+    } catch (_) {}
+    if (!Array.isArray(plan)) plan = [];
 
-if (Array.isArray(planFromDiscover) && planFromDiscover.length > 0) {
-  state.selectedIds = new Set(planFromDiscover.map((event) => planId(event.id)));
-  syncPlanSelection(planFromDiscover);
-}
+    function savePlan() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(plan)); } catch (_) {}
+    }
 
-function getPlanEvents() {
-  if (planFromDiscover && planFromDiscover.length > 0) {
-    return planFromDiscover.map((e, i) => ({
-      id: planId(e.id || 'discover-' + i),
-      title: e.title || 'Event',
-      city: (e.location || e.city || '').split(',')[0] || '—',
-      date: e.date || '2026-01-01',
-      fee: Number(e.vendor_fee ?? e.fee ?? 0) || 0,
-      distance: Number(e.distance_miles ?? e.distance ?? 25) || 25,
-      fitScore: Number(e.fit_score ?? e.fitScore ?? 75) || 75,
-      icon: '📍',
-      traffic: 'med',
-    })).sort((a, b) => a.date.localeCompare(b.date));
-  }
-  return [...state.selectedIds].map(id => EVENTS.find(e => planId(e.id) === planId(id))).filter(Boolean)
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
+    // Load auth + data
+    let me = null, savedMarkets = [], vendorStats = null;
+    try {
+      const meRes = await fetch("/api/auth/me", { credentials: "include" });
+      if (meRes.ok) me = await meRes.json();
+    } catch (_) {}
 
-// ════════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════════
-function fmt(n){
-  const v = Number(n);
-  if (!Number.isFinite(v)) return '—';
-  return v >= 1000 ? '$'+(v/1000).toFixed(1)+'k' : '$'+Math.round(v);
-}
-function trafficNum(t){ return t==='high'?3:t==='med'?2:1; }
-function projRevenue(e){ return e.fee===0?300 : Math.round((trafficNum(e.traffic)*200 + (e.fitScore/100)*300 - e.fee)*0.7 + e.fee*2); }
+    if (me) {
+      const [dashRes, statsRes] = await Promise.all([
+        fetch("/api/dashboard", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/vendor-stats", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      savedMarkets = dashRes?.saved_markets || [];
+      vendorStats = statsRes;
+    }
 
-function getFiltered() {
-  let evs = [...EVENTS];
-  if(state.travelMode === 'local') evs = evs.filter(e => e.distance <= state.maxDist);
-  if(state.typeFilter !== 'all') evs = evs.filter(e => e.type === state.typeFilter);
-  if(state.featureFilters.includes('outdoor')) evs = evs.filter(e => !e.indoor);
-  if(state.featureFilters.includes('indoor'))  evs = evs.filter(e => e.indoor);
-  if(state.featureFilters.includes('electric')) evs = evs.filter(e => e.electric);
-  if(state.featureFilters.includes('free')) evs = evs.filter(e => e.fee === 0);
-  if(state.maxFee < 500) evs = evs.filter(e => e.fee <= state.maxFee);
-  if(state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
-    evs = evs.filter(e => e.title.toLowerCase().includes(q) || e.city.toLowerCase().includes(q) || e.type.toLowerCase().includes(q));
-  }
-  // Sort
-  if(state.sortBy==='fit') evs.sort((a,b)=>b.fitScore-a.fitScore);
-  else if(state.sortBy==='date') evs.sort((a,b)=>a.date.localeCompare(b.date));
-  else if(state.sortBy==='fee') evs.sort((a,b)=>a.fee-b.fee);
-  else if(state.sortBy==='traffic') evs.sort((a,b)=>trafficNum(b.traffic)-trafficNum(a.traffic));
-  else if(state.sortBy==='distance') evs.sort((a,b)=>a.distance-b.distance);
-  return evs;
-}
-
-function scoreClass(s){ return s>=85?'high':s>=65?'med':'low'; }
-function groupClass(s){ return s>=85?'best':s>=65?'worth':'notideal'; }
-
-// ════════════════════════════════════════
-// RENDER DISCOVERY
-// ════════════════════════════════════════
-function renderDiscovery() {
-  const evs = getFiltered();
-  const best   = evs.filter(e=>e.fitScore>=85);
-  const worth  = evs.filter(e=>e.fitScore>=65&&e.fitScore<85);
-  const notideal = evs.filter(e=>e.fitScore<65);
-
-  let html = '';
-
-  if(evs.length === 0) {
-    html = `<div class="empty-state"><h3>No events found</h3><p>Try adjusting your filters or search query.</p></div>`;
-  } else {
-    if(best.length) html += renderGroup('Best Matches','#34d399',best,'best');
-    if(worth.length) html += renderGroup('Worth Trying','#f0b429',worth,'worth');
-    if(notideal.length) html += renderGroup('Not Ideal','#5a5a78',notideal,'notideal');
-  }
-
-  document.getElementById('events-panel').innerHTML = html;
-  updatePlanCounter();
-}
-
-// Render batching (prevents flicker on rapid updates)
-let planRenderQueued = false;
-let discoveryRenderQueued = false;
-function requestRenderPlan() {
-  if (planRenderQueued) return;
-  planRenderQueued = true;
-  requestAnimationFrame(() => {
-    planRenderQueued = false;
-    renderPlan();
-  });
-}
-function requestRenderDiscovery() {
-  if (discoveryRenderQueued) return;
-  discoveryRenderQueued = true;
-  requestAnimationFrame(() => {
-    discoveryRenderQueued = false;
-    renderDiscovery();
-  });
-}
-
-function renderGroup(label, color, events, cls) {
-  return `
-    <div class="group-header">
-      <div class="group-dot" style="background:${color}"></div>
-      ${label}
-      <span class="group-count">${events.length} events</span>
-    </div>
-    <div class="events-grid">
-      ${events.map(e => renderCard(e, cls)).join('')}
-    </div>`;
-}
-
-function renderCard(e, cls) {
-  const sel = selectedHas(e.id);
-  const sc = scoreClass(e.fitScore);
-  const pills = [];
-  if(!e.indoor) pills.push(`<span class="pill">☀️ Outdoor</span>`);
-  else pills.push(`<span class="pill">🏠 Indoor</span>`);
-  if(e.electric) pills.push(`<span class="pill green">⚡ Electric</span>`);
-  if(e.traffic==='high') pills.push(`<span class="pill gold">🔥 High Traffic</span>`);
-  if(e.fee===0) pills.push(`<span class="pill green">Free</span>`);
-  if(e.setup==='easy') pills.push(`<span class="pill">Easy Setup</span>`);
-
-  const dateStr = new Date(e.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  const rev = projRevenue(e);
-
-  return `
-    <div class="event-card ${cls} ${sel?'selected':''}" id="card-${e.id}">
-      <div class="card-top">
-        <div class="card-icon" style="background:${cls==='best'?'rgba(52,211,153,0.12)':cls==='worth'?'rgba(240,180,41,0.12)':'var(--surface2)'}">${e.icon}</div>
-        <div class="card-main">
-          <div class="card-name">${e.title}</div>
-          <div class="card-loc">📍 ${e.city} · ${e.distance}mi</div>
+    // Show past stats if available
+    if (vendorStats?.summary) {
+      const s = vendorStats.summary;
+      document.getElementById("stats-section").style.display = "";
+      document.getElementById("stats-row").innerHTML = [
+        { val: s.event_count || 0, label: "Events done", prefix: "" },
+        { val: s.total_revenue || 0, label: "Total revenue", prefix: "$" },
+        { val: s.total_profit || 0, label: "Total profit", prefix: "$" },
+        { val: s.average_profit_per_event || 0, label: "Avg profit / event", prefix: "$" },
+      ].map(c => `
+        <div class="stat-chip">
+          <div class="chip-val">${c.prefix}${typeof c.val === 'number' ? (c.prefix === '$' ? c.val.toFixed(0) : c.val) : c.val}</div>
+          <div class="chip-label">${c.label}</div>
         </div>
-        <div class="card-right">
-          <div class="fit-score ${sc}">${e.fitScore}</div>
-          <div class="fit-label">Fit Score</div>
-        </div>
-      </div>
-      <div class="card-pills">${pills.join('')}
-        <span class="pill accent">${e.type}</span>
-      </div>
-      <div class="card-footer">
-        <div class="card-stat">📅 <strong>${dateStr}</strong></div>
-        <div class="card-stat">💵 <strong>${e.fee===0?'Free':fmt(e.fee)}</strong></div>
-        <div class="card-stat">📈 <strong>~${fmt(rev)}</strong> est.</div>
-        <button class="card-add-btn ${sel?'added':''}" onclick="toggleSelect(${JSON.stringify(String(e.id))},event)">
-          ${sel?'✓ Added':'+ Plan'}
-        </button>
-      </div>
-    </div>`;
-}
+      `).join("");
+    }
 
-function toggleSelect(id, evt) {
-  if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
-  const key = planId(id);
-  const current = planFromDiscover && planFromDiscover.length > 0
-    ? [...planFromDiscover]
-    : getPlanEvents().map((event) => toStoredPlanEvent(event)).filter(Boolean);
-  const removing = current.some((event) => planId(event.id) === key);
-  const next = removing
-    ? current.filter((event) => planId(event.id) !== key)
-    : [...current, toStoredPlanEvent(EVENTS.find((event) => planId(event.id) === key))].filter(Boolean);
-  syncPlanSelection(next);
-  renderDiscovery();
-  updatePlanCounter();
-  requestRenderPlan();
-}
+    // Show import bar if saved markets exist and not already in plan
+    const importableMarkets = savedMarkets.filter(m => !plan.some(p => p.source_id === m.id));
+    if (importableMarkets.length) {
+      document.getElementById("import-bar").style.display = "";
+      document.getElementById("saved-count").textContent = importableMarkets.length;
+      document.getElementById("import-btn").addEventListener("click", () => {
+        importableMarkets.forEach(m => {
+          plan.push({
+            id: Date.now() + Math.random(),
+            name: m.name || m.title || "Event",
+            date: m.date || m.start_date || "",
+            location: (m.city ? m.city + (m.state ? ", " + m.state : "") : "") || m.location || "",
+            fee: Number(m.booth_price || m.vendor_fee || 0),
+            revenue: 0,
+            expenses: 0,
+            notes: "",
+            source_id: m.id,
+          });
+        });
+        savePlan();
+        renderAll();
+        document.getElementById("import-bar").style.display = "none";
+      });
+    }
 
-function updatePlanCounter() {
-  const sel = getPlanEvents();
-  const fees = sel.reduce((a,e)=>a+e.fee,0);
-  const profit = sel.reduce((a,e)=>a+projRevenue(e)-e.fee,0);
-  document.getElementById('pc-events').textContent = sel.length;
-  document.getElementById('pc-fees').textContent = fmt(fees);
-  document.getElementById('pc-profit').textContent = fmt(profit);
-  document.getElementById('plan-badge').textContent = sel.length + ' event' + (sel.length!==1?'s':'');
-}
+    // Render functions
+    function calcProfit(ev) {
+      return (Number(ev.revenue) || 0) - (Number(ev.fee) || 0) - (Number(ev.expenses) || 0);
+    }
 
-// ════════════════════════════════════════
-// RENDER FINAL PLAN
-// ════════════════════════════════════════
-function renderPlan() {
-  const sel = getPlanEvents();
+    function formatMoney(n) {
+      const abs = Math.abs(n);
+      return (n < 0 ? "-$" : "$") + abs.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
 
-  const totalFees = sel.reduce((a,e)=>a+e.fee,0);
-  const totalRevMin = sel.reduce((a,e)=>a+Math.round(projRevenue(e)*0.7),0);
-  const totalRevMax = sel.reduce((a,e)=>a+Math.round(projRevenue(e)*1.35),0);
-  const profitMin = totalRevMin - totalFees;
-  const profitMax = totalRevMax - totalFees;
-  const maxDist = sel.length ? Math.max(...sel.map(e=>e.distance)) : 0;
-  const hasHighFee = sel.some(e=>e.fee>100);
-  const riskLevel = sel.length===0?0 : Math.min(100, Math.round((hasHighFee?40:20) + (sel.some(e=>e.distance>100)?20:0) + (sel.length>8?20:0) + Math.random()*10));
+    function renderAll() {
+      renderEventList();
+      updateSummary();
+    }
 
-  // KPIs
-  document.getElementById('plan-kpis').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-icon">📅</div>
-      <div class="kpi-val accent">${sel.length}</div>
-      <div class="kpi-lab">Events Selected</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-icon">📍</div>
-      <div class="kpi-val accent">${maxDist}mi</div>
-      <div class="kpi-lab">Max Distance</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-icon">💰</div>
-      <div class="kpi-val green">${fmt(profitMin)}–${fmt(profitMax)}</div>
-      <div class="kpi-lab">Est. Profit Range</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-icon">⚠️</div>
-      <div class="kpi-val ${riskLevel<40?'green':riskLevel<65?'amber':'red'}">${riskLevel<40?'Low':riskLevel<65?'Med':'High'}</div>
-      <div class="kpi-lab">Risk Level</div>
-    </div>
-  `;
+    function renderEventList() {
+      const list = document.getElementById("event-list");
+      const empty = document.getElementById("empty-plan");
+      document.getElementById("event-count").textContent = plan.length ? `${plan.length} event${plan.length === 1 ? "" : "s"}` : "";
 
-  // Budget dashboard (from event history)
-  const budget = typeof getBudgetSummary === 'function' ? getBudgetSummary() : { totalRevenue:0, totalProfit:0, count:0, best:null, worst:null };
-  const shopifyConnected = window.shopifyConnected === true;
-  const shopifyProducts = window.shopifyProducts || [];
-  const historyForAov = typeof getEventHistory === 'function' ? getEventHistory() : [];
-  const totalRev = historyForAov.reduce((s,h)=>s+(h.revenue||0),0);
-  const eventsWithRevenue = historyForAov.filter(h=>h.revenue&&h.revenue>0).length;
-  const avgOrderValue = eventsWithRevenue ? totalRev / eventsWithRevenue : 0;
-  let main = '';
-  main += `
-    <div class="plan-section budget-dashboard">
-      <div class="section-head">
-        <div class="section-num">0</div>
-        <div class="section-title">Your numbers so far</div>
-      </div>
-      <p class="muted">Totals from events you've logged.</p>
-      <div class="budget-cards">
-        <div class="budget-card"><span class="budget-val">${fmt(budget.totalRevenue)}</span><span class="budget-lab">Total revenue</span></div>
-        <div class="budget-card"><span class="budget-val ${budget.totalProfit>=0?'green':'red'}">${fmt(budget.totalProfit)}</span><span class="budget-lab">Total profit</span></div>
-        <div class="budget-card"><span class="budget-val">${budget.count}</span><span class="budget-lab">Events logged</span></div>
-      </div>
-      ${budget.best ? `<p class="budget-highlight good">Best so far: <strong>${budget.best.eventTitle}</strong> — ${fmt(budget.best.profit)} profit</p>` : ''}
-      ${budget.worst && budget.worst.id !== budget.best?.id ? `<p class="budget-highlight warn">Toughest: <strong>${budget.worst.eventTitle}</strong> — ${fmt(budget.worst.profit)} profit</p>` : ''}
-      ${budget.count === 0 ? '<p class="muted">Mark events as completed after you sell to see your totals here.</p>' : ''}
-    </div>`;
+      if (!plan.length) {
+        list.innerHTML = "";
+        empty.style.display = "";
+        return;
+      }
+      empty.style.display = "none";
 
-  if (shopifyConnected && shopifyProducts.length > 0) {
-    const topByStock = [...shopifyProducts].sort((a,b)=>(b.inventory_quantity||0)-(a.inventory_quantity||0)).slice(0, 5);
-    const lowStock = shopifyProducts.filter(p=>(p.inventory_quantity||0) < 5 && (p.inventory_quantity||0) >= 0);
-    const valueEst = shopifyProducts.reduce((s,p)=> s + (p.price||0)*Math.min(p.inventory_quantity||0, 15), 0);
-    const estMin = Math.round(valueEst*0.4);
-    const estMax = Math.round(valueEst*0.85);
-    main += `
-    <div class="plan-section shopify-insights">
-      <div class="section-head"><div class="section-num">📦</div><div class="section-title">What to bring</div></div>
-      <p class="muted">Based on your connected store. Bring more of what you have in stock.</p>
-      <ul class="bring-list">
-        ${topByStock.map(p=>`<li><strong>${p.name}</strong> — ${p.inventory_quantity} in stock, ${fmt(p.price)} each</li>`).join('')}
-      </ul>
-    </div>
-    <div class="plan-section shopify-insights">
-      <div class="section-head"><div class="section-num">💰</div><div class="section-title">Profit estimate</div></div>
-      <p class="muted">Rough range based on your inventory and prices${avgOrderValue ? ' and your past event revenue.' : '.'}</p>
-      <p class="profit-estimate-range">You'll likely make <strong>${fmt(estMin)}–${fmt(estMax)}</strong> if you sell a solid slice of what you bring.</p>
-    </div>
-    ${lowStock.length > 0 ? `
-    <div class="plan-section shopify-insights">
-      <div class="section-head"><div class="section-num">📉</div><div class="section-title">Inventory check</div></div>
-      <p class="muted">You may run low on these.</p>
-      <ul class="bring-list warn"><li>${lowStock.map(p=>`<strong>${p.name}</strong> (${p.inventory_quantity} left)`).join('</li><li>')}</li></ul>
-    </div>` : ''}
-    `;
-  }
-
-  // Main content
-
-  // Route
-  main += `
-    <div class="plan-section">
-      <div class="section-head">
-        <div class="section-num">1</div>
-        <div class="section-title">Your Event Route</div>
-      </div>
-      <div class="map-placeholder">
-        <div class="map-grid"></div>
-        ${sel.slice(0,5).map((e,i)=>`<div class="map-pin" style="left:${15+i*16}%;top:${25+Math.sin(i)*30}%">${e.icon}</div>`).join('')}
-        <div class="map-center-label">🗺️ Interactive map — tap to expand</div>
-      </div>
-      <div class="route-list">
-        ${sel.map((e,i)=>{
-          const d = new Date(e.date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-          return `
-          <div class="route-item">
-            <div class="route-num ${i===0?'first'}">${i+1}</div>
-            <div class="route-info">
-              <div class="route-name">${e.icon} ${e.title}</div>
-              <div class="route-meta"><span>${d}</span><span>${e.city}</span><span>${e.distance}mi away</span></div>
-              ${i<sel.length-1?`<div class="route-travel">→ ${Math.round((sel[i+1].distance+e.distance)*0.4+12)} min drive to next stop</div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-
-  // Selected events
-  main += `
-    <div class="plan-section">
-      <div class="section-head">
-        <div class="section-num">2</div>
-        <div class="section-title">Selected Events</div>
-      </div>
-      ${sel.length===0 ? '<div class="empty-state" style="padding:30px 0"><p>No events selected yet. Go to Discover to add some.</p></div>' :
-        sel.map(e => {
-          const d = new Date(e.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-          const whys = [
-            `Strong fit score of ${e.fitScore} — matches your audience and setup preferences.`,
-            `${e.traffic==='high'?'High foot traffic means more discovery opportunities.':'Niche crowd with high purchase intent for your product type.'}`,
-            `${e.fee<=25?'Very low booth fee maximizes your profit margin.':e.fee<=75?'Reasonable booth fee with strong projected return.':'Premium event with affluent buyer demographic.'}`,
-            `${e.electric?'Electricity available — great for lighting up your jewelry display.':'Outdoor natural light is ideal for showcasing jewelry colors.'}`
-          ];
-          const why = whys[e.id % whys.length];
-          return `
-          <div class="sel-event-card">
-            <div class="sel-event-icon" style="background:${e.fitScore>=85?'rgba(52,211,153,0.12)':'rgba(124,109,250,0.1)'}">${e.icon}</div>
-            <div class="sel-event-body">
-              <div class="sel-event-name">${e.title}</div>
-              <div class="sel-event-meta">
-                <span>📅 ${d}</span>
-                <span>📍 ${e.distance}mi</span>
-                <span>👥 ${e.traffic} traffic</span>
+      list.innerHTML = plan.map((ev, idx) => {
+        const profit = calcProfit(ev);
+        const profitColor = profit >= 0 ? "var(--success, #15803d)" : "var(--danger, #dc2626)";
+        const emoji = profit > 200 ? "🌟" : profit > 0 ? "✅" : profit === 0 ? "⚖️" : "⚠️";
+        return `
+          <div class="event-plan-card" data-idx="${idx}">
+            <div class="event-card-header">
+              <div class="event-card-icon">${emoji}</div>
+              <div class="event-card-title">
+                <strong>${escapeHtml(ev.name || "Unnamed event")}</strong>
+                <div class="event-meta">
+                  ${ev.date ? "📅 " + escapeHtml(ev.date) + " " : ""}
+                  ${ev.location ? "📍 " + escapeHtml(ev.location) : ""}
+                </div>
               </div>
-              <div class="sel-event-why">💡 ${why}</div>
-            </div>
-            <div class="sel-event-right">
-              <div class="sel-event-fee">${e.fee===0?'Free':fmt(e.fee)}</div>
-              <div class="pill ${e.fitScore>=85?'green':''}">${e.fitScore} fit</div>
-              <button type="button" class="sel-event-complete" onclick="openPostEventModal('${String(e.id).replace(/'/g,"\'")}','${String(e.title).replace(/'/g,"\'").replace(/"/g,'&quot;')}','${e.date||''}')">Mark as completed</button>
-              <button class="sel-event-remove" onclick="removeFromPlan(${typeof e.id==='number'?e.id:JSON.stringify(String(e.id))})">Remove</button>
-            </div>
-          </div>`;
-        }).join('')}
-    </div>`;
-
-  // Profit snapshot
-  main += `
-    <div class="plan-section">
-      <div class="section-head">
-        <div class="section-num">3</div>
-        <div class="section-title">Profit Snapshot</div>
-      </div>
-      <div class="profit-table">
-        <div class="profit-row"><span class="profit-label">Total Booth Fees</span><span class="profit-val neg">-${fmt(totalFees)}</span></div>
-        <div class="profit-row"><span class="profit-label">Estimated Revenue (low)</span><span class="profit-val">${fmt(totalRevMin)}</span></div>
-        <div class="profit-row"><span class="profit-label">Estimated Revenue (high)</span><span class="profit-val">${fmt(totalRevMax)}</span></div>
-        <div class="profit-row total"><span class="profit-label">Projected Net Profit</span><span class="profit-val pos">${fmt(profitMin)} – ${fmt(profitMax)}</span></div>
-      </div>
-    </div>`;
-
-  // Prep list
-  const prepItems = [
-    "Display risers & stands","Jewelry organizer trays","Square / card reader","Business cards & tags",
-    "Canopy + weights","Table + tablecloth","Cash float ($100)","Packaging & bags",
-    "Extension cord","Phone charger + bank","Pricing labels","Mirror for customers",
-    "Water & snacks","Weather contingency plan","First aid kit","Inventory spreadsheet"
-  ];
-  main += `
-    <div class="plan-section">
-      <div class="section-head">
-        <div class="section-num">4</div>
-        <div class="section-title">Preparation Checklist</div>
-      </div>
-      <div class="prep-grid">
-        ${prepItems.map((item,i) => `
-          <div class="prep-item ${state.prepChecked.has(i)?'checked':''}" onclick="togglePrep(${i},this)">
-            <div class="prep-check">${state.prepChecked.has(i)?'✓':''}</div>
-            ${item}
-          </div>`).join('')}
-      </div>
-    </div>`;
-
-  // Event history (past logged events)
-  const history = typeof getEventHistory === 'function' ? getEventHistory() : [];
-  main += `
-    <div class="plan-section event-history-section">
-      <div class="section-head">
-        <div class="section-num">5</div>
-        <div class="section-title">Event history</div>
-      </div>
-      <p class="muted">Events you've logged with revenue and costs. We use this to show your totals above.</p>
-      ${history.length === 0 ? '<div class="empty-state"><p>No events logged yet. Use "Mark as completed" on a plan event after you sell.</p></div>' : `
-      <div class="history-list">
-        ${history.slice(0, 20).map((h, i) => `
-          <div class="history-item" data-history-id="${h.id}">
-            <div class="history-main">
-              <strong>${h.eventTitle || 'Event'}</strong>
-              <span class="history-meta">${h.date ? new Date(h.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : ''}${h.rating != null ? ' · '+h.rating+'/5' : ''}</span>
-              <div class="history-detail" style="display:none;">
-                <p class="history-detail-row">Booth fee: ${fmt(h.boothFee)} · Revenue: ${fmt(h.revenue)} · Other costs: ${fmt(h.costs)}</p>
-                ${h.notes ? '<p class="history-notes">'+h.notes+'</p>' : ''}
+              <div class="event-card-profit">
+                <div class="profit-label">Profit</div>
+                <div class="profit-val" style="color:${profitColor}">${formatMoney(profit)}</div>
               </div>
             </div>
-            <div class="history-right">
-              <div class="history-profit ${h.profit >= 0 ? 'pos' : 'neg'}">${fmt(h.profit)}</div>
-              <button type="button" class="history-toggle" onclick="toggleHistoryDetail('${h.id}')">Details</button>
+            <div class="event-card-inputs">
+              <div class="input-group">
+                <label>Booth fee ($)</label>
+                <input type="number" class="fee-field ${ev.source_id ? 'fee-locked' : ''}"
+                  value="${ev.fee || 0}" min="0" step="5"
+                  data-idx="${idx}" data-field="fee">
+              </div>
+              <div class="input-group">
+                <label>Revenue ($)</label>
+                <input type="number" class="revenue-field"
+                  value="${ev.revenue || 0}" min="0" step="10"
+                  data-idx="${idx}" data-field="revenue"
+                  placeholder="Expected sales">
+              </div>
+              <div class="input-group">
+                <label>Other expenses ($)</label>
+                <input type="number" class="expenses-field"
+                  value="${ev.expenses || 0}" min="0" step="5"
+                  data-idx="${idx}" data-field="expenses"
+                  placeholder="Travel, supplies…">
+              </div>
             </div>
-          </div>`).join('')}
-      </div>
-      ${history.length > 20 ? '<p class="muted">Showing latest 20.</p>' : ''}`}
-    </div>`;
+            <div class="event-card-actions">
+              <div class="event-notes">
+                <input type="text" placeholder="Notes…" value="${escapeHtml(ev.notes || "")}"
+                  data-idx="${idx}" data-field="notes">
+              </div>
+              <button class="delete-event-btn" data-idx="${idx}">✕ Remove</button>
+            </div>
+          </div>
+        `;
+      }).join("");
 
-  document.getElementById('plan-main').innerHTML = main;
+      // Wire up inputs
+      list.querySelectorAll("input[data-field]").forEach(input => {
+        input.addEventListener("input", () => {
+          const idx = parseInt(input.dataset.idx);
+          const field = input.dataset.field;
+          plan[idx][field] = field === "notes" ? input.value : (parseFloat(input.value) || 0);
+          savePlan();
+          // Update just this card's profit display
+          const card = input.closest(".event-plan-card");
+          const profit = calcProfit(plan[idx]);
+          const el = card.querySelector(".profit-val");
+          const profitColor = profit >= 0 ? "var(--success, #15803d)" : "var(--danger, #dc2626)";
+          const emoji = profit > 200 ? "🌟" : profit > 0 ? "✅" : profit === 0 ? "⚖️" : "⚠️";
+          el.textContent = formatMoney(profit);
+          el.style.color = profitColor;
+          card.querySelector(".event-card-icon").textContent = emoji;
+          updateSummary();
+        });
+      });
 
-  // ASIDE
-  const advice = [
-    {type:'good', icon:'✅', title:'Strong ROI on recurring markets', body:`Art Garden KC at $10/event gives you the best return in KC. Booking 8+ dates builds loyal repeat customers who'll seek you out specifically.`},
-    {type:'tip',  icon:'💡', title:'Front-load your season', body:`Your April–May events build brand awareness so shoppers recognize you at the higher-traffic summer events. Sequence matters.`},
-    {type:'warn', icon:'⚠️', title:'Convention fee risk', body:`Events over $100 like KC Oddities need 8+ sales just to break even. Have a fallback plan if foot traffic is lower than expected.`},
-    {type:'good', icon:'🎯', title:'Holiday window is your biggest opportunity', body:`November–December events (Holiday Swing, Crown Center) have 40–60% higher average ticket sizes. Prioritize premium inventory for these.`},
-  ];
+      list.querySelectorAll(".delete-event-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.dataset.idx);
+          plan.splice(idx, 1);
+          savePlan();
+          renderAll();
+        });
+      });
+    }
 
-  const asideHTML = `
-    <div class="action-buttons">
-      <button class="action-btn primary" onclick="savePlanNow()">💾 Save Plan</button>
-      <button class="action-btn secondary" onclick="showScreen('discovery')">✏️ Edit Plan</button>
-      <button class="action-btn secondary" onclick="sharePlan()">🔗 Share Plan</button>
-      <a class="action-btn ghost" href="/business">📈 My Business</a>
-      <a class="action-btn ghost" href="/history">🗂 Event History</a>
-      <a class="action-btn ghost" href="/profile">👤 Profiles</a>
-      <a class="action-btn ghost" href="/integrations">🔌 Integrations</a>
-      <button class="action-btn ghost" onclick="showScreen('discovery')">➕ Add Event</button>
-    </div>
+    function updateSummary() {
+      const totalFees = plan.reduce((s, ev) => s + (Number(ev.fee) || 0), 0);
+      const totalRevenue = plan.reduce((s, ev) => s + (Number(ev.revenue) || 0), 0);
+      const totalExpenses = plan.reduce((s, ev) => s + (Number(ev.expenses) || 0), 0);
+      const totalProfit = totalRevenue - totalFees - totalExpenses;
+      const totalCost = totalFees + totalExpenses;
+      const roi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
-    <div class="aside-section">
-      <div class="aside-section-title">Risk Assessment</div>
-      <div class="risk-meter">
-        <div class="risk-label">Overall Season Risk</div>
-        <div class="risk-bar-wrap"><div class="risk-bar" style="width:${riskLevel}%"></div></div>
-        <div class="risk-indicator"><span>Low</span><span>Medium</span><span>High</span></div>
-        <div class="risk-val">${riskLevel<40?'Low':riskLevel<65?'Medium':'High'}</div>
-        <div class="risk-desc">${riskLevel<40?'Well-balanced plan with low-cost recurring markets anchoring your season.':riskLevel<65?'Some higher-fee events introduce risk. Offset with recurring low-cost markets.':'Several high-fee events. Make sure you have enough inventory to justify each.'}</div>
-      </div>
-    </div>
+      document.getElementById("sum-events").textContent = plan.length;
+      document.getElementById("sum-fees").textContent = formatMoney(totalFees);
+      document.getElementById("sum-revenue").textContent = formatMoney(totalRevenue);
+      document.getElementById("sum-expenses").textContent = formatMoney(totalExpenses);
 
-    <div class="aside-section">
-      <div class="aside-section-title">Season Timeline</div>
-      <div class="timeline">
-        ${sel.slice(0,8).map((e,i)=>{
-          const mon = new Date(e.date).toLocaleString('en-US',{month:'short',year:'2-digit'});
-          return `
-          <div class="tl-item">
-            <div class="tl-dot ${e.fitScore>=85?'green':e.fitScore>=70?'gold':''}"></div>
-            <div class="tl-month">${mon}</div>
-            <div class="tl-name">${e.icon} ${e.title.length>28?e.title.slice(0,28)+'…':e.title}</div>
-            <div class="tl-fee">${e.fee===0?'Free':fmt(e.fee)} booth fee</div>
-          </div>`;
-        }).join('')}
-        ${sel.length>8?`<div class="tl-item"><div class="tl-dot"></div><div class="tl-month">+${sel.length-8} more</div></div>`:''}
-      </div>
-    </div>
+      const profitEl = document.getElementById("sum-profit");
+      profitEl.textContent = formatMoney(totalProfit);
+      profitEl.className = "total-value " + (totalProfit >= 0 ? "positive" : "negative");
 
-    <div class="aside-section">
-      <div class="aside-section-title">Smart Advice</div>
-      <div class="advice-cards">
-        ${advice.map(a=>`
-          <div class="advice-card ${a.type}">
-            <div class="advice-icon">${a.icon}</div>
-            <div class="advice-text ${a.type}"><strong>${a.title}</strong>${a.body}</div>
-          </div>`).join('')}
-      </div>
-    </div>
+      document.getElementById("roi-pct").textContent = totalCost > 0 ? roi.toFixed(0) + "%" : "—";
+      document.getElementById("roi-fill").style.width = Math.min(Math.max(roi, 0), 200) / 2 + "%";
 
-    <div class="aside-section shopify-section">
-      <div class="aside-section-title">Your store</div>
-      <div id="shopify-inline-status" class="inline-status" style="display:none;"></div>
-      ${shopifyConnected ? `
-        <p class="shopify-status connected">✅ Your store is connected</p>
-        ${window.shopifyUpdatedAt ? `<p class="muted small">Last synced: ${new Date(window.shopifyUpdatedAt).toLocaleString()}</p>` : ``}
-        <p class="muted">We use your products and inventory to suggest what to bring and estimate profit.</p>
-        <button type="button" class="action-btn secondary btn-block" onclick="shopifySyncAndRefresh(()=>renderPlan())" ${window.shopifyLoading ? 'disabled' : ''}>${window.shopifyLoading ? 'Syncing…' : 'Sync products'}</button>
-        <button type="button" class="action-btn ghost btn-block" onclick="shopifyDisconnectSoft(()=>renderPlan())">Disconnect</button>
-        ${(window.shopifyProducts && window.shopifyProducts.length === 0 && !window.shopifyLoading) ? `<p class="muted small" style="margin-top:10px;">No products found yet. Try syncing again.</p>` : ``}
-      ` : `
-        <p class="shopify-cta">Connect My Store</p>
-        <p class="muted">We'll help you plan what to bring and estimate profit.</p>
-        <div class="shopify-connect-wrap">
-          <input type="text" id="shopify-shop-input" placeholder="yourstore" class="shopify-shop-input">
-          <button type="button" class="action-btn primary btn-block" onclick="shopifyConnectFromInput()" ${window.shopifyLoading ? 'disabled' : ''}>${window.shopifyLoading ? 'Loading…' : 'Connect'}</button>
-        </div>
-        <p class="muted small">Enter your Shopify store name (e.g. mystore)</p>
-      `}
-    </div>
-  `;
-  document.getElementById('plan-aside').innerHTML = asideHTML;
-}
+      // Profit tip
+      const tip = document.getElementById("profit-tip");
+      const tipText = document.getElementById("profit-tip-text");
+      if (plan.length > 0 && totalRevenue > 0) {
+        tip.style.display = "";
+        if (roi < 0) {
+          tipText.textContent = "Your expenses exceed revenue. Try reducing booth fees or adding higher-revenue events.";
+        } else if (roi < 30) {
+          tipText.textContent = "ROI under 30%. Look for lower booth fees or events with better foot traffic.";
+        } else if (roi < 80) {
+          tipText.textContent = "Solid ROI. Focus on your best-performing events and scale inventory accordingly.";
+        } else {
+          tipText.textContent = "Great ROI! Consider expanding your event calendar or testing premium markets.";
+        }
+      } else {
+        tip.style.display = "none";
+      }
+    }
 
-function openPostEventModal(eventId, eventTitle, eventDate) {
-  document.getElementById('pe-event-id').value = eventId || '';
-  document.getElementById('pe-event-title').value = eventTitle || '';
-  document.getElementById('pe-event-date').value = eventDate || '';
-  const history = typeof getEventHistory === 'function' ? getEventHistory() : [];
-  const existing = history.find((h) => String(h.eventId || '') === String(eventId || '') && String(h.eventDate || h.date || '') === String(eventDate || ''));
-  if (existing) {
-    document.getElementById('pe-modal-title').textContent = 'Update event log';
-    document.getElementById('pe-submit').textContent = 'Update';
-    document.getElementById('pe-booth-fee').value = existing.boothFee ?? '';
-    document.getElementById('pe-revenue').value = existing.revenue ?? '';
-    document.getElementById('pe-costs').value = existing.costs ?? '0';
-    document.getElementById('pe-rating').value = existing.rating ?? '';
-    document.getElementById('pe-notes').value = existing.notes ?? '';
-  } else {
-    document.getElementById('pe-modal-title').textContent = 'Log this event';
-    document.getElementById('pe-submit').textContent = 'Save';
-    document.getElementById('pe-booth-fee').value = '';
-    document.getElementById('pe-revenue').value = '';
-    document.getElementById('pe-costs').value = '0';
-    document.getElementById('pe-rating').value = '';
-    document.getElementById('pe-notes').value = '';
-  }
-  document.getElementById('post-event-modal').style.display = 'flex';
-}
-function closePostEventModal() {
-  document.getElementById('post-event-modal').style.display = 'none';
-}
-function submitPostEvent(ev) {
-  ev.preventDefault();
-  const boothFee = document.getElementById('pe-booth-fee').value;
-  const revenue = document.getElementById('pe-revenue').value;
-  const costs = document.getElementById('pe-costs').value || '0';
-  const rating = document.getElementById('pe-rating').value;
-  const notes = document.getElementById('pe-notes').value;
-  if (typeof addEventToHistory !== 'function') return;
-  addEventToHistory({
-    eventId: document.getElementById('pe-event-id').value,
-    eventTitle: document.getElementById('pe-event-title').value,
-    eventDate: document.getElementById('pe-event-date').value,
-    boothFee, revenue, costs, rating: rating ? parseInt(rating, 10) : null, notes
-  });
-  closePostEventModal();
-  showToast('Event log saved', 'success');
-  updatePlanCounter();
-  requestRenderPlan();
-}
-function toggleHistoryDetail(id) {
-  const item = document.querySelector('[data-history-id="'+id+'"]');
-  if (!item) return;
-  const detail = item.querySelector('.history-detail');
-  const btn = item.querySelector('.history-toggle');
-  if (detail && btn) {
-    const show = detail.style.display === 'none';
-    detail.style.display = show ? 'block' : 'none';
-    btn.textContent = show ? 'Hide' : 'Details';
-  }
-}
-
-// Shopify UI helpers are shared via /assets/app.js (shopifyLoadData / shopifySyncAndRefresh / shopifyDisconnectSoft).
-
-function savePlanNow() {
-  syncPlanSelection(getPlanEvents());
-  const count = getPlanEvents().length;
-  showToast(`Plan saved with ${count} event${count === 1 ? '' : 's'}`, 'success');
-}
-
-function sharePlan() {
-  const url = window.location.href;
-  const done = () => showToast('Share link copied', 'success');
-  const fail = () => showToast('Could not copy link', 'error');
-
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-    navigator.clipboard.writeText(url).then(done).catch(() => {
-      // fallback below
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = url;
-        ta.setAttribute('readonly', 'true');
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        ok ? done() : fail();
-      } catch (e) { fail(); }
+    // Add event handler
+    document.getElementById("add-event-btn").addEventListener("click", () => {
+      const name = document.getElementById("new-name").value.trim();
+      if (!name) {
+        document.getElementById("new-name").focus();
+        return;
+      }
+      plan.push({
+        id: Date.now() + Math.random(),
+        name,
+        date: document.getElementById("new-date").value,
+        location: document.getElementById("new-location").value.trim(),
+        fee: parseFloat(document.getElementById("new-fee").value) || 0,
+        revenue: parseFloat(document.getElementById("new-revenue").value) || 0,
+        expenses: parseFloat(document.getElementById("new-expenses").value) || 0,
+        notes: "",
+        source_id: null,
+      });
+      savePlan();
+      // Reset form
+      ["new-name","new-date","new-location","new-fee","new-revenue","new-expenses"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      renderAll();
     });
-    return;
-  }
 
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = url;
-    ta.setAttribute('readonly', 'true');
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    ok ? done() : fail();
-  } catch (e) {
-    fail();
-  }
-}
+    // Enter key on name field
+    document.getElementById("new-name").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("add-event-btn").click();
+    });
 
-// Toast UI is shared via /assets/app.js (showToast/ensureToast).
-
-function removeFromPlan(id) {
-  const key = planId(id);
-  const next = getPlanEvents()
-    .map((event) => toStoredPlanEvent(event))
-    .filter((event) => event && planId(event.id) !== key);
-  syncPlanSelection(next);
-  updatePlanCounter();
-  requestRenderDiscovery();
-  requestRenderPlan();
-}
-
-function togglePrep(i, el) {
-  if(state.prepChecked.has(i)) state.prepChecked.delete(i);
-  else state.prepChecked.add(i);
-  el.classList.toggle('checked');
-  el.querySelector('.prep-check').textContent = state.prepChecked.has(i)?'✓':'';
-}
-
-// ════════════════════════════════════════
-// CONTROLS
-// ════════════════════════════════════════
-function showScreen(name) {
-  state.screen = name;
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+name).classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>{
-    t.classList.toggle('active', (i===0&&name==='discovery')||(i===1&&name==='plan'));
-  });
-  if(name==='plan') {
-    // render in next tick so the screen change feels instant
-    queueMicrotask(()=>requestRenderPlan());
-  } else if (name==='discovery') {
-    queueMicrotask(()=>requestRenderDiscovery());
-  }
-}
-
-function setTypeFilter(el, val) {
-  state.typeFilter = val;
-  document.querySelectorAll('[data-filter]').forEach(c=>{
-    if(['all','market','vintage','oddity','convention','craft','flea'].includes(c.dataset.filter))
-      c.classList.toggle('active', c.dataset.filter===val);
-  });
-  requestRenderDiscovery();
-}
-
-function setFeatureFilter(el, val) {
-  const idx = state.featureFilters.indexOf(val);
-  if(idx>-1) { state.featureFilters.splice(idx,1); el.classList.remove('active'); }
-  else { state.featureFilters.push(val); el.classList.add('active'); }
-  requestRenderDiscovery();
-}
-
-function setSort(el, val) {
-  state.sortBy = val;
-  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  requestRenderDiscovery();
-}
-
-function setMode(mode) {
-  state.travelMode = mode;
-  document.getElementById('mode-local').classList.toggle('active', mode==='local');
-  document.getElementById('mode-travel').classList.toggle('active', mode==='travel');
-  if(mode==='travel') state.maxDist=200;
-  requestRenderDiscovery();
-}
-
-function updateFeeFilter(el) {
-  state.maxFee = +el.value;
-  document.getElementById('fee-val').textContent = el.value>=500 ? 'Any' : '≤ $'+el.value;
-  requestRenderDiscovery();
-}
-
-function updateDistFilter(el) {
-  state.maxDist = +el.value;
-  document.getElementById('dist-val').textContent = el.value>=200 ? 'Any' : '≤ '+el.value+'mi';
-  requestRenderDiscovery();
-}
-
-function filterEvents() {
-  state.searchQuery = document.getElementById('search-input').value;
-  requestRenderDiscovery();
-}
-
-function togglePref(el) { el.classList.toggle('active'); }
-
-// ════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════
-window.shopifyConnected = false;
-window.shopifyProducts = [];
-renderDiscovery();
-updatePlanCounter();
-showScreen('plan');
-shopifyLoadData().then(function() {
-  requestRenderPlan();
-}).catch(function() {
-  requestRenderPlan();
-});
-</script>
+    renderAll();
+  })();
+  </script>
 </body>
 </html>

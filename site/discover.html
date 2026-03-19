@@ -11,8 +11,8 @@
     <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
       <nav class="nav-links">
-        <a href="/">Home</a>
-        <a href="/dashboard">Plan</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/my-shop">My Shop</a>
         <a class="active" href="/discover">Discover</a>
         <a href="/final-plan">Profit</a>
       </nav>
@@ -20,8 +20,8 @@
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
     <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/">Home</a>
-      <a href="/dashboard">Plan</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/my-shop">My Shop</a>
       <a href="/discover">Discover</a>
       <a href="/final-plan">Profit</a>
       <div data-mobile-auth-nav></div>
@@ -30,9 +30,9 @@
   <main>
     <section class="page-hero discover-hero">
       <div class="container">
-        <span class="eyebrow">Advanced discovery</span>
-        <h1>Find the events that fit you best.</h1>
-        <p>Browse a large event catalog, narrow it with simple filters, and let Vendor Atlas rank what looks strongest for your style of selling.</p>
+        <span class="eyebrow">Event browser — free</span>
+        <h1>Find events that fit your style.</h1>
+        <p>Browse the event database, filter by location, date, category, and booth fee, and save the ones worth applying to. No AI required.</p>
       </div>
     </section>
     <section>
@@ -50,5 +50,177 @@
     </div>
   </footer>
   <script src="/assets/app.js"></script>
+  <style>
+    .fit-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; font-weight: 700; padding: .18rem .55rem;
+      border-radius: 99px; white-space: nowrap;
+    }
+    .fit-badge.high   { background: rgba(2,122,72,.12);  color: #15803d; }
+    .fit-badge.mid    { background: rgba(232,159,71,.14); color: #92400e; }
+    .fit-badge.low    { background: rgba(107,114,128,.1); color: #6b7280; }
+    .fit-tooltip {
+      position: relative; cursor: help;
+    }
+    .fit-tooltip:hover::after {
+      content: attr(data-tip);
+      position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+      background: #1a2e2b; color: #fff; font-size: .75rem; font-weight: 400;
+      padding: .4rem .7rem; border-radius: 6px; white-space: normal;
+      min-width: 160px; max-width: 220px; z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    }
+    .ai-match-bar {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .78rem; color: var(--muted);
+      margin-bottom: .75rem; padding: .5rem .75rem;
+      background: rgba(15,118,110,.06); border-radius: var(--radius-sm);
+    }
+    .ai-match-bar strong { color: var(--brand); }
+  </style>
+  <script>
+  // ── AI Fit Score Overlay ───────────────────────────────────────────────────
+  // Runs after app.js renders the discover page.
+  // If ai_matching is enabled and user is a vendor, we:
+  //   1. Score all visible events via POST /api/ai/scores/events
+  //   2. Inject fit score badges into the rendered event cards
+  //   3. Re-sort the card list by fit score (highest first)
+  // If AI is off, this script does nothing.
+  (async function initAIScoreOverlay() {
+    // Check config first — bail fast if AI matching is off
+    let cfg = null;
+    try {
+      const r = await fetch("/api/config");
+      if (r.ok) cfg = await r.json();
+    } catch (_) {}
+    if (!cfg?.ai_matching) return;
+
+    // Check user is a vendor
+    let me = null;
+    try {
+      const r = await fetch("/api/auth/me", { credentials: "include" });
+      if (r.ok) me = await r.json();
+    } catch (_) {}
+    if (!me || me.role !== "vendor") return;
+
+    // Wait for app.js to render event cards (it's async, so poll briefly)
+    const root = document.querySelector("[data-discover-app]");
+    if (!root) return;
+
+    let attempts = 0;
+    await new Promise(resolve => {
+      const check = () => {
+        const cards = root.querySelectorAll("article.result-card");
+        if (cards.length > 0 || attempts++ > 20) { resolve(); return; }
+        setTimeout(check, 300);
+      };
+      check();
+    });
+
+    const cards = Array.from(root.querySelectorAll("article.result-card"));
+    if (!cards.length) return;
+
+    // Extract event data from cards via data-save-market attribute
+    const eventIds = [];
+    cards.forEach(card => {
+      const btn = card.querySelector("[data-save-market]");
+      if (btn) eventIds.push(btn.getAttribute("data-save-market"));
+    });
+    if (!eventIds.length) return;
+
+    // Fetch scores for these event IDs
+    let scores = {};
+    try {
+      const ids = eventIds.join(",");
+      const r = await fetch(`/api/ai/scores/events?event_ids=${encodeURIComponent(ids)}`, { credentials: "include" });
+      if (r.ok) {
+        const d = await r.json();
+        scores = d.scores || {};
+      }
+    } catch (_) {}
+
+    // If no cached scores exist, score them now
+    const unscored = eventIds.filter(id => !scores[id]);
+    if (unscored.length) {
+      try {
+        // Build minimal event objects from card DOM for scoring
+        const events = cards
+          .filter(card => {
+            const btn = card.querySelector("[data-save-market]");
+            return btn && unscored.includes(btn.getAttribute("data-save-market"));
+          })
+          .map(card => {
+            const btn = card.querySelector("[data-save-market]");
+            const id = btn?.getAttribute("data-save-market") || "";
+            const name = card.querySelector("h3")?.textContent?.trim() || "";
+            const pills = Array.from(card.querySelectorAll(".pill")).map(p => p.textContent.trim());
+            return { id, name, vendor_category: pills[2] || "", booth_price: parseFloat(pills[0]?.replace(/[^0-9.]/g,"")) || 0 };
+          });
+
+        const r = await fetch("/api/ai/scores/events", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ events }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          (d.events || []).forEach(ev => {
+            if (ev.id && ev.fit_score !== undefined) {
+              scores[ev.id] = { score: ev.fit_score, reason: ev.fit_reason };
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
+    if (!Object.keys(scores).length) return;
+
+    // Add score bar above results
+    const container = root.querySelector(".results-grid") || root;
+    const bar = document.createElement("div");
+    bar.className = "ai-match-bar";
+    bar.innerHTML = `✨ <strong>Fit scores active</strong> — events ranked by how well they match your vendor profile. <a href="/my-shop" style="color:var(--brand);">Edit profile →</a>`;
+    container.insertAdjacentElement("beforebegin", bar);
+
+    // Inject badges and sort cards
+    const cardParents = new Map();
+    cards.forEach(card => {
+      const btn = card.querySelector("[data-save-market]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-save-market");
+      const scoreData = scores[id];
+      if (!scoreData) return;
+
+      const score = scoreData.score;
+      const reason = scoreData.reason || "";
+      const tier = score >= 72 ? "high" : score >= 50 ? "mid" : "low";
+      const emoji = score >= 72 ? "🌟" : score >= 50 ? "✅" : "○";
+      const label = score >= 72 ? "Strong fit" : score >= 50 ? "Decent fit" : "Weak fit";
+
+      // Add badge to the card's meta row
+      const meta = card.querySelector(".result-meta");
+      if (meta) {
+        const badge = document.createElement("span");
+        badge.className = `fit-badge ${tier} fit-tooltip`;
+        badge.setAttribute("data-tip", reason || label);
+        badge.innerHTML = `${emoji} ${score} — ${label}`;
+        meta.prepend(badge);
+      }
+
+      // Store score on the card element for sorting
+      card.dataset.fitScore = String(score);
+      cardParents.set(card, card.parentElement);
+    });
+
+    // Re-sort cards by fit score descending within each .results-grid section
+    root.querySelectorAll(".results-grid").forEach(grid => {
+      const children = Array.from(grid.querySelectorAll("article.result-card"));
+      if (children.length < 2) return;
+      children.sort((a, b) => (Number(b.dataset.fitScore) || 0) - (Number(a.dataset.fitScore) || 0));
+      children.forEach(c => grid.appendChild(c));
+    });
+  })();
+  </script>
 </body>
 </html>
