@@ -69,7 +69,10 @@ def get_config() -> ServerConfig:
     if _config is None:
         try:
             from dotenv import load_dotenv
+            # Load .env file (local dev)
             load_dotenv()
+            # Load Render Secret File (production) — never wiped by deploys
+            load_dotenv("/etc/secrets/.env", override=False)
         except ImportError:
             pass
         _config = ServerConfig.from_env()
