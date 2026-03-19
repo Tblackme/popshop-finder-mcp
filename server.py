@@ -2627,6 +2627,54 @@ def create_app() -> FastAPI:
             }
         )
 
+    @app.post("/api/shopify/connect-token")
+    async def handle_shopify_connect_token(request: Request) -> JSONResponse:
+        """
+        Connect a Shopify store using a shop domain + Admin API access token.
+        Validates the credentials immediately by hitting the Shopify API,
+        then stores the connection identically to the OAuth path.
+        Body: { "shop_domain": "yourstore.myshopify.com", "access_token": "shpat_..." }
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+
+        shop_domain = _normalize_shopify_domain(body.get("shop_domain", ""))
+        access_token = str(body.get("access_token", "")).strip()
+
+        if not shop_domain:
+            return _validation_error("Enter your Shopify store domain.")
+        if not access_token:
+            return _validation_error("Enter your Shopify Admin API access token.")
+
+        # Validate credentials by making a real API call
+        try:
+            from shopify_oauth import products_with_inventory
+            products = products_with_inventory(shop_domain, access_token, limit=50)
+        except Exception as exc:
+            msg = str(exc)
+            if "401" in msg or "403" in msg or "Unauthorized" in msg.lower():
+                return _validation_error("Invalid credentials — check your store domain and access token.")
+            return _validation_error(f"Could not reach your Shopify store: {msg}", status_code=502)
+
+        vendor_id = int(user["id"])
+        set_shopify_connection(vendor_id, shop_domain, access_token)
+        if products:
+            upsert_shopify_products(vendor_id, products)
+
+        return JSONResponse({
+            "ok": True,
+            "shop": shop_domain,
+            "product_count": len(products),
+            "connected": True,
+        })
+
     @app.post("/api/shopify/storefront")
     async def handle_shopify_storefront_save(request: Request) -> JSONResponse:
         user = _require_user(request)

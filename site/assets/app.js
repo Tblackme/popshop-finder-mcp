@@ -4442,32 +4442,23 @@ async function setupIntegrationsPage() {
                   <button class="btn btn-secondary" type="button" data-integrations-disconnect>Disconnect</button>
                 </div>
               `
-              : oauthAvailable
-                ? `
+              : `
                 <div class="field" style="margin-top:18px;">
-                  <label for="integrations_shopify_store">Shopify store name</label>
-                  <div class="stack-row">
-                    <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore" value="${escapeHtml(snapshot.shop ? String(snapshot.shop).replace(".myshopify.com", "") : "")}">
-                    <button class="btn btn-primary" type="button" data-integrations-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Loading…" : "Connect Shopify"}</button>
-                  </div>
-                  <p class="muted" style="margin-top:8px;">We'll bring in products and inventory so your plan can suggest what to bring.</p>
+                  <label for="integrations_shopify_store">Store domain</label>
+                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || snapshot.storefrontShop || "")}">
                 </div>
-                `
-                : ``
+                <div class="field" style="margin-top:12px;">
+                  <label for="integrations_shopify_token">Admin API access token</label>
+                  <input id="integrations_shopify_token" class="mini-input" placeholder="shpat_xxxxxxxxxxxxxxxxxxxx" type="password">
+                  <p class="muted" style="margin-top:6px;">Get this from your Shopify admin → Settings → Apps → Develop apps → your app → API credentials. This gives Vendor Atlas read access to your products and inventory.</p>
+                </div>
+                <div class="stack-row" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="button" data-token-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect Shopify"}</button>
+                  ${oauthAvailable ? `<button class="btn btn-ghost" type="button" data-integrations-connect style="font-size:.82rem;">Use OAuth instead</button>` : ""}
+                </div>
+              `
           }
-          <div class="field" style="margin-top:18px;">
-            <label for="integrations_storefront_domain">Your Shopify store domain</label>
-            <div class="stack-row">
-              <input id="integrations_storefront_domain" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.storefrontShop || snapshot.shop || "")}">
-              <button class="btn btn-secondary" type="button" data-storefront-save>${storefrontConnected ? "Update" : "Save shop"}</button>
-            </div>
-            <p class="muted" style="margin-top:8px;">${storefrontConnected ? `Connected to ${escapeHtml(snapshot.storefrontShop || snapshot.shop || "your shop")}.` : "Enter your .myshopify.com domain — no token required for public product display."}</p>
-          </div>
-          <div class="field" style="margin-top:14px;">
-            <label for="integrations_storefront_token">Storefront access token <span class="muted" style="font-weight:400;">(optional)</span></label>
-            <input id="integrations_storefront_token" class="mini-input" placeholder="shpat_... — leave blank to use public access" type="password">
-            <p class="muted" style="margin-top:6px;">Only needed if your Shopify store restricts public product access. Find it in Shopify → Apps → Storefront API.</p>
-          </div>
+          <div id="shopify-connect-error" class="status" style="display:none;margin-top:10px;color:var(--error,#dc2626);font-size:.85rem;"></div>
         </div>
         <div class="dashboard-card">
           <span class="eyebrow">Inventory snapshot</span>
@@ -4495,11 +4486,37 @@ async function setupIntegrationsPage() {
       </div>
     `;
 
+    root.querySelector("[data-token-connect]")?.addEventListener("click", async () => {
+      const btn = root.querySelector("[data-token-connect]");
+      const errEl = root.querySelector("#shopify-connect-error");
+      const shop = (root.querySelector("#integrations_shopify_store")?.value || "").trim();
+      const token = (root.querySelector("#integrations_shopify_token")?.value || "").trim();
+      if (!shop) { if (errEl) { errEl.textContent = "Enter your store domain."; errEl.style.display = ""; } return; }
+      if (!token) { if (errEl) { errEl.textContent = "Enter your Admin API access token."; errEl.style.display = ""; } return; }
+      if (errEl) errEl.style.display = "none";
+      if (btn) { btn.disabled = true; btn.textContent = "Connecting…"; }
+      try {
+        const r = await fetch("/api/shopify/connect-token", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shop_domain: shop, access_token: token }),
+        });
+        const d = await r.json();
+        if (r.ok && d.ok) {
+          await shopifyLoadData();
+          render(getShopifySnapshot());
+        } else {
+          if (errEl) { errEl.textContent = d.error || "Connection failed — check your credentials."; errEl.style.display = ""; }
+          if (btn) { btn.disabled = false; btn.textContent = "Connect Shopify"; }
+        }
+      } catch (_) {
+        if (errEl) { errEl.textContent = "Network error — try again."; errEl.style.display = ""; }
+        if (btn) { btn.disabled = false; btn.textContent = "Connect Shopify"; }
+      }
+    });
     root.querySelector("[data-integrations-connect]")?.addEventListener("click", () => {
       shopifyConnectFromInput("integrations_shopify_store");
-    });
-    root.querySelector("[data-storefront-save]")?.addEventListener("click", () => {
-      shopifySaveStorefrontFromInputs("integrations_storefront_domain", "integrations_storefront_token", () => render(getShopifySnapshot()));
     });
     root.querySelector("[data-integrations-sync]")?.addEventListener("click", () => {
       shopifySyncAndRefresh(() => render(getShopifySnapshot()));
