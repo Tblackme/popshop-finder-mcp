@@ -194,15 +194,11 @@ function shopifyLoadData() {
     .then((data) => {
       window.shopifyConnected = data.connected === true;
       window.shopifyShop = data.shop || null;
-      window.shopifyStorefrontConnected = data.storefront_connected === true;
-      window.shopifyStorefrontShop = data.storefront_shop || "";
       window.shopifyUpdatedAt = data.updated_at || "";
       window.shopifyOauthAvailable = data.oauth_available === true;
       setShopifySnapshot({
         connected: window.shopifyConnected,
         shop: window.shopifyShop,
-        storefrontConnected: window.shopifyStorefrontConnected,
-        storefrontShop: window.shopifyStorefrontShop,
         updatedAt: window.shopifyUpdatedAt,
         oauthAvailable: window.shopifyOauthAvailable,
         status: "ready",
@@ -219,8 +215,6 @@ function shopifyLoadData() {
       setShopifySnapshot({
         connected: window.shopifyConnected,
         shop: window.shopifyShop,
-        storefrontConnected: window.shopifyStorefrontConnected,
-        storefrontShop: window.shopifyStorefrontShop,
         updatedAt: window.shopifyUpdatedAt,
         oauthAvailable: window.shopifyOauthAvailable,
         products: window.shopifyProducts,
@@ -234,8 +228,6 @@ function shopifyLoadData() {
       const snapshot = getShopifySnapshot();
       window.shopifyConnected = Boolean(snapshot.connected);
       window.shopifyShop = snapshot.shop || null;
-      window.shopifyStorefrontConnected = Boolean(snapshot.storefrontConnected);
-      window.shopifyStorefrontShop = snapshot.storefrontShop || "";
       window.shopifyUpdatedAt = snapshot.updatedAt || "";
       window.shopifyProducts = Array.isArray(snapshot.products) ? snapshot.products : [];
       window.shopifyLoading = false;
@@ -249,45 +241,6 @@ function shopifyLoadData() {
     });
 }
 
-function shopifySaveStorefrontFromInputs(domainInputId = "integrations_storefront_domain", tokenInputId = "integrations_storefront_token", onDone) {
-  const domainInput = document.getElementById(domainInputId);
-  const tokenInput = document.getElementById(tokenInputId);
-  const shopDomain = domainInput && domainInput.value ? domainInput.value.trim() : "";
-  const storefrontToken = tokenInput && tokenInput.value ? tokenInput.value.trim() : "";
-  if (!shopDomain) {
-    setInlineStatus("shopify-inline-status", "Enter your Shopify shop domain first.", "error");
-    return;
-  }
-  if (!storefrontToken) {
-    setInlineStatus("shopify-inline-status", "Enter your Storefront access token.", "error");
-    return;
-  }
-  setInlineStatus("shopify-inline-status", "Saving storefront access…", "");
-  api("/api/shopify/storefront", {
-    method: "POST",
-    body: JSON.stringify({ shop_domain: shopDomain, storefront_token: storefrontToken }),
-  })
-    .then((data) => {
-      window.shopifyStorefrontConnected = true;
-      window.shopifyStorefrontShop = data.shop || shopDomain;
-      setShopifySnapshot({
-        ...getShopifySnapshot(),
-        storefrontConnected: true,
-        storefrontShop: window.shopifyStorefrontShop,
-        error: "",
-      });
-      if (tokenInput) tokenInput.value = "";
-      setInlineStatus("shopify-inline-status", "Storefront access saved.", "success");
-      showToast("Storefront saved", "success");
-      if (typeof onDone === "function") onDone();
-    })
-    .catch((error) => {
-      const message = error?.message || "We couldn't save storefront access right now.";
-      setInlineStatus("shopify-inline-status", message, "error");
-      showToast(message, "error");
-      if (typeof onDone === "function") onDone();
-    });
-}
 
 function shopifyConnectFromInput(inputId = "shopify-shop-input") {
   const input = document.getElementById(inputId);
@@ -4415,7 +4368,6 @@ async function setupIntegrationsPage() {
 
   function render(snapshot = getShopifySnapshot()) {
     const connected = Boolean(snapshot.connected);
-    const storefrontConnected = Boolean(snapshot.storefrontConnected);
     const oauthAvailable = snapshot.oauthAvailable !== false && window.shopifyOauthAvailable !== false;
     const products = Array.isArray(snapshot.products) ? snapshot.products : [];
     const status = snapshot.status || "idle";
@@ -4429,7 +4381,6 @@ async function setupIntegrationsPage() {
           <p class="muted" style="margin-top:10px;">Keep your inventory and pricing close to your event plan so profit estimates feel less like guesswork.</p>
           <div class="mini-meta" style="margin-top:12px;">
             <span class="pill">${connected ? "Shopify connected" : "Shopify not connected"}</span>
-            <span class="pill">${storefrontConnected ? "Storefront ready" : "Storefront not set"}</span>
             <span class="pill">${products.length} products cached</span>
           </div>
           <div id="shopify-inline-status" class="status" style="margin-top:14px; ${error ? "" : "display:none;"}">${escapeHtml(error)}</div>
@@ -4445,13 +4396,12 @@ async function setupIntegrationsPage() {
               : `
                 <div class="field" style="margin-top:18px;">
                   <label for="integrations_shopify_store">Store domain</label>
-                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.storefrontShop || snapshot.shop || "")}">
-                  <p class="muted" style="margin-top:6px;">Just the domain is enough — tokenless access works for public products.</p>
+                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || "")}">
                 </div>
                 <div class="field" style="margin-top:12px;">
-                  <label for="integrations_shopify_token">Storefront API access token <span class="muted" style="font-weight:400;">(optional)</span></label>
-                  <input id="integrations_shopify_token" class="mini-input" placeholder="leave blank for tokenless, or paste your Storefront API token" type="password">
-                  <p class="muted" style="margin-top:6px;">In your Shopify admin go to <strong>Settings → Apps → Develop apps → [your app] → API credentials → Storefront API access token</strong>. Adds higher rate limits and access to private products.</p>
+                  <label for="integrations_shopify_token">Admin API access token</label>
+                  <input id="integrations_shopify_token" class="mini-input" placeholder="shpat_…" type="password">
+                  <p class="muted" style="margin-top:6px;">In your Shopify admin go to <strong>Settings → Apps and sales channels → Develop apps</strong>, create a custom app, then copy the Admin API access token.</p>
                 </div>
                 <div class="stack-row" style="margin-top:14px;">
                   <button class="btn btn-primary" type="button" data-token-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect Shopify"}</button>
@@ -4470,7 +4420,7 @@ async function setupIntegrationsPage() {
               : error && !products.length
                 ? `<div class="empty-state"><strong>We couldn't load products right now.</strong><p class="muted">${escapeHtml(error)}</p></div>`
                 : !products.length
-                  ? `<div class="empty-state"><strong>No products cached yet.</strong><p class="muted">${connected ? "Run a sync to refresh your inventory snapshot." : storefrontConnected ? "Your storefront is saved. Connect admin Shopify too if you want inventory snapshots inside Vendor Atlas." : "Connect Shopify or save your storefront to start bringing product data into Vendor Atlas."}</p></div>`
+                  ? `<div class="empty-state"><strong>No products cached yet.</strong><p class="muted">${connected ? "Run a sync to refresh your inventory snapshot." : "Connect Shopify to start bringing product data into Vendor Atlas."}</p></div>`
                   : renderStreamList(products.slice(0, 20), (product) => `
                       <div class="atlas-stream-card">
                         <div class="atlas-stream-main">
@@ -4493,6 +4443,7 @@ async function setupIntegrationsPage() {
       const shop = (root.querySelector("#integrations_shopify_store")?.value || "").trim();
       const token = (root.querySelector("#integrations_shopify_token")?.value || "").trim();
       if (!shop) { if (errEl) { errEl.textContent = "Enter your store domain."; errEl.style.display = ""; } return; }
+      if (!token) { if (errEl) { errEl.textContent = "Enter your Admin API access token."; errEl.style.display = ""; } return; }
       if (errEl) errEl.style.display = "none";
       if (btn) { btn.disabled = true; btn.textContent = "Connecting…"; }
       try {
@@ -4500,8 +4451,7 @@ async function setupIntegrationsPage() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          // storefront_token is optional — tokenless works for public products
-          body: JSON.stringify({ shop_domain: shop, storefront_token: token }),
+          body: JSON.stringify({ shop_domain: shop, access_token: token }),
         });
         const d = await r.json();
         if (r.ok && d.ok) {

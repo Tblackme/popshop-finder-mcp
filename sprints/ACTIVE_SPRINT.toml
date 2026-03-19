@@ -1539,4 +1539,164 @@ Success criteria:
 - The storefront integration is protected by regression tests.
 - Tests do not depend on live Shopify credentials or network access.
 """
+
+# ---------------------------------------------------------------------------
+# PHASE 10: AI layer wire-up + auth + DB migration (remaining work as of 2026-03-19)
+# ---------------------------------------------------------------------------
+
+[tasks.PIPE-001]
+id = "PIPE-001"
+name = "Commit vendor_atlas_pipeline.py dedup fix"
+description = "Commit the has_verified dedup fix already in working tree — prevents low-precision fallback events from slipping in when verified results exist."
+estimated_time = "5 min"
+estimated_lines = 5
+agent = "general-purpose"
+phase = "Phase 10: Remaining"
+status = "todo"
+priority = "high"
+estimated_hours = 0.1
+prompt = """
+DESIGN DECISION: When at least one verified event exists in the pipeline, skip the low-precision fallback pass entirely.
+WHY: Without this fix, events with precision_score < 2 could still append to results even after a verified event was found, polluting the result set.
+
+Context (CRITICAL):
+- tools/vendor_atlas_pipeline.py, _refine_discovered_events: the `has_verified` flag and the early `continue` guard are already present in the working tree but uncommitted.
+- The fix is a 5-line change: set has_verified = False before the verified loop, flip to True when a verified result is accepted, then skip the fallback loop when has_verified is True.
+
+Steps:
+1. Stage tools/vendor_atlas_pipeline.py.
+2. Commit with a clear message: "fix: skip low-precision fallback when verified events exist".
+
+Success criteria:
+- Uncommitted change is committed. _refine_discovered_events only falls back to precision_score >= 2 events when no verified event was accepted.
+"""
+dependencies = []
+
+[tasks.AI-001]
+id = "AI-001"
+name = "End-to-end validation of AI service endpoints"
+description = "Smoke-test /api/ai/content, /api/ai/match, and /api/ai/marketing with a real ANTHROPIC_API_KEY; confirm flag-off path returns 402."
+estimated_time = "1.5 hours"
+estimated_lines = 60
+agent = "general-purpose"
+phase = "Phase 10: Remaining"
+status = "todo"
+priority = "high"
+estimated_hours = 1.5
+prompt = """
+DESIGN DECISION: The AI services (ContentGenerator, SmartMatcher, MarketingAutomation) were scaffolded in commit 2d28503. They need end-to-end validation before being promoted to users.
+WHY: Service code is written but the round-trip from UI button → /api/ai/* → Claude API → response has not been tested.
+
+Context (CRITICAL):
+- ai/router.py mounts at /api/ai/ with auth + flag checks.
+- features/flags.py reads AI_CONTENT_ENABLED, AI_MATCHING_ENABLED, AI_MARKETING_ENABLED from env.
+- site/assets/ai-features.js wires AI buttons on dashboard, discover, final-plan, my-shop pages.
+- ANTHROPIC_API_KEY must be set in .env for real calls; set AI_*_ENABLED=true to enable each service.
+
+Steps:
+1. With ANTHROPIC_API_KEY set and all AI flags enabled, trigger each AI button on the relevant page and confirm a real response renders.
+2. With a flag disabled, confirm the endpoint returns HTTP 402 and the UI shows a friendly upgrade prompt (not a raw error).
+3. Fix any integration issues found (missing fields, auth errors, malformed prompts).
+4. Add a smoke test to tests/ that mocks the Claude API and verifies the flag-off 402 path.
+
+Success criteria:
+- Each AI endpoint returns a usable response when enabled. Flag-off path returns 402 with a friendly message. UI handles both states gracefully.
+"""
+dependencies = ["PIPE-001"]
+
+[tasks.AI-002]
+id = "AI-002"
+name = "Billing gate UI for AI features"
+description = "When AI flag is off (free tier), show an upgrade prompt instead of an error when the user clicks an AI button."
+estimated_time = "1 hour"
+estimated_lines = 50
+agent = "general-purpose"
+phase = "Phase 10: Remaining"
+status = "todo"
+priority = "medium"
+estimated_hours = 1.0
+prompt = """
+DESIGN DECISION: AI features are gated by feature flags that will eventually map to a paid tier. The upgrade prompt is the billing gate UI.
+WHY: When AI_*_ENABLED=false, /api/ai/* returns 402. site/assets/ai-features.js must handle 402 with a clear, friendly upgrade prompt rather than a generic error or silent failure.
+
+Context (CRITICAL):
+- site/assets/ai-features.js: each AI button calls its endpoint; on 402, show "Upgrade to Pro to unlock [feature name]" with a CTA linking to /pricing.html or showing a modal.
+- Keep the free tier experience friendly, not punishing. The prompt should feel like an invitation, not a blocker.
+
+Steps:
+1. In ai-features.js, detect HTTP 402 in the fetch response.
+2. Show a small inline message or modal: "This feature is available on the Pro plan. [Upgrade to Pro]".
+3. Link or CTA goes to /pricing.html (or opens the pricing section if on index.html).
+4. Ensure the upgrade prompt is styled to match design system (lavender CTA, white card).
+
+Success criteria:
+- 402 from any AI endpoint shows a friendly upgrade prompt. No raw "402 Payment Required" or empty state. Free-tier users understand the value proposition.
+"""
+dependencies = ["AI-001"]
+
+[tasks.AUTH-001]
+id = "AUTH-001"
+name = "Wire signup and signin to real auth backend"
+description = "Connect site/signup.html and site/signin.html forms to a real auth flow (Supabase Auth or session tokens); protect vendor-only routes."
+estimated_time = "3 hours"
+estimated_lines = 150
+agent = "general-purpose"
+phase = "Phase 10: Remaining"
+status = "todo"
+priority = "high"
+estimated_hours = 3.0
+prompt = """
+DESIGN DECISION: signup.html and signin.html pages exist but the auth flow is not yet connected to a real backend.
+WHY: Without real auth, vendor profiles, saved events, and AI features cannot be reliably scoped to a user.
+
+Context (CRITICAL):
+- storage_users.py was created in commit 2d28503 with user record handling.
+- Supabase is the intended auth backend (see docs/RENDER_DOPPLER_SUPABASE_SETUP.md).
+- Server currently has no session middleware; user identity is not threaded through API handlers.
+
+Steps:
+1. Decide auth strategy: Supabase Auth (recommended, already in setup docs) or a simple token issued by the server.
+2. Wire signup.html form to POST /auth/signup; signin.html to POST /auth/signin. Return a session token.
+3. Store session token in localStorage or cookie; send as Authorization header on subsequent API calls.
+4. Add a lightweight auth middleware to server.py that validates the token and injects user_id into request context.
+5. Scope vendor profile, saved events, and AI calls to the authenticated user_id.
+6. Protect vendor-only pages (my-shop, final-plan, dashboard) with a redirect to signin if no token.
+
+Success criteria:
+- A new user can sign up, sign in, and have their data scoped to their account. Unauthenticated users are redirected to signin. Auth token is validated server-side.
+"""
+dependencies = []
+
+[tasks.DB-001]
+id = "DB-001"
+name = "Supabase/Postgres migration for production data"
+description = "Migrate storage_events.py, storage_markets.py, storage_users.py, and storage_ai.py from local SQLite to Supabase/Postgres for the deployed environment."
+estimated_time = "4 hours"
+estimated_lines = 200
+agent = "general-purpose"
+phase = "Phase 10: Remaining"
+status = "todo"
+priority = "high"
+estimated_hours = 4.0
+prompt = """
+DESIGN DECISION: The app currently uses local SQLite for all storage. This is fine for local dev but will not persist across Render deploys and cannot scale.
+WHY: README explicitly states: "the app can deploy on Render now, but it still uses the current local storage modules until a separate Supabase/Postgres migration is completed."
+
+Context (CRITICAL):
+- Storage modules: storage_events.py, storage_markets.py, storage_users.py, storage_ai.py.
+- All use SQLite via the sqlite3 module with an env-driven path.
+- Supabase project and credentials are expected to be available (see RENDER_DOPPLER_SUPABASE_SETUP.md).
+- The migration should be additive: local SQLite continues to work in dev (DATABASE_URL not set); Supabase/Postgres is used when DATABASE_URL is set.
+
+Steps:
+1. Add asyncpg or psycopg2-binary (or supabase-py) to requirements.txt.
+2. Refactor each storage module to check for DATABASE_URL env var. If set, use Postgres; otherwise fall back to SQLite.
+3. Write migration SQL (or use Supabase dashboard) to create the equivalent tables in Supabase.
+4. Test locally with DATABASE_URL pointing to a local Postgres or Supabase dev project.
+5. Deploy to Render and verify data persists across deploys.
+
+Success criteria:
+- With DATABASE_URL set, all storage reads/writes go to Supabase/Postgres. Without it, local SQLite works as before. Data persists across Render restarts.
+"""
+dependencies = ["AUTH-001"]
 dependencies = ["SHOP-001", "SHOP-002", "SHOP-003", "SHOP-004"]

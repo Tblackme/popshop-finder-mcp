@@ -70,9 +70,7 @@ from storage_shopify import (
     get_shopify_access_token,
     get_shopify_connection,
     get_shopify_products,
-    get_shopify_storefront_access_token,
     set_shopify_connection,
-    set_shopify_storefront_connection,
     upsert_shopify_products,
 )
 from storage_users import (
@@ -115,7 +113,7 @@ from storage_users import (
 from shopify_oauth import (
     build_authorize_url,
     exchange_code_for_token,
-    fetch_storefront_products,
+    fetch_products,
     products_with_inventory,
     verify_hmac,
 )
@@ -1695,7 +1693,7 @@ def create_app() -> FastAPI:
         conn = get_shopify_connection(int(vendor["id"]))
         shop_domain = ""
         if conn:
-            shop_domain = conn.get("storefront_domain") or conn.get("shop_domain") or ""
+            shop_domain = conn.get("shop_domain") or ""
 
         if not conn or not shop_domain:
             # Return manual products only
@@ -1708,12 +1706,12 @@ def create_app() -> FastAPI:
                 "message": "This vendor's products." if manual_products else "This vendor hasn't added products yet.",
             })
 
-        # Try Shopify storefront
-        storefront_token = get_shopify_storefront_access_token(int(vendor["id"])) or ""
+        # Try Shopify Admin API
+        admin_token = get_shopify_access_token(int(vendor["id"])) or ""
         try:
-            shopify_products = fetch_storefront_products(shop_domain, storefront_token, limit=10)
+            shopify_products = fetch_products(shop_domain, admin_token, limit=10)
         except Exception as exc:
-            logger.warning("Shopify storefront fetch failed for @%s: %s", vendor.get("username"), exc)
+            logger.warning("Shopify product fetch failed for @%s: %s", vendor.get("username"), exc)
             return JSONResponse(
                 {
                     "ok": False,
@@ -1721,7 +1719,7 @@ def create_app() -> FastAPI:
                     "shop": shop_domain,
                     "products": [],
                     "source": "shopify",
-                    "error": "Shopify storefront is temporarily unavailable. Try again later.",
+                    "error": "Shopify is temporarily unavailable. Try again later.",
                 },
                 status_code=502,
             )
@@ -2611,17 +2609,15 @@ def create_app() -> FastAPI:
         oauth_available = bool(cfg.shopify_api_key and cfg.shopify_api_secret)
         user = _require_user(request)
         if not user:
-            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False, "oauth_available": oauth_available})
+            return JSONResponse({"ok": True, "connected": False, "oauth_available": oauth_available})
         conn = get_shopify_connection(int(user["id"]))
         if not conn:
-            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False, "oauth_available": oauth_available})
+            return JSONResponse({"ok": True, "connected": False, "oauth_available": oauth_available})
         return JSONResponse(
             {
                 "ok": True,
                 "connected": bool(get_shopify_access_token(int(user["id"]))),
                 "shop": conn["shop_domain"],
-                "storefront_connected": bool(conn.get("storefront_connected")),
-                "storefront_shop": conn.get("storefront_domain", "") or conn["shop_domain"],
                 "updated_at": conn.get("updated_at", ""),
                 "oauth_available": oauth_available,
             }
@@ -2630,17 +2626,14 @@ def create_app() -> FastAPI:
     @app.post("/api/shopify/connect-token")
     async def handle_shopify_connect_token(request: Request) -> JSONResponse:
         """
-        Connect a Shopify storefront using a shop domain and an optional Storefront API token.
+        Connect a Shopify store using a shop domain and Admin API access token.
 
-        Supports all three Shopify Storefront API auth modes:
-          - Tokenless (domain only): works for public products, 1,000 complexity limit
-          - Public token (X-Shopify-Storefront-Access-Token): higher capacity, client-side safe
-          - Private token (Shopify-Storefront-Private-Token): server-side only, secret
+        Vendors create an Admin API token in their Shopify admin under:
+          Settings > Apps and sales channels > Develop apps
 
         Body: {
           "shop_domain": "yourstore.myshopify.com",
-          "storefront_token": "...",   // optional
-          "private_token": false       // true = use private header
+          "access_token": "shpat_..."
         }
         """
         user = _require_user(request)
@@ -2654,21 +2647,16 @@ def create_app() -> FastAPI:
             return _validation_error("Invalid JSON body")
 
         shop_domain = _normalize_shopify_domain(body.get("shop_domain", ""))
-        storefront_token = str(body.get("storefront_token", "")).strip()
-        is_private = bool(body.get("private_token", False))
+        access_token = str(body.get("access_token", "")).strip()
 
         if not shop_domain:
             return _validation_error("Enter your Shopify store domain.")
+        if not access_token:
+            return _validation_error("Enter your Shopify Admin API access token.")
 
-        # Validate by fetching products via Storefront API (tokenless or with token)
+        # Validate credentials by fetching products
         try:
-            from shopify_oauth import fetch_storefront_products
-            products = fetch_storefront_products(
-                shop_domain,
-                storefront_access_token=storefront_token,
-                limit=20,
-                private_token=is_private,
-            )
+            products = fetch_products(shop_domain, access_token, limit=20)
         except Exception as exc:
             msg = str(exc)
             if "401" in msg or "403" in msg or "Unauthorized" in msg.lower() or "Forbidden" in msg:
@@ -2676,41 +2664,15 @@ def create_app() -> FastAPI:
             return _validation_error(f"Could not reach your Shopify store: {msg}", status_code=502)
 
         vendor_id = int(user["id"])
-        # Store as storefront connection (not admin OAuth connection)
-        set_shopify_storefront_connection(vendor_id, shop_domain, storefront_token)
+        set_shopify_connection(vendor_id, shop_domain, access_token)
+        upsert_shopify_products(vendor_id, products)
 
         return JSONResponse({
             "ok": True,
             "shop": shop_domain,
             "product_count": len(products),
-            "storefront_connected": True,
+            "connected": True,
         })
-
-    @app.post("/api/shopify/storefront")
-    async def handle_shopify_storefront_save(request: Request) -> JSONResponse:
-        user = _require_user(request)
-        if not user:
-            return _validation_error("Authentication required.", status_code=401)
-        if _normalized_role(user) != "vendor":
-            return _validation_error("Vendor access required.", status_code=403)
-        try:
-            body = await request.json()
-        except json.JSONDecodeError:
-            return _validation_error("Invalid JSON body")
-
-        shop_domain = _normalize_shopify_domain(body.get("shop_domain", ""))
-        storefront_token = str(body.get("storefront_token", "")).strip()
-        if not shop_domain:
-            return _validation_error("Enter your Shopify shop domain.")
-
-        set_shopify_storefront_connection(int(user["id"]), shop_domain, storefront_token)
-        return JSONResponse(
-            {
-                "ok": True,
-                "shop": shop_domain,
-                "storefront_connected": True,
-            }
-        )
 
     @app.get("/api/shopify/products")
     async def handle_shopify_products(request: Request) -> JSONResponse:

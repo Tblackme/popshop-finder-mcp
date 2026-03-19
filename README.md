@@ -57,6 +57,7 @@ Deployment scaffolding for Render and secret setup notes for Doppler/Supabase ar
 - [render.yaml](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/render.yaml)
 - [docs/RENDER_DOPPLER_SUPABASE_SETUP.md](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/docs/RENDER_DOPPLER_SUPABASE_SETUP.md)
 - [doppler.yaml.example](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/doppler.yaml.example)
+- [.env.render.example](/c:/Users/lizbl/Documents/GitHub/popshop-finder-mcp/.env.render.example)
 
 Important: the app can deploy on Render now, but it still uses the current local storage modules until a separate Supabase/Postgres migration is completed.
 

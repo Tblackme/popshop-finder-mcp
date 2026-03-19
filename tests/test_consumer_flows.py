@@ -1158,57 +1158,57 @@ def test_role_entry_redirects_to_signup_when_signed_in_as_different_role(temp_us
         assert response.headers["location"] == "/signup?role=market"
 
 
-def test_vendor_can_save_storefront_settings_and_shopify_me_reports_them(temp_user_storage):
+def test_vendor_can_connect_with_admin_token_and_shopify_me_reports_it(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "fetch_products", lambda shop, token, limit=20: [])
     with TestClient(server.create_app()) as client:
         login = client.post("/api/auth/dev-login", json={"role": "vendor"})
         assert login.status_code == 200
 
-        save = client.post(
-            "/api/shopify/storefront",
+        connect = client.post(
+            "/api/shopify/connect-token",
             json={
                 "shop_domain": "https://Test-Shop.myshopify.com/products",
-                "storefront_token": "storefront_token_demo_12345",
+                "access_token": "shpat_demo_admin_token_12345",
             },
         )
-        assert save.status_code == 200
-        save_payload = save.json()
-        assert save_payload["ok"] is True
-        assert save_payload["storefront_connected"] is True
-        assert save_payload["shop"] == "test-shop.myshopify.com"
+        assert connect.status_code == 200
+        connect_payload = connect.json()
+        assert connect_payload["ok"] is True
+        assert connect_payload["connected"] is True
+        assert connect_payload["shop"] == "test-shop.myshopify.com"
 
         me = client.get("/api/shopify/me")
         assert me.status_code == 200
         payload = me.json()
         assert payload["ok"] is True
-        assert payload["connected"] is False
-        assert payload["storefront_connected"] is True
-        assert payload["storefront_shop"] == "test-shop.myshopify.com"
+        assert payload["connected"] is True
+        assert payload["shop"] == "test-shop.myshopify.com"
 
 
-def test_shopify_storefront_setup_requires_vendor_and_valid_token(temp_user_storage):
+def test_shopify_connect_token_requires_vendor_and_credentials(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "fetch_products", lambda shop, token, limit=20: [])
     with TestClient(server.create_app()) as client:
         shopper_login = client.post("/api/auth/dev-login", json={"role": "shopper"})
         assert shopper_login.status_code == 200
         forbidden = client.post(
-            "/api/shopify/storefront",
-            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
+            "/api/shopify/connect-token",
+            json={"shop_domain": "demo-shop", "access_token": "shpat_demo"},
         )
         assert forbidden.status_code == 403
 
         client.post("/api/auth/logout")
         vendor_login = client.post("/api/auth/dev-login", json={"role": "vendor"})
         assert vendor_login.status_code == 200
-        invalid = client.post(
-            "/api/shopify/storefront",
-            json={"shop_domain": "demo-shop", "storefront_token": "short"},
+        missing_token = client.post(
+            "/api/shopify/connect-token",
+            json={"shop_domain": "demo-shop"},
         )
-        assert invalid.status_code == 400
-        assert "Storefront access token" in invalid.json()["error"]
+        assert missing_token.status_code == 400
+        assert "token" in missing_token.json()["error"].lower()
 
 
-def test_public_vendor_products_returns_empty_when_storefront_not_connected(temp_user_storage, monkeypatch):
+def test_public_vendor_products_returns_empty_when_shopify_not_connected(temp_user_storage, monkeypatch):
     monkeypatch.setattr(server, "get_shopify_connection", lambda user_id: None)
-    monkeypatch.setattr(server, "get_shopify_storefront_access_token", lambda user_id: None)
 
     with TestClient(server.create_app()) as client:
         signup = client.post(
@@ -1232,10 +1232,10 @@ def test_public_vendor_products_returns_empty_when_storefront_not_connected(temp
         assert payload["products"] == []
 
 
-def test_public_vendor_products_returns_normalized_storefront_payload(temp_user_storage, monkeypatch):
+def test_public_vendor_products_returns_normalized_admin_api_payload(temp_user_storage, monkeypatch):
     monkeypatch.setattr(
         server,
-        "fetch_storefront_products",
+        "fetch_products",
         lambda shop, token, limit=10: [
             {
                 "id": "gid://shopify/Product/1",
@@ -1252,20 +1252,18 @@ def test_public_vendor_products_returns_normalized_storefront_payload(temp_user_
         signup = client.post(
             "/api/auth/signup",
             json={
-                "name": "Storefront Product Vendor",
-                "email": "storefront-products@example.com",
-                "username": "storefrontproducts",
+                "name": "Admin Product Vendor",
+                "email": "admin-products@example.com",
+                "username": "adminproducts",
                 "password": "supersecure123",
                 "role": "vendor",
             },
         )
         assert signup.status_code == 200
+        user_id = signup.json()["user"]["id"]
         username = signup.json()["user"]["username"]
-        save = client.post(
-            "/api/shopify/storefront",
-            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
-        )
-        assert save.status_code == 200
+        from storage_shopify import set_shopify_connection
+        set_shopify_connection(user_id, "demo-shop.myshopify.com", "shpat_demo_token")
 
         response = client.get(f"/api/vendors/{username}/products")
         assert response.status_code == 200
@@ -1273,32 +1271,28 @@ def test_public_vendor_products_returns_normalized_storefront_payload(temp_user_
         assert payload["ok"] is True
         assert payload["connected"] is True
         assert payload["shop"] == "demo-shop.myshopify.com"
-        assert payload["products"][0]["handle"] == "amber-candle"
-        assert payload["products"][0]["image"] == "https://cdn.example.com/candle.jpg"
-        assert payload["products"][0]["product_url"] == "https://demo-shop.myshopify.com/products/amber-candle"
+        assert payload["products"][0]["name"] == "Amber Candle"
 
 
 def test_public_vendor_products_returns_connected_empty_message(temp_user_storage, monkeypatch):
-    monkeypatch.setattr(server, "fetch_storefront_products", lambda shop, token, limit=10: [])
+    monkeypatch.setattr(server, "fetch_products", lambda shop, token, limit=10: [])
 
     with TestClient(server.create_app()) as client:
         signup = client.post(
             "/api/auth/signup",
             json={
-                "name": "Storefront Empty Connected Vendor",
-                "email": "storefront-empty-connected@example.com",
-                "username": "storefrontemptyconnected",
+                "name": "Admin Empty Connected Vendor",
+                "email": "admin-empty-connected@example.com",
+                "username": "adminemptyconnected",
                 "password": "supersecure123",
                 "role": "vendor",
             },
         )
         assert signup.status_code == 200
+        user_id = signup.json()["user"]["id"]
         username = signup.json()["user"]["username"]
-        save = client.post(
-            "/api/shopify/storefront",
-            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
-        )
-        assert save.status_code == 200
+        from storage_shopify import set_shopify_connection
+        set_shopify_connection(user_id, "demo-shop.myshopify.com", "shpat_demo_token")
 
         response = client.get(f"/api/vendors/{username}/products")
         assert response.status_code == 200
@@ -1309,27 +1303,25 @@ def test_public_vendor_products_returns_connected_empty_message(temp_user_storag
         assert "no products are published yet" in payload["message"].lower()
 
 
-def test_public_vendor_products_handles_storefront_failures(temp_user_storage, monkeypatch):
-    monkeypatch.setattr(server, "fetch_storefront_products", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+def test_public_vendor_products_handles_shopify_failures(temp_user_storage, monkeypatch):
+    monkeypatch.setattr(server, "fetch_products", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
 
     with TestClient(server.create_app()) as client:
         signup = client.post(
             "/api/auth/signup",
             json={
-                "name": "Storefront Failure Vendor",
-                "email": "storefront-failure@example.com",
-                "username": "storefrontfailure",
+                "name": "Admin Failure Vendor",
+                "email": "admin-failure@example.com",
+                "username": "adminfailure",
                 "password": "supersecure123",
                 "role": "vendor",
             },
         )
         assert signup.status_code == 200
+        user_id = signup.json()["user"]["id"]
         username = signup.json()["user"]["username"]
-        save = client.post(
-            "/api/shopify/storefront",
-            json={"shop_domain": "demo-shop", "storefront_token": "storefront_token_demo_12345"},
-        )
-        assert save.status_code == 200
+        from storage_shopify import set_shopify_connection
+        set_shopify_connection(user_id, "demo-shop.myshopify.com", "shpat_demo_token")
 
         response = client.get(f"/api/vendors/{username}/products")
         assert response.status_code == 502

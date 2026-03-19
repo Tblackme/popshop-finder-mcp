@@ -483,6 +483,7 @@ async def _refine_discovered_events(
 
     accepted: list[dict[str, Any]] = []
     accepted_keys: set[tuple[str, str]] = set()
+    has_verified = False
     for result in verified:
         if isinstance(result, Exception) or not result:
             continue
@@ -492,6 +493,8 @@ async def _refine_discovered_events(
         )
         accepted_keys.add(key)
         accepted.append(result)
+        if result.get("verified"):
+            has_verified = True
 
     for event in events:
         key = (
@@ -499,6 +502,8 @@ async def _refine_discovered_events(
             str(event.get("title", "")).strip().lower(),
         )
         if key in accepted_keys:
+            continue
+        if has_verified:
             continue
         if int(event.get("precision_score", 0)) >= 2:
             accepted.append(event)
