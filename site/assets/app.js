@@ -4393,7 +4393,27 @@ async function setupIntegrationsPage() {
                   <button class="btn btn-secondary" type="button" data-integrations-disconnect>Disconnect</button>
                 </div>
               `
-              : `
+              : oauthAvailable ? `
+                <div class="field" style="margin-top:18px;">
+                  <label for="integrations_shopify_store">Store domain</label>
+                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || "")}">
+                </div>
+                <div class="stack-row" style="margin-top:14px;">
+                  <button class="btn btn-primary" type="button" data-integrations-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect with Shopify"}</button>
+                </div>
+                <p class="muted" style="margin-top:10px;font-size:.82rem;">You'll be redirected to Shopify to approve access, then brought right back.</p>
+                <details style="margin-top:16px;">
+                  <summary class="muted" style="cursor:pointer;font-size:.82rem;">Connect manually instead</summary>
+                  <div class="field" style="margin-top:12px;">
+                    <label for="integrations_shopify_token">Admin API access token</label>
+                    <input id="integrations_shopify_token" class="mini-input" placeholder="shpat_…" type="password">
+                    <p class="muted" style="margin-top:6px;">In your Shopify admin go to <strong>Settings → Apps and sales channels → Develop apps</strong>, create a custom app, then copy the Admin API access token.</p>
+                  </div>
+                  <div style="margin-top:10px;">
+                    <button class="btn btn-secondary" type="button" data-token-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect with token"}</button>
+                  </div>
+                </details>
+              ` : `
                 <div class="field" style="margin-top:18px;">
                   <label for="integrations_shopify_store">Store domain</label>
                   <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || "")}">
@@ -4405,7 +4425,6 @@ async function setupIntegrationsPage() {
                 </div>
                 <div class="stack-row" style="margin-top:14px;">
                   <button class="btn btn-primary" type="button" data-token-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect Shopify"}</button>
-                  ${oauthAvailable ? `<button class="btn btn-ghost" type="button" data-integrations-connect style="font-size:.82rem;">Use OAuth instead</button>` : ""}
                 </div>
               `
           }
