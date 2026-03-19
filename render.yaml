@@ -21,3 +21,5 @@ services:
         sync: false
       - key: SHOPIFY_SCOPES
         value: read_products,read_inventory
+      - key: SERPER_API_KEY
+        sync: false
