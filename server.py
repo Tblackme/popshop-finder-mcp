@@ -1260,54 +1260,51 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    DISCOVERY_KEYWORD_SETS = [
+        ["popup market", "makers market", "craft fair", "vendor fair", "flea market"],
+        ["oddity market", "curiosities market", "dark market", "oddities and curiosities", "horror convention"],
+        ["rave", "electronic music festival", "underground event", "DJ event vendor"],
+        ["tattoo convention", "tattoo expo", "tattoo festival"],
+        ["anime convention", "comic con", "cosplay convention", "fan expo"],
+        ["small concert vendor", "music festival vendor", "festival vendor application"],
+        ["night market", "art market", "vintage market", "antique market", "holiday market"],
+        ["street fair vendor", "vendor expo", "outdoor vendor event"],
+    ]
+
+    async def _run_discovery(label: str = "scheduled") -> int:
+        """Run the full MCP discovery pipeline and return count saved."""
+        discover_handler = ALL_HANDLERS.get("discover_events")
+        if not discover_handler:
+            return 0
+        saved = 0
+        for keywords in DISCOVERY_KEYWORD_SETS:
+            try:
+                raw = await discover_handler(
+                    city="Kansas City",
+                    state="MO",
+                    keywords=keywords,
+                    sources=["google", "eventbrite", "facebook_events", "public_event_listings"],
+                )
+                payload = json.loads(raw) if isinstance(raw, str) else raw
+                events = payload.get("events", [])
+                saved += len(events)
+                logger.info("[discovery:%s] %s → %d events", label, keywords[0], len(events))
+                await asyncio.sleep(1)
+            except Exception as exc:
+                logger.warning("[discovery:%s] %s failed: %s", label, keywords[0], exc)
+        return saved
+
     @app.on_event("startup")
     async def _background_seed_events() -> None:
         async def _run() -> None:
-            await asyncio.sleep(5)  # let server finish starting
-            discover_handler = ALL_HANDLERS.get("discover_events")
-            if not discover_handler:
-                return
-            keyword_sets = [
-                ["popup market", "makers market", "craft fair", "vendor fair", "flea market"],
-                ["oddity market", "curiosities market", "dark market", "oddities and curiosities", "horror convention"],
-                ["rave", "electronic music festival", "underground event", "DJ event vendor"],
-                ["tattoo convention", "tattoo expo", "tattoo festival"],
-                ["anime convention", "comic con", "cosplay convention", "fan expo"],
-                ["small concert vendor", "music festival vendor", "festival vendor application"],
-                ["night market", "art market", "vintage market", "antique market", "holiday market"],
-                ["street fair vendor", "vendor expo", "outdoor vendor event"],
-            ]
-            for keywords in keyword_sets:
-                try:
-                    raw = await discover_handler(
-                        city="Kansas City",
-                        state="MO",
-                        keywords=keywords,
-                        sources=["google", "eventbrite", "facebook_events", "public_event_listings"],
-                    )
-                    payload = json.loads(raw) if isinstance(raw, str) else raw
-                    for event in payload.get("events", []):
-                        try:
-                            from storage_events import Event, upsert_event
-                            upsert_event(Event(
-                                id=event.get("id") or event.get("event_id") or "",
-                                name=event.get("name") or event.get("title") or "",
-                                city=event.get("city") or "Kansas City",
-                                state=event.get("state") or "MO",
-                                date=event.get("date") or event.get("start_date") or "",
-                                vendor_count=event.get("vendor_count"),
-                                estimated_traffic=event.get("estimated_traffic"),
-                                booth_price=event.get("booth_price") or event.get("vendor_fee"),
-                                application_link=event.get("application_link") or event.get("url") or event.get("source_url") or "",
-                                source_url=event.get("source_url") or event.get("url") or "",
-                                vendor_category=event.get("vendor_category") or event.get("event_type") or "",
-                                event_size=event.get("event_size") or "",
-                            ))
-                        except Exception:
-                            pass
-                    await asyncio.sleep(2)
-                except Exception as exc:
-                    logger.warning("Startup discovery failed for %s: %s", keywords[0], exc)
+            await asyncio.sleep(5)
+            saved = await _run_discovery("startup")
+            logger.info("[discovery:startup] complete — %d events processed", saved)
+            # Re-run every 4 hours to keep data fresh
+            while True:
+                await asyncio.sleep(4 * 3600)
+                saved = await _run_discovery("periodic")
+                logger.info("[discovery:periodic] complete — %d events processed", saved)
         asyncio.create_task(_run())
 
     @app.exception_handler(404)
@@ -1439,62 +1436,12 @@ def create_app() -> FastAPI:
 
     @app.post("/api/admin/refresh-events")
     async def handle_refresh_events() -> JSONResponse:
-        """Trigger live MCP discovery for Kansas City and save results. Returns what was found."""
-        discover_handler = ALL_HANDLERS.get("discover_events")
-        if not discover_handler:
+        """Trigger live MCP discovery pipeline and return count."""
+        if not ALL_HANDLERS.get("discover_events"):
             return JSONResponse({"ok": False, "error": "discover_events handler not found"}, status_code=500)
-
-        keyword_sets = [
-            ["popup market", "makers market", "craft fair", "vendor fair", "flea market"],
-            ["oddity market", "curiosities market", "oddities and curiosities", "horror convention"],
-            ["rave", "electronic music festival", "underground event vendor"],
-            ["tattoo convention", "tattoo expo", "tattoo festival"],
-            ["anime convention", "comic con", "cosplay convention"],
-            ["music festival vendor", "festival vendor application", "concert vendor"],
-            ["night market", "art market", "vintage market", "holiday market"],
-            ["street fair vendor", "outdoor vendor event", "vendor expo"],
-        ]
-
-        saved = 0
-        found: list[dict[str, Any]] = []
-        errors: list[str] = []
-
-        for keywords in keyword_sets:
-            try:
-                raw = await discover_handler(
-                    city="Kansas City",
-                    state="MO",
-                    keywords=keywords,
-                    sources=["google", "eventbrite", "facebook_events", "public_event_listings"],
-                )
-                payload = json.loads(raw) if isinstance(raw, str) else raw
-                events = payload.get("events", [])
-                for event in events:
-                    try:
-                        from storage_events import Event, upsert_event
-                        upsert_event(Event(
-                            id=event.get("id") or event.get("event_id") or "",
-                            name=event.get("name") or event.get("title") or "",
-                            city=event.get("city") or "Kansas City",
-                            state=event.get("state") or "MO",
-                            date=event.get("date") or event.get("start_date") or "",
-                            vendor_count=event.get("vendor_count"),
-                            estimated_traffic=event.get("estimated_traffic"),
-                            booth_price=event.get("booth_price") or event.get("vendor_fee"),
-                            application_link=event.get("application_link") or event.get("url") or event.get("source_url") or "",
-                            source_url=event.get("source_url") or event.get("url") or "",
-                            vendor_category=event.get("vendor_category") or event.get("event_type") or "",
-                            event_size=event.get("event_size") or "",
-                        ))
-                        saved += 1
-                        found.append({"name": event.get("name") or event.get("title"), "url": event.get("url") or event.get("source_url"), "keywords": keywords[0]})
-                    except Exception as exc:
-                        errors.append(str(exc))
-            except Exception as exc:
-                errors.append(f"{keywords[0]}: {exc}")
-
+        saved = await _run_discovery("manual")
         total_in_db = len(stored_search_events({}))
-        return JSONResponse({"ok": True, "saved": saved, "total_in_db": total_in_db, "found": found, "errors": errors})
+        return JSONResponse({"ok": True, "saved": saved, "total_in_db": total_in_db})
 
     @app.get("/api/auth/me")
     async def handle_auth_me(request: Request) -> JSONResponse:
