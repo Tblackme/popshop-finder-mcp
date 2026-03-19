@@ -17,14 +17,6 @@ services:
         value: sse
       - key: SHOPIFY_SCOPES
         value: read_products,read_inventory
-      - key: SHOPIFY_API_KEY
-        sync: false
-      - key: SHOPIFY_API_SECRET
-        sync: false
-      - key: SERPER_API_KEY
-        sync: false
-      - key: DATABASE_URL
-        sync: false
       - key: BILLING_ENABLED
         value: "false"
       - key: FREE_TIER_CALLS
