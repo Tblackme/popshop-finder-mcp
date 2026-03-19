@@ -2594,6 +2594,7 @@ function renderGuidedDashboardApp(root, payload, auth) {
   const user = payload?.user || auth.user || { name: "friend", interests: "" };
   const savedMarkets = payload?.saved_markets || [];
   const recommendations = payload?.recommended_markets || savedMarkets.slice(0, 3);
+  const shopify = payload?.shopify || null;
   const plannedEvents = getSelectedEvents();
   const eventChoices = (plannedEvents.length ? plannedEvents : recommendations.length ? recommendations : savedMarkets).slice(0, 3);
   const mockProducts = buildMockProducts(user.interests);
@@ -2748,12 +2749,23 @@ function renderGuidedDashboardApp(root, payload, auth) {
               </div>
             </div>
             <div class="tool-card">
-              <strong>Shopify and storefront</strong>
-              <p class="muted">Connect your shop and make inventory highlights part of your public business page.</p>
-              <div class="stack-row">
-                <a class="btn btn-primary" href="/integrations">Open integrations</a>
-                <a class="btn btn-secondary" href="/business">View business hub</a>
-              </div>
+              <strong>Shopify store</strong>
+              ${shopify?.connected
+                ? `<p class="muted" style="display:flex;align-items:center;gap:.4rem;">
+                    <span style="color:var(--success);font-weight:700;">✓ Connected</span>
+                    <span>${escapeHtml(String(shopify.shop || "").replace(".myshopify.com", ""))}</span>
+                  </p>
+                  <div class="stack-row">
+                    ${auth.user?.username ? `<a class="btn btn-primary" href="/shop/${encodeURIComponent(auth.user.username)}">View my shop</a>` : ""}
+                    <button class="btn btn-secondary" type="button" data-shopify-sync-dash>Sync products</button>
+                    <a class="btn btn-ghost" href="/integrations">Settings</a>
+                  </div>`
+                : `<p class="muted">Connect your Shopify store to show products on your public vendor page.</p>
+                  <div class="stack-row" style="flex-wrap:wrap;gap:.5rem;">
+                    <input class="mini-input" id="dash_shopify_store" placeholder="yourstore" style="max-width:160px;">
+                    <button class="btn btn-primary" type="button" data-shopify-connect-dash>Connect Shopify</button>
+                  </div>`
+              }
             </div>
             <div class="tool-card">
               <strong>Event plan and route</strong>
@@ -2785,6 +2797,22 @@ function renderGuidedDashboardApp(root, payload, auth) {
 
     attachButtonPress(".btn", root);
     attachButtonPress(".guided-action", root);
+
+    root.querySelector("[data-shopify-connect-dash]")?.addEventListener("click", () => {
+      const shop = (root.querySelector("#dash_shopify_store")?.value || "").trim();
+      if (!shop) return;
+      shopifyConnectFromInput("dash_shopify_store");
+    });
+    root.querySelector("[data-shopify-sync-dash]")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "Syncing…";
+      try {
+        await fetch("/api/shopify/sync", { method: "POST", credentials: "include" });
+        btn.textContent = "Synced ✓";
+      } catch (_) { btn.textContent = "Sync products"; }
+      setTimeout(() => { btn.disabled = false; btn.textContent = "Sync products"; }, 3000);
+    });
 
     root.querySelector("[data-profile-select]")?.addEventListener("change", (e) => {
       const id = e.target.value || null;
@@ -3352,12 +3380,15 @@ async function setupDashboard() {
   if (!guidedRoot) return;
 
   try {
-    const payload = await api("/api/dashboard", { method: "GET" });
+    const [payload, shopify] = await Promise.all([
+      api("/api/dashboard", { method: "GET" }),
+      fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
     const user = payload.user || {};
     if (welcome) {
       welcome.textContent = `Hi ${user.name || "there"}, what would you like to do today?`;
     }
-    renderGuidedDashboardApp(guidedRoot, payload, { user });
+    renderGuidedDashboardApp(guidedRoot, { ...payload, shopify }, { user });
   } catch (error) {
     if (error.status === 401) {
       window.location.href = "/signin";
@@ -3366,7 +3397,7 @@ async function setupDashboard() {
     if (welcome) {
       welcome.textContent = "What would you like to do today?";
     }
-    renderGuidedDashboardApp(guidedRoot, { user: { name: "friend", interests: "" }, saved_markets: [], recommended_markets: [] }, { user: null });
+    renderGuidedDashboardApp(guidedRoot, { user: { name: "friend", interests: "" }, saved_markets: [], recommended_markets: [], shopify: null }, { user: null });
   }
 }
 
@@ -3422,7 +3453,11 @@ async function setupBusinessPage() {
   const root = document.querySelector("[data-business-app]");
   if (!root) return;
   try {
-    const payload = await api("/api/analytics", { method: "GET" });
+    const [payload, shopifyConn, shopifyProducts] = await Promise.all([
+      api("/api/analytics", { method: "GET" }),
+      fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
     const role = payload.role || "vendor";
     const summary = payload.summary || {};
 
@@ -3495,8 +3530,48 @@ async function setupBusinessPage() {
                 : `<div class="empty-state"><strong>No event performance yet.</strong><p class="muted">Once revenue, expenses, and fees are logged, your profit breakdown will show up here.</p></div>`
             }
           </div>
+
+          <div class="dashboard-card">
+            <span class="eyebrow">Shopify store</span>
+            <h2 style="display:flex;align-items:center;gap:.6rem;">
+              Your shop
+              ${shopifyConn?.connected
+                ? `<span style="font-size:.75rem;font-weight:600;color:var(--success);background:rgba(2,122,72,.08);padding:.2rem .6rem;border-radius:99px;">✓ Connected</span>`
+                : `<span style="font-size:.75rem;font-weight:600;color:var(--muted);background:rgba(19,38,35,.06);padding:.2rem .6rem;border-radius:99px;">Not connected</span>`}
+            </h2>
+            ${shopifyConn?.connected
+              ? `<p class="muted" style="margin-bottom:.75rem;">${escapeHtml(String(shopifyConn.shop || "").replace(".myshopify.com", ""))}.myshopify.com · ${shopifyProducts.length} product${shopifyProducts.length === 1 ? "" : "s"} synced</p>
+                <div class="stack-row" style="margin-bottom:1rem;">
+                  ${shopifyConn.username ? `<a class="btn btn-primary" href="/shop/${encodeURIComponent(shopifyConn.username)}">View public shop</a>` : ""}
+                  <button class="btn btn-secondary" type="button" id="biz-shopify-sync">Sync now</button>
+                  <a class="btn btn-ghost" href="/integrations">Settings</a>
+                </div>
+                ${shopifyProducts.length
+                  ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;">
+                      ${shopifyProducts.slice(0, 6).map(p => `
+                        <div style="background:var(--surface);border-radius:var(--radius-md);padding:.75rem;font-size:.88rem;">
+                          <div style="font-weight:600;margin-bottom:.2rem;">${escapeHtml(p.name)}</div>
+                          <div style="color:var(--brand);font-weight:700;">${p.price > 0 ? "$" + Number(p.price).toFixed(2) : "Free"}</div>
+                          <div style="color:var(--muted);font-size:.78rem;">Stock: ${p.inventory_quantity ?? "—"}</div>
+                        </div>`).join("")}
+                    </div>`
+                  : `<p class="muted">No products synced yet. Click Sync now to pull your Shopify inventory.</p>`}
+              `
+              : `<p class="muted">Connect your Shopify store to show products on your public vendor page and track inventory before events.</p>
+                <a class="btn btn-primary" href="/integrations">Connect Shopify</a>`
+            }
+          </div>
         </div>
       `;
+      root.querySelector("#biz-shopify-sync")?.addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true; btn.textContent = "Syncing…";
+        try {
+          await fetch("/api/shopify/sync", { method: "POST", credentials: "include" });
+          btn.textContent = "Synced ✓";
+        } catch (_) { btn.textContent = "Sync now"; }
+        setTimeout(() => { btn.disabled = false; btn.textContent = "Sync now"; }, 3000);
+      });
     } else if (role === "market") {
       const events = Array.isArray(payload.events) ? payload.events : [];
       const organizerSummaryTiles = renderMetricGrid([
