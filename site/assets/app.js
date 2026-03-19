@@ -4445,12 +4445,13 @@ async function setupIntegrationsPage() {
               : `
                 <div class="field" style="margin-top:18px;">
                   <label for="integrations_shopify_store">Store domain</label>
-                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || snapshot.storefrontShop || "")}">
+                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.storefrontShop || snapshot.shop || "")}">
+                  <p class="muted" style="margin-top:6px;">Just the domain is enough — tokenless access works for public products.</p>
                 </div>
                 <div class="field" style="margin-top:12px;">
-                  <label for="integrations_shopify_token">Admin API access token</label>
-                  <input id="integrations_shopify_token" class="mini-input" placeholder="shpat_xxxxxxxxxxxxxxxxxxxx" type="password">
-                  <p class="muted" style="margin-top:6px;">Get this from your Shopify admin → Settings → Apps → Develop apps → your app → API credentials. This gives Vendor Atlas read access to your products and inventory.</p>
+                  <label for="integrations_shopify_token">Storefront API access token <span class="muted" style="font-weight:400;">(optional)</span></label>
+                  <input id="integrations_shopify_token" class="mini-input" placeholder="leave blank for tokenless, or paste your Storefront API token" type="password">
+                  <p class="muted" style="margin-top:6px;">In your Shopify admin go to <strong>Settings → Apps → Develop apps → [your app] → API credentials → Storefront API access token</strong>. Adds higher rate limits and access to private products.</p>
                 </div>
                 <div class="stack-row" style="margin-top:14px;">
                   <button class="btn btn-primary" type="button" data-token-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect Shopify"}</button>
@@ -4492,7 +4493,6 @@ async function setupIntegrationsPage() {
       const shop = (root.querySelector("#integrations_shopify_store")?.value || "").trim();
       const token = (root.querySelector("#integrations_shopify_token")?.value || "").trim();
       if (!shop) { if (errEl) { errEl.textContent = "Enter your store domain."; errEl.style.display = ""; } return; }
-      if (!token) { if (errEl) { errEl.textContent = "Enter your Admin API access token."; errEl.style.display = ""; } return; }
       if (errEl) errEl.style.display = "none";
       if (btn) { btn.disabled = true; btn.textContent = "Connecting…"; }
       try {
@@ -4500,7 +4500,8 @@ async function setupIntegrationsPage() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_domain: shop, access_token: token }),
+          // storefront_token is optional — tokenless works for public products
+          body: JSON.stringify({ shop_domain: shop, storefront_token: token }),
         });
         const d = await r.json();
         if (r.ok && d.ok) {

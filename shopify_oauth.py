@@ -216,6 +216,7 @@ def fetch_storefront_products(
     shop: str,
     storefront_access_token: str = "",
     limit: int = 10,
+    private_token: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Fetch a lightweight public product payload from Shopify Storefront GraphQL.
@@ -267,7 +268,11 @@ def fetch_storefront_products(
     """
     headers = {"Content-Type": "application/json"}
     if storefront_access_token:
-        headers["X-Shopify-Storefront-Access-Token"] = storefront_access_token
+        # Private tokens use a different header per Shopify docs
+        if private_token:
+            headers["Shopify-Storefront-Private-Token"] = storefront_access_token
+        else:
+            headers["X-Shopify-Storefront-Access-Token"] = storefront_access_token
     with httpx.Client() as client:
         response = client.post(
             url,

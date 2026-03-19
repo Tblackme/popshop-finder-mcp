@@ -2630,10 +2630,18 @@ def create_app() -> FastAPI:
     @app.post("/api/shopify/connect-token")
     async def handle_shopify_connect_token(request: Request) -> JSONResponse:
         """
-        Connect a Shopify store using a shop domain + Admin API access token.
-        Validates the credentials immediately by hitting the Shopify API,
-        then stores the connection identically to the OAuth path.
-        Body: { "shop_domain": "yourstore.myshopify.com", "access_token": "shpat_..." }
+        Connect a Shopify storefront using a shop domain and an optional Storefront API token.
+
+        Supports all three Shopify Storefront API auth modes:
+          - Tokenless (domain only): works for public products, 1,000 complexity limit
+          - Public token (X-Shopify-Storefront-Access-Token): higher capacity, client-side safe
+          - Private token (Shopify-Storefront-Private-Token): server-side only, secret
+
+        Body: {
+          "shop_domain": "yourstore.myshopify.com",
+          "storefront_token": "...",   // optional
+          "private_token": false       // true = use private header
+        }
         """
         user = _require_user(request)
         if not user:
@@ -2646,33 +2654,36 @@ def create_app() -> FastAPI:
             return _validation_error("Invalid JSON body")
 
         shop_domain = _normalize_shopify_domain(body.get("shop_domain", ""))
-        access_token = str(body.get("access_token", "")).strip()
+        storefront_token = str(body.get("storefront_token", "")).strip()
+        is_private = bool(body.get("private_token", False))
 
         if not shop_domain:
             return _validation_error("Enter your Shopify store domain.")
-        if not access_token:
-            return _validation_error("Enter your Shopify Admin API access token.")
 
-        # Validate credentials by making a real API call
+        # Validate by fetching products via Storefront API (tokenless or with token)
         try:
-            from shopify_oauth import products_with_inventory
-            products = products_with_inventory(shop_domain, access_token, limit=50)
+            from shopify_oauth import fetch_storefront_products
+            products = fetch_storefront_products(
+                shop_domain,
+                storefront_access_token=storefront_token,
+                limit=20,
+                private_token=is_private,
+            )
         except Exception as exc:
             msg = str(exc)
-            if "401" in msg or "403" in msg or "Unauthorized" in msg.lower():
-                return _validation_error("Invalid credentials — check your store domain and access token.")
+            if "401" in msg or "403" in msg or "Unauthorized" in msg.lower() or "Forbidden" in msg:
+                return _validation_error("Access denied — check your store domain and token.")
             return _validation_error(f"Could not reach your Shopify store: {msg}", status_code=502)
 
         vendor_id = int(user["id"])
-        set_shopify_connection(vendor_id, shop_domain, access_token)
-        if products:
-            upsert_shopify_products(vendor_id, products)
+        # Store as storefront connection (not admin OAuth connection)
+        set_shopify_storefront_connection(vendor_id, shop_domain, storefront_token)
 
         return JSONResponse({
             "ok": True,
             "shop": shop_domain,
             "product_count": len(products),
-            "connected": True,
+            "storefront_connected": True,
         })
 
     @app.post("/api/shopify/storefront")
