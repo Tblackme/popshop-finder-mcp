@@ -2607,12 +2607,14 @@ def create_app() -> FastAPI:
 
     @app.get("/api/shopify/me")
     async def handle_shopify_me(request: Request) -> JSONResponse:
+        cfg = get_config()
+        oauth_available = bool(cfg.shopify_api_key and cfg.shopify_api_secret)
         user = _require_user(request)
         if not user:
-            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False})
+            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False, "oauth_available": oauth_available})
         conn = get_shopify_connection(int(user["id"]))
         if not conn:
-            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False})
+            return JSONResponse({"ok": True, "connected": False, "storefront_connected": False, "oauth_available": oauth_available})
         return JSONResponse(
             {
                 "ok": True,
@@ -2621,6 +2623,7 @@ def create_app() -> FastAPI:
                 "storefront_connected": bool(conn.get("storefront_connected")),
                 "storefront_shop": conn.get("storefront_domain", "") or conn["shop_domain"],
                 "updated_at": conn.get("updated_at", ""),
+                "oauth_available": oauth_available,
             }
         )
 

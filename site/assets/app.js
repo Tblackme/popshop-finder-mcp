@@ -197,12 +197,14 @@ function shopifyLoadData() {
       window.shopifyStorefrontConnected = data.storefront_connected === true;
       window.shopifyStorefrontShop = data.storefront_shop || "";
       window.shopifyUpdatedAt = data.updated_at || "";
+      window.shopifyOauthAvailable = data.oauth_available === true;
       setShopifySnapshot({
         connected: window.shopifyConnected,
         shop: window.shopifyShop,
         storefrontConnected: window.shopifyStorefrontConnected,
         storefrontShop: window.shopifyStorefrontShop,
         updatedAt: window.shopifyUpdatedAt,
+        oauthAvailable: window.shopifyOauthAvailable,
         status: "ready",
         error: "",
       });
@@ -220,6 +222,7 @@ function shopifyLoadData() {
         storefrontConnected: window.shopifyStorefrontConnected,
         storefrontShop: window.shopifyStorefrontShop,
         updatedAt: window.shopifyUpdatedAt,
+        oauthAvailable: window.shopifyOauthAvailable,
         products: window.shopifyProducts,
         status: "ready",
         error: "",
@@ -4413,6 +4416,7 @@ async function setupIntegrationsPage() {
   function render(snapshot = getShopifySnapshot()) {
     const connected = Boolean(snapshot.connected);
     const storefrontConnected = Boolean(snapshot.storefrontConnected);
+    const oauthAvailable = snapshot.oauthAvailable !== false && window.shopifyOauthAvailable !== false;
     const products = Array.isArray(snapshot.products) ? snapshot.products : [];
     const status = snapshot.status || "idle";
     const error = snapshot.error || "";
@@ -4438,7 +4442,8 @@ async function setupIntegrationsPage() {
                   <button class="btn btn-secondary" type="button" data-integrations-disconnect>Disconnect</button>
                 </div>
               `
-              : `
+              : oauthAvailable
+                ? `
                 <div class="field" style="margin-top:18px;">
                   <label for="integrations_shopify_store">Shopify store name</label>
                   <div class="stack-row">
@@ -4447,7 +4452,10 @@ async function setupIntegrationsPage() {
                   </div>
                   <p class="muted" style="margin-top:8px;">We'll bring in products and inventory so your plan can suggest what to bring.</p>
                 </div>
-              `
+                `
+                : `
+                <p class="muted" style="margin-top:14px;">Shopify OAuth is not configured on this server. Use the storefront fields below to connect your public shop for product display.</p>
+                `
           }
           <div class="field" style="margin-top:18px;">
             <label for="integrations_storefront_domain">Storefront shop domain</label>
