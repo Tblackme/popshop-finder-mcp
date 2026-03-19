@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import os
 from datetime import UTC, datetime
 from html import unescape
 from html.parser import HTMLParser
@@ -8,6 +9,9 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 import httpx
+
+SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "")
+SERPER_SEARCH_URL = "https://google.serper.dev/search"
 
 from storage_events import Event, get_event_by_id, upsert_event
 from storage_events import search_events as query_events
@@ -536,6 +540,33 @@ def _extract_search_results(
     return candidates
 
 
+def _parse_serper_results(
+    data: dict[str, Any],
+    source: str,
+    city: str,
+    state: str,
+    keywords: list[str] | None,
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for item in data.get("organic", [])[:12]:
+        url = item.get("link", "")
+        title = item.get("title", "")
+        snippet = item.get("snippet", "")
+        if not url or not _is_discovery_candidate(url):
+            continue
+        score = _event_keyword_score(f"{title} {snippet}") + _source_url_score(url, source)
+        results.append({
+            "url": url,
+            "title": title,
+            "snippet": snippet,
+            "source": source,
+            "precision_score": score,
+            "city": city,
+            "state": state,
+        })
+    return results
+
+
 async def _fetch_search_results(
     client: httpx.AsyncClient,
     query: str,
@@ -544,6 +575,15 @@ async def _fetch_search_results(
     state: str = "",
     keywords: list[str] | None = None,
 ) -> list[dict[str, Any]]:
+    if SERPER_API_KEY:
+        response = await client.post(
+            SERPER_SEARCH_URL,
+            headers={"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"},
+            content=json.dumps({"q": query, "num": 10}),
+        )
+        response.raise_for_status()
+        return _parse_serper_results(response.json(), source, city, state, keywords)
+
     response = await client.get(
         DISCOVERY_SEARCH_URL,
         params={"q": query},
