@@ -212,3 +212,18 @@ def search_events(filters: dict[str, Any]) -> list[dict[str, Any]]:
         conn.close()
 
     return [_event_from_row(row).to_dict() for row in rows]
+
+
+def clear_discovered_events() -> int:
+    """Delete all pipeline-discovered events (id starts with 'discovered-'). Returns count deleted."""
+    init_events_db()
+    conn = _connect()
+    try:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE id LIKE 'discovered-%'"
+        ).fetchone()[0]
+        conn.execute("DELETE FROM events WHERE id LIKE 'discovered-%'")
+        conn.commit()
+    finally:
+        conn.close()
+    return count

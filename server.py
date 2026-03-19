@@ -43,7 +43,7 @@ from config import get_config
 from db_runtime import backend_summary
 from middleware.session_manager import get_session_manager
 from middleware.sync import get_sync_engine
-from storage_events import Event as StoredEvent, get_event_by_id, init_events_db, search_events as stored_search_events, upsert_event
+from storage_events import Event as StoredEvent, clear_discovered_events, get_event_by_id, init_events_db, search_events as stored_search_events, upsert_event
 from storage_markets import init_db
 from storage_marketplace import (
     create_application as create_marketplace_application,
@@ -2154,6 +2154,17 @@ def create_app() -> FastAPI:
             user,
         )
         return JSONResponse({"ok": True, "count": len(events), "events": events})
+
+    @app.delete("/api/admin/events/discovered")
+    async def handle_admin_clear_discovered(request: Request) -> JSONResponse:
+        """Admin: delete all pipeline-discovered events. Requires vendor or admin role."""
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "market", "admin"}:
+            return _validation_error("Not authorized.", status_code=403)
+        deleted = clear_discovered_events()
+        return JSONResponse({"ok": True, "deleted": deleted})
 
     @app.get("/api/users")
     async def handle_users_index(request: Request, role: str = "", limit: int = 25) -> JSONResponse:
