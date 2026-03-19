@@ -1439,15 +1439,21 @@ def create_app() -> FastAPI:
 
     @app.get("/api/debug/env")
     async def handle_debug_env() -> JSONResponse:
-        import os
+        import os, pathlib
         key = os.environ.get("SHOPIFY_API_KEY", "")
         secret = os.environ.get("SHOPIFY_API_SECRET", "")
         serper = os.environ.get("SERPER_API_KEY", "")
+        cwd = pathlib.Path.cwd()
+        env_file = cwd / ".env"
+        all_keys = [k for k in os.environ if "SHOPIFY" in k or "SERPER" in k]
         return JSONResponse({
             "SHOPIFY_API_KEY": key[:4] + "..." if key else "NOT SET",
             "SHOPIFY_API_SECRET": secret[:4] + "..." if secret else "NOT SET",
             "SERPER_API_KEY": serper[:4] + "..." if serper else "NOT SET",
             "config_shopify_key": (get_config().shopify_api_key or "")[:4] + "..." if get_config().shopify_api_key else "NOT SET",
+            "cwd": str(cwd),
+            "env_file_exists": env_file.exists(),
+            "matching_env_keys": all_keys,
         })
 
     @app.post("/api/admin/refresh-events")
