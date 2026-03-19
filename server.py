@@ -2643,8 +2643,6 @@ def create_app() -> FastAPI:
         storefront_token = str(body.get("storefront_token", "")).strip()
         if not shop_domain:
             return _validation_error("Enter your Shopify shop domain.")
-        if len(storefront_token) < 10:
-            return _validation_error("Enter a valid Storefront access token.")
 
         set_shopify_storefront_connection(int(user["id"]), shop_domain, storefront_token)
         return JSONResponse(

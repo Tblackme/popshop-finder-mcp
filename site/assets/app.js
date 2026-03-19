@@ -4453,22 +4453,20 @@ async function setupIntegrationsPage() {
                   <p class="muted" style="margin-top:8px;">We'll bring in products and inventory so your plan can suggest what to bring.</p>
                 </div>
                 `
-                : `
-                <p class="muted" style="margin-top:14px;">Shopify OAuth is not configured on this server. Use the storefront fields below to connect your public shop for product display.</p>
-                `
+                : ``
           }
           <div class="field" style="margin-top:18px;">
-            <label for="integrations_storefront_domain">Storefront shop domain</label>
-            <input id="integrations_storefront_domain" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.storefrontShop || snapshot.shop || "")}">
-            <p class="muted" style="margin-top:8px;">Save the shop domain shoppers should browse when you add public product browsing.</p>
+            <label for="integrations_storefront_domain">Your Shopify store domain</label>
+            <div class="stack-row">
+              <input id="integrations_storefront_domain" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.storefrontShop || snapshot.shop || "")}">
+              <button class="btn btn-secondary" type="button" data-storefront-save>${storefrontConnected ? "Update" : "Save shop"}</button>
+            </div>
+            <p class="muted" style="margin-top:8px;">${storefrontConnected ? `Connected to ${escapeHtml(snapshot.storefrontShop || snapshot.shop || "your shop")}.` : "Enter your .myshopify.com domain — no token required for public product display."}</p>
           </div>
           <div class="field" style="margin-top:14px;">
-            <label for="integrations_storefront_token">Storefront access token</label>
-            <div class="stack-row">
-              <input id="integrations_storefront_token" class="mini-input" placeholder="shpat_..." type="password">
-              <button class="btn btn-secondary" type="button" data-storefront-save>${storefrontConnected ? "Update storefront" : "Save storefront"}</button>
-            </div>
-            <p class="muted" style="margin-top:8px;">${storefrontConnected ? `Saved for ${escapeHtml(snapshot.storefrontShop || snapshot.shop || "your shop")}. Add a new token any time you need to rotate it.` : "Paste the read-only Storefront API token from Shopify so Vendor Atlas can load public product data later."}</p>
+            <label for="integrations_storefront_token">Storefront access token <span class="muted" style="font-weight:400;">(optional)</span></label>
+            <input id="integrations_storefront_token" class="mini-input" placeholder="shpat_... — leave blank to use public access" type="password">
+            <p class="muted" style="margin-top:6px;">Only needed if your Shopify store restricts public product access. Find it in Shopify → Apps → Storefront API.</p>
           </div>
         </div>
         <div class="dashboard-card">
