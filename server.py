@@ -1437,6 +1437,19 @@ def create_app() -> FastAPI:
             }
         )
 
+    @app.get("/api/debug/env")
+    async def handle_debug_env() -> JSONResponse:
+        import os
+        key = os.environ.get("SHOPIFY_API_KEY", "")
+        secret = os.environ.get("SHOPIFY_API_SECRET", "")
+        serper = os.environ.get("SERPER_API_KEY", "")
+        return JSONResponse({
+            "SHOPIFY_API_KEY": key[:4] + "..." if key else "NOT SET",
+            "SHOPIFY_API_SECRET": secret[:4] + "..." if secret else "NOT SET",
+            "SERPER_API_KEY": serper[:4] + "..." if serper else "NOT SET",
+            "config_shopify_key": (get_config().shopify_api_key or "")[:4] + "..." if get_config().shopify_api_key else "NOT SET",
+        })
+
     @app.post("/api/admin/refresh-events")
     async def handle_refresh_events() -> JSONResponse:
         """Trigger live MCP discovery pipeline and return count."""
