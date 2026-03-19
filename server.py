@@ -1421,6 +1421,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def handle_health() -> JSONResponse:
+        cfg = get_config()
         return JSONResponse(
             {
                 "status": "ok",
@@ -1431,6 +1432,8 @@ def create_app() -> FastAPI:
                 "connected_clients": sse_transport.connected_clients,
                 "database": backend_summary(),
                 "event_count": len(stored_search_events({})),
+                "shopify_configured": bool(cfg.shopify_api_key and cfg.shopify_api_secret),
+                "serper_configured": bool(cfg.serper_api_key),
             }
         )
 
