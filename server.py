@@ -1465,6 +1465,7 @@ def create_app() -> FastAPI:
             "searched_paths": found_files,
             "find_env_files": find_result,
             "matching_env_keys": all_keys,
+            "all_env_keys": sorted(os.environ.keys()),
         })
 
     @app.post("/api/admin/refresh-events")
