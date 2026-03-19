@@ -216,7 +216,7 @@ EVENT_KEYWORDS = {
     "flea",
     "artisan",
 }
-PAGE_VERIFICATION_LIMIT = 20
+PAGE_VERIFICATION_LIMIT = 8
 
 
 class SearchResultsParser(HTMLParser):

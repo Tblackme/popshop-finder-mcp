@@ -2840,7 +2840,23 @@ def create_app() -> FastAPI:
             else:
                 api_key = request.headers.get("X-API-Key", "")
 
-        result = await billing_middleware(tool_name, arguments, api_key, handler)
+        try:
+            result = await asyncio.wait_for(
+                billing_middleware(tool_name, arguments, api_key, handler),
+                timeout=25.0,
+            )
+        except TimeoutError:
+            return JSONResponse(
+                {"ok": False, "error": "Request timed out. Try a more specific search."},
+                status_code=504,
+            )
+        except Exception as exc:
+            logger.exception("Unhandled error in consumer/run for tool %s: %s", tool_name, exc)
+            return JSONResponse(
+                {"ok": False, "error": "Something went wrong. Please try again."},
+                status_code=500,
+            )
+
         if "error" in result:
             err = result["error"]
             msg = (
