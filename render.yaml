@@ -12,6 +12,6 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: APP_BASE_URL
-        value: https://your-render-service.onrender.com
+        value: https://popshop-finder-mcp.onrender.com
       - key: SERVER_TRANSPORT
         value: sse
