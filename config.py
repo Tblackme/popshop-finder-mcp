@@ -70,7 +70,7 @@ def get_config() -> ServerConfig:
         try:
             from dotenv import load_dotenv
             # Load .env file — works for local dev and Render Secret Files
-            load_dotenv(override=False)
+            load_dotenv(override=True)
         except ImportError:
             pass
         _config = ServerConfig.from_env()
