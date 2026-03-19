@@ -461,12 +461,13 @@ def _read_session_user_id(request: Request) -> int | None:
 
 def _set_session_cookie(response: Response, user_id: int) -> None:
     config = get_config()
+    is_https = config.app_base_url.startswith("https://")
     response.set_cookie(
         SESSION_COOKIE_NAME,
         _sign_session_value(user_id, config.session_secret),
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_https,
         path="/",
         max_age=60 * 60 * 24 * 14,
     )
