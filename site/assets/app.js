@@ -1507,6 +1507,8 @@ async function setupDiscoverPage(auth) {
   root.innerHTML = `<div class="empty-state"><strong>Ranking events for you...</strong><p class="muted">Pulling together the latest event list and sorting the strongest fits first.</p></div>`;
   let allEvents = [];
   let discoverDataSource = "live";
+
+  // Phase 1 — fast: stored events
   try {
     const payload = await api("/api/events?limit=120", { method: "GET" });
     allEvents = Array.isArray(payload.events)
@@ -1520,6 +1522,22 @@ async function setupDiscoverPage(auth) {
     allEvents = buildMockDiscoverEvents().map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean);
     discoverDataSource = "fallback";
   }
+
+  // Phase 2 — async: live MCP discovery for Kansas City (runs after initial render)
+  const liveRefresh = async () => {
+    try {
+      const livePayload = await api("/api/events?limit=120&live=1", { method: "GET" });
+      const liveEvents = Array.isArray(livePayload.events)
+        ? livePayload.events.map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean)
+        : [];
+      if (liveEvents.length > allEvents.length) {
+        allEvents = liveEvents;
+        discoverDataSource = "live";
+        requestRender();
+      }
+    } catch (_) { /* silent — keep stored events */ }
+  };
+  setTimeout(liveRefresh, 0);
   const planningAnswers = getPlanningAnswers();
   const persistedDiscoverState = getDiscoverState();
   const initialDistance = persistedDiscoverState.distance

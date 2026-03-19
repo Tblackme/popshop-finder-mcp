@@ -1985,13 +1985,31 @@ def create_app() -> FastAPI:
         return JSONResponse({"ok": True, "event_id": event_id, "rsvped": False})
 
     @app.get("/api/events")
-    async def handle_events_index(request: Request, limit: int = 25) -> JSONResponse:
+    async def handle_events_index(request: Request, limit: int = 25, live: str = "") -> JSONResponse:
         user = _current_user(request)
-        events = _rank_events_for_user(
-            stored_search_events({})[: max(1, min(int(limit or 25), 100))],
-            user,
-        )
-        return JSONResponse({"ok": True, "count": len(events), "events": events})
+        cap = max(1, min(int(limit or 25), 100))
+        stored = stored_search_events({})[:cap]
+
+        discovered: list[dict[str, Any]] = []
+        if live == "1":
+            discover_handler = ALL_HANDLERS.get("discover_events")
+            if discover_handler:
+                try:
+                    raw = await discover_handler(
+                        city="Kansas City",
+                        state="MO",
+                        keywords=["popup market", "makers market", "craft fair", "flea market", "vendor fair", "art market"],
+                        sources=["google", "eventbrite", "public_event_listings"],
+                    )
+                    payload = json.loads(raw) if isinstance(raw, str) else raw
+                    discovered = payload.get("events", [])
+                except Exception as exc:
+                    logger.warning("Live discovery failed in /api/events: %s", exc)
+
+        stored_ids = {e.get("id") for e in stored}
+        merged = stored + [e for e in discovered if e.get("id") not in stored_ids]
+        events = _rank_events_for_user(_apply_recurrence_signals(merged)[:cap], user)
+        return JSONResponse({"ok": True, "count": len(events), "events": events, "live": bool(discovered)})
 
     @app.get("/api/users")
     async def handle_users_index(request: Request, role: str = "", limit: int = 25) -> JSONResponse:
