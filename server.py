@@ -1260,6 +1260,57 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.on_event("startup")
+    async def _background_seed_events() -> None:
+        async def _run() -> None:
+            await asyncio.sleep(5)  # let server finish starting
+            discover_handler = ALL_HANDLERS.get("discover_events")
+            if not discover_handler:
+                return
+            keyword_sets = [
+                ["popup market", "makers market", "craft fair", "vendor fair", "flea market"],
+                ["oddity market", "curiosities market", "dark market", "oddities and curiosities", "horror convention"],
+                ["rave", "electronic music festival", "underground event", "DJ event vendor"],
+                ["tattoo convention", "tattoo expo", "tattoo festival"],
+                ["anime convention", "comic con", "cosplay convention", "fan expo"],
+                ["small concert vendor", "music festival vendor", "festival vendor application"],
+                ["night market", "art market", "vintage market", "antique market", "holiday market"],
+                ["street fair vendor", "vendor expo", "outdoor vendor event"],
+            ]
+            for keywords in keyword_sets:
+                try:
+                    raw = await discover_handler(
+                        city="Kansas City",
+                        state="MO",
+                        keywords=keywords,
+                        sources=["google", "eventbrite", "facebook_events", "public_event_listings"],
+                    )
+                    payload = json.loads(raw) if isinstance(raw, str) else raw
+                    for event in payload.get("events", []):
+                        try:
+                            from storage_events import Event, upsert_event
+                            upsert_event(Event(
+                                id=event.get("id") or event.get("event_id") or "",
+                                name=event.get("name") or event.get("title") or "",
+                                city=event.get("city") or "Kansas City",
+                                state=event.get("state") or "MO",
+                                start_date=event.get("date") or event.get("start_date") or "",
+                                end_date=event.get("end_date") or event.get("date") or "",
+                                vendor_count=event.get("vendor_count"),
+                                estimated_traffic=event.get("estimated_traffic"),
+                                booth_price=event.get("booth_price") or event.get("vendor_fee"),
+                                application_link=event.get("application_link") or event.get("url") or event.get("source_url") or "",
+                                source_url=event.get("source_url") or event.get("url") or "",
+                                vendor_category=event.get("vendor_category") or event.get("event_type") or "",
+                                event_size=event.get("event_size") or "",
+                            ))
+                        except Exception:
+                            pass
+                    await asyncio.sleep(2)
+                except Exception as exc:
+                    logger.warning("Startup discovery failed for %s: %s", keywords[0], exc)
+        asyncio.create_task(_run())
+
     @app.exception_handler(404)
     async def custom_not_found(request: Request, _exc: Any) -> JSONResponse:
         return JSONResponse(
@@ -1985,31 +2036,14 @@ def create_app() -> FastAPI:
         return JSONResponse({"ok": True, "event_id": event_id, "rsvped": False})
 
     @app.get("/api/events")
-    async def handle_events_index(request: Request, limit: int = 25, live: str = "") -> JSONResponse:
+    async def handle_events_index(request: Request, limit: int = 25) -> JSONResponse:
         user = _current_user(request)
         cap = max(1, min(int(limit or 25), 100))
-        stored = stored_search_events({})[:cap]
-
-        discovered: list[dict[str, Any]] = []
-        if live == "1":
-            discover_handler = ALL_HANDLERS.get("discover_events")
-            if discover_handler:
-                try:
-                    raw = await discover_handler(
-                        city="Kansas City",
-                        state="MO",
-                        keywords=["popup market", "makers market", "craft fair", "flea market", "vendor fair", "art market"],
-                        sources=["google", "eventbrite", "public_event_listings"],
-                    )
-                    payload = json.loads(raw) if isinstance(raw, str) else raw
-                    discovered = payload.get("events", [])
-                except Exception as exc:
-                    logger.warning("Live discovery failed in /api/events: %s", exc)
-
-        stored_ids = {e.get("id") for e in stored}
-        merged = stored + [e for e in discovered if e.get("id") not in stored_ids]
-        events = _rank_events_for_user(_apply_recurrence_signals(merged)[:cap], user)
-        return JSONResponse({"ok": True, "count": len(events), "events": events, "live": bool(discovered)})
+        events = _rank_events_for_user(
+            _apply_recurrence_signals(stored_search_events({})[:cap]),
+            user,
+        )
+        return JSONResponse({"ok": True, "count": len(events), "events": events})
 
     @app.get("/api/users")
     async def handle_users_index(request: Request, role: str = "", limit: int = 25) -> JSONResponse:

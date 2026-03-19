@@ -762,6 +762,13 @@ def test_new_product_pages_render(temp_user_storage):
 
 
 def test_event_detail_page_and_api_render_existing_event(temp_user_storage):
+    storage_events.upsert_event(storage_events.Event(
+        id="test-event-detail-001",
+        name="Test Popup Market",
+        city="Kansas City",
+        state="MO",
+        date="2026-06-15",
+    ))
     with TestClient(server.create_app()) as client:
         events = client.get("/api/events").json()["events"]
         assert events
@@ -808,6 +815,13 @@ def test_events_and_users_api_indexes_return_smoke_shapes(temp_user_storage):
 
 
 def test_events_index_returns_ranked_fit_fields(temp_user_storage):
+    storage_events.upsert_event(storage_events.Event(
+        id="test-event-ranked-001",
+        name="Test Ranked Market",
+        city="Kansas City",
+        state="MO",
+        date="2026-06-15",
+    ))
     with TestClient(server.create_app()) as client:
         response = client.get("/api/events")
         assert response.status_code == 200
@@ -823,6 +837,13 @@ def test_events_index_returns_ranked_fit_fields(temp_user_storage):
 
 
 def test_event_detail_reuses_ranked_fit_signal(temp_user_storage):
+    storage_events.upsert_event(storage_events.Event(
+        id="test-event-signal-001",
+        name="Test Signal Market",
+        city="Kansas City",
+        state="MO",
+        date="2026-06-15",
+    ))
     with TestClient(server.create_app()) as client:
         events = client.get("/api/events").json()["events"]
         assert events
@@ -1086,6 +1107,13 @@ def test_market_organizer_can_update_own_event(temp_user_storage):
 
 
 def test_shopper_can_rsvp_event_and_event_detail_reports_it(temp_user_storage):
+    storage_events.upsert_event(storage_events.Event(
+        id="test-event-rsvp-001",
+        name="Test RSVP Market",
+        city="Kansas City",
+        state="MO",
+        date="2026-06-15",
+    ))
     with TestClient(server.create_app()) as client:
         signup = client.post(
             "/api/auth/signup",

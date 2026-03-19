@@ -285,13 +285,13 @@ def _source_search_query(source: str, location_text: str, keywords: list[str]) -
     joined_keywords = " OR ".join(f'"{keyword}"' for keyword in keywords) if keywords else '"popup market"'
 
     query_map = {
-        "google": f"{location_text} ({joined_keywords}) vendor market",
-        "eventbrite": f"site:eventbrite.com {location_text} ({joined_keywords})",
-        "facebook_events": f"site:facebook.com/events {location_text} ({joined_keywords})",
-        "instagram_hashtags": f"site:instagram.com {location_text} ({joined_keywords})",
-        "local_market_sites": f'{location_text} ({joined_keywords}) "vendor application"',
-        "public_event_listings": f'{location_text} ({joined_keywords}) ("event listing" OR "festival")',
-        "social_media": f"(site:instagram.com OR site:tiktok.com OR site:facebook.com) {location_text} ({joined_keywords})",
+        "google": f'{location_text} ({joined_keywords}) (vendor OR vending OR "vendor application" OR "booth rental")',
+        "eventbrite": f'site:eventbrite.com {location_text} ({joined_keywords})',
+        "facebook_events": f'site:facebook.com/events {location_text} ({joined_keywords})',
+        "instagram_hashtags": f'site:instagram.com {location_text} ({joined_keywords})',
+        "local_market_sites": f'{location_text} ({joined_keywords}) ("vendor application" OR "apply to vend" OR "booth space" OR "vendor spots")',
+        "public_event_listings": f'{location_text} ({joined_keywords}) (festival OR "event listing" OR convention OR market)',
+        "social_media": f'(site:instagram.com OR site:tiktok.com OR site:facebook.com) {location_text} ({joined_keywords})',
     }
     return query_map.get(source, query_map["google"]).strip()
 

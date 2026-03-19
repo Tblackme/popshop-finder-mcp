@@ -1518,26 +1518,7 @@ async function setupDiscoverPage(auth) {
     discoverDataSource = "fallback";
     allEvents = [];
   }
-  if (!allEvents.length) {
-    allEvents = buildMockDiscoverEvents().map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean);
-    discoverDataSource = "fallback";
-  }
-
-  // Phase 2 — async: live MCP discovery for Kansas City (runs after initial render)
-  const liveRefresh = async () => {
-    try {
-      const livePayload = await api("/api/events?limit=120&live=1", { method: "GET" });
-      const liveEvents = Array.isArray(livePayload.events)
-        ? livePayload.events.map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean)
-        : [];
-      if (liveEvents.length > allEvents.length) {
-        allEvents = liveEvents;
-        discoverDataSource = "live";
-        requestRender();
-      }
-    } catch (_) { /* silent — keep stored events */ }
-  };
-  setTimeout(liveRefresh, 0);
+  // no mock fallback — real events only
   const planningAnswers = getPlanningAnswers();
   const persistedDiscoverState = getDiscoverState();
   const initialDistance = persistedDiscoverState.distance
@@ -1635,28 +1616,6 @@ async function setupDiscoverPage(auth) {
       .map((event) => scoreDiscoverEvent(event, state))
       .sort((a, b) => b.fit_score - a.fit_score);
 
-    let backupResultsNotice = "";
-    if (!scored.length && discoverDataSource === "live") {
-      scored = buildMockDiscoverEvents()
-        .map((event, index) => normalizeDiscoverEvent(event, index))
-        .filter((event) => categoryMatches(event, state.eventType))
-        .filter((event) => event.distance_miles <= (state.travelMode === "Local" ? Math.min(state.distance, 75) : Math.max(state.distance, 120)))
-        .filter((event) => event.vendor_fee <= state.maxFee)
-        .filter((event) => state.dateRange === "Any" || (state.dateRange === "Soon" ? Number(event.date.slice(5, 7)) <= 6 : Number(event.date.slice(5, 7)) >= 7))
-        .filter((event) => state.features.every((feature) => {
-          if (feature === "Electricity") return event.electricity;
-          if (feature === "Indoor") return event.indoor_outdoor === "Indoor";
-          if (feature === "Parking") return /parking|load-in/i.test(event.parking_accessibility);
-          if (feature === "Foot Traffic") return event.estimated_traffic === "High";
-          return true;
-        }))
-        .map((event) => scoreDiscoverEvent(event, state))
-        .sort((a, b) => b.fit_score - a.fit_score);
-      if (scored.length) {
-        backupResultsNotice = "Your current filters were too narrow for the live event set, so we filled in with close-fit sample events to keep planning moving.";
-      }
-    }
-
     const groups = {
       "Best Matches": scored.filter((event) => event.bucket === "Best Matches").slice(0, 8),
       "Worth Trying": scored.filter((event) => event.bucket === "Worth Trying").slice(0, 8),
@@ -1679,7 +1638,6 @@ async function setupDiscoverPage(auth) {
             <button class="btn btn-secondary" type="button" data-map-toggle>${state.mapOpen ? "Hide Map" : "Show Map"}</button>
           </div>
           ${discoverDataSource === "fallback" ? `<div class="discover-why-summary"><strong>Using backup event data.</strong> Live event ranking is temporarily unavailable, so we're keeping the page useful with a local sample set.</div>` : ""}
-          ${backupResultsNotice ? `<div class="discover-why-summary"><strong>Adjusted for planning.</strong> ${backupResultsNotice}</div>` : ""}
           <div class="discover-summary-strip">
             <div class="discover-summary-pill">
               <strong>${groups["Best Matches"].length}</strong>

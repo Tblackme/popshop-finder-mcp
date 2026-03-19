@@ -1,16 +1,9 @@
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import Any
 
-from db_runtime import connect, sqlite_db_path
-
-DEMO_DATA_PATH = Path(
-    os.environ.get("VENDOR_ATLAS_DEMO_DATA_PATH", str(Path(__file__).resolve().parent / "data" / "demo_markets.json"))
-).expanduser()
+from db_runtime import connect
 
 
 @dataclass
@@ -120,33 +113,6 @@ def _event_from_row(row) -> Event:
     )
 
 
-def _seed_demo_events_if_empty(conn: sqlite3.Connection) -> None:
-    count = conn.execute("SELECT COUNT(*) AS count FROM events").fetchone()["count"]
-    if count or not DEMO_DATA_PATH.exists():
-        return
-
-    raw_markets = json.loads(DEMO_DATA_PATH.read_text(encoding="utf-8"))
-    for item in raw_markets:
-        categories = item.get("categories", [])
-        event = Event(
-            id=item["id"],
-            name=item["name"],
-            city=item["city"],
-            state=item["state"],
-            date=item.get("start_date", ""),
-            vendor_count=item.get("vendor_count"),
-            estimated_traffic=item.get("estimated_traffic"),
-            booth_price=item.get("booth_price"),
-            application_link=item.get("apply_url"),
-            organizer_contact=item.get("organizer_contact"),
-            popularity_score=item.get("popularity_score"),
-            source_url=item.get("source_ref") or item.get("apply_url"),
-            vendor_category=categories[0] if categories else None,
-            event_size=_normalize_event_size(item.get("vendor_count")),
-        )
-        _upsert_event_conn(conn, event)
-
-
 def init_events_db() -> None:
     conn = _connect()
     try:
@@ -170,7 +136,6 @@ def init_events_db() -> None:
             )
             """
         )
-        _seed_demo_events_if_empty(conn)
         conn.commit()
     finally:
         conn.close()
