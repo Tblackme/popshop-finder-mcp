@@ -1383,6 +1383,23 @@ def create_app() -> FastAPI:
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
         return serve_page("shopper-dashboard.html")
 
+    @app.get("/shop/{username}")
+    async def handle_vendor_shop_page(username: str) -> Response:
+        return serve_page("vendor-shop.html")
+
+    @app.get("/api/users/{username}")
+    async def handle_public_user_profile(username: str) -> JSONResponse:
+        user = get_user_by_username(username)
+        if not user or _normalized_role(user) != "vendor":
+            return JSONResponse({"error": "Vendor not found."}, status_code=404)
+        return JSONResponse({
+            "id": user["id"],
+            "username": user["username"],
+            "display_name": user.get("display_name") or user["username"],
+            "bio": user.get("bio") or "",
+            "role": _normalized_role(user),
+        })
+
     @app.get("/enter/{role_name}")
     async def handle_role_entry(request: Request, role_name: str) -> Response:
         normalized = str(role_name or "").strip().lower()

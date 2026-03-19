@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vendor Shop | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .shop-hero {
+      padding: 2.5rem 0 1.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .shop-hero-inner {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .shop-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-size: 1.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .shop-meta h1 { margin: 0 0 .25rem; font-size: 1.5rem; }
+    .shop-meta p  { margin: 0; color: var(--muted); font-size: .95rem; }
+    .follow-btn { margin-left: auto; }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.25rem;
+      padding: 2rem 0;
+    }
+    .product-card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(12,31,29,.07);
+      display: flex;
+      flex-direction: column;
+    }
+    .product-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #e8e2d8;
+    }
+    .product-card-img-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #e8e2d8, #d6cfc4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+    .product-card-body {
+      padding: .85rem 1rem 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+    }
+    .product-name {
+      font-weight: 600;
+      font-size: .95rem;
+      line-height: 1.35;
+    }
+    .product-price {
+      color: var(--brand);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .product-buy {
+      margin-top: auto;
+      padding-top: .6rem;
+    }
+    .no-shop-state {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--muted);
+    }
+    .no-shop-state .icon { font-size: 3rem; margin-bottom: .75rem; }
+    .badge-connected {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--success);
+      background: rgba(2,122,72,.08);
+      padding: .2rem .6rem;
+      border-radius: 99px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/discover">Discover</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a>
+      <a href="/discover">Discover</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="shop-hero">
+      <div class="container">
+        <div id="shop-hero-content">
+          <div class="empty-state">Loading vendor…</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div id="shop-products-content">
+          <div class="products-grid" id="products-grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (async function () {
+      const params = new URLSearchParams(location.search);
+      const username = params.get("u") || location.pathname.split("/").pop();
+
+      if (!username || username === "vendor-shop") {
+        document.getElementById("shop-hero-content").innerHTML =
+          '<div class="empty-state"><strong>No vendor specified.</strong></div>';
+        return;
+      }
+
+      // Load vendor profile
+      let vendor = null;
+      try {
+        const r = await fetch(`/api/users/${encodeURIComponent(username)}`, { credentials: "include" });
+        if (r.ok) vendor = await r.json();
+      } catch (_) {}
+
+      const heroEl = document.getElementById("shop-hero-content");
+      const gridEl = document.getElementById("products-grid");
+
+      if (!vendor || vendor.role !== "vendor") {
+        heroEl.innerHTML = '<div class="empty-state"><strong>Vendor not found.</strong></div>';
+        return;
+      }
+
+      const initial = (vendor.display_name || vendor.username || "V")[0].toUpperCase();
+      heroEl.innerHTML = `
+        <div class="shop-hero-inner">
+          <div class="shop-avatar">${initial}</div>
+          <div class="shop-meta">
+            <h1>${escapeHtml(vendor.display_name || "@" + vendor.username)}</h1>
+            <p>@${escapeHtml(vendor.username)}${vendor.bio ? " · " + escapeHtml(vendor.bio) : ""}</p>
+          </div>
+          <div class="follow-btn" id="follow-area"></div>
+        </div>
+      `;
+
+      // Follow button (shoppers only)
+      initFollowArea(vendor.id);
+
+      // Load products
+      gridEl.innerHTML = "<p style='color:var(--muted);padding:2rem 0'>Loading products…</p>";
+      try {
+        const r = await fetch(`/api/vendors/${encodeURIComponent(username)}/products`, { credentials: "include" });
+        const data = await r.json();
+
+        if (!data.connected || !data.products?.length) {
+          gridEl.innerHTML = `
+            <div class="no-shop-state" style="grid-column:1/-1">
+              <div class="icon">🛍️</div>
+              <strong>${escapeHtml(vendor.display_name || "@" + vendor.username)} hasn't connected their shop yet.</strong>
+              <p style="margin:.5rem 0 0">Check back after their next event!</p>
+            </div>`;
+          return;
+        }
+
+        document.querySelector(".shop-meta p").insertAdjacentHTML("afterend",
+          `<span class="badge-connected" style="margin-top:.4rem">✓ Shopify connected</span>`);
+
+        gridEl.innerHTML = data.products.map(p => `
+          <div class="product-card">
+            ${p.image
+              ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy">`
+              : `<div class="product-card-img-placeholder">🛍️</div>`
+            }
+            <div class="product-card-body">
+              <div class="product-name">${escapeHtml(p.name)}</div>
+              ${p.price > 0 ? `<div class="product-price">$${Number(p.price).toFixed(2)}</div>` : ""}
+              ${p.product_url ? `<div class="product-buy"><a class="btn btn-primary" href="${escapeHtml(p.product_url)}" target="_blank" rel="noopener">Buy now</a></div>` : ""}
+            </div>
+          </div>
+        `).join("");
+      } catch (e) {
+        gridEl.innerHTML = '<div class="no-shop-state" style="grid-column:1/-1"><div class="icon">⚠️</div><strong>Could not load products right now.</strong></div>';
+      }
+
+      async function initFollowArea(vendorId) {
+        const area = document.getElementById("follow-area");
+        if (!area) return;
+        try {
+          const me = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
+          if (!me || me.role !== "shopper") return;
+
+          // Check follow status
+          const followed = await fetch("/api/shopper/following", { credentials: "include" })
+            .then(r => r.ok ? r.json() : []);
+          const isFollowing = Array.isArray(followed) && followed.some(v => String(v.id) === String(vendorId));
+
+          const btn = document.createElement("button");
+          btn.className = "btn " + (isFollowing ? "btn-secondary" : "btn-primary");
+          btn.textContent = isFollowing ? "Following ✓" : "Follow vendor";
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            try {
+              await fetch(`/api/vendors/${vendorId}/follow`, { method: "POST", credentials: "include" });
+              btn.textContent = "Following ✓";
+              btn.className = "btn btn-secondary";
+            } catch (_) {}
+            btn.disabled = false;
+          });
+          area.appendChild(btn);
+        } catch (_) {}
+      }
+    })();
+  </script>
+</body>
+</html>
