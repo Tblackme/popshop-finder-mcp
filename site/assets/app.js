@@ -1493,8 +1493,8 @@ async function setupDiscoverPage(auth) {
     if (!city || discoverSearching) return;
     discoverSearching = true;
     discoverCity = city;
-    root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").disabled = true);
-    root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").textContent = "Searching…");
+    allEvents = [];
+    requestRender();
     const location = parseCityStateInput(city);
     try {
       const query = new URLSearchParams();
@@ -1659,7 +1659,7 @@ async function setupDiscoverPage(auth) {
             <input id="discover-city-input" class="mini-input" placeholder="Search events by city (e.g. Austin, TX)" style="flex:1;max-width:340px;" value="${escapeHtml(discoverCity)}">
             <button class="btn btn-primary" type="button" data-discover-search-btn ${discoverSearching ? "disabled" : ""}>${discoverSearching ? "Searching…" : "Find Events"}</button>
           </div>
-          ${scored.length === 0 && !discoverSearching ? `<div class="empty-state" style="margin-top:1.5rem;"><strong>No events found.</strong><p class="muted">Enter your city above and click Find Events to discover markets near you.</p></div>` : ""}
+          ${discoverSearching ? `<div class="empty-state" style="margin-top:1.5rem;"><strong>Searching for events…</strong><p class="muted">Scanning the web for popup markets and craft fairs near ${escapeHtml(discoverCity)}. This takes about 15 seconds.</p></div>` : scored.length === 0 ? `<div class="empty-state" style="margin-top:1.5rem;"><strong>No events found.</strong><p class="muted">Enter your city above and click Find Events to discover markets near you.</p></div>` : ""}
           ${discoverDataSource === "fallback" ? `<div class="discover-why-summary"><strong>Using backup event data.</strong> Live event ranking is temporarily unavailable, so we're keeping the page useful with a local sample set.</div>` : ""}
           <div class="discover-summary-strip">
             <div class="discover-summary-pill">

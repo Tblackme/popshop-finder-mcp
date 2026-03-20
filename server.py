@@ -155,6 +155,8 @@ PUBLIC_PAGE_ROUTES = {
     "/integrations": "integrations.html",
     "/signin": "signin.html",
     "/signup": "signup.html",
+    "/market-analytics": "market-analytics.html",
+    "/market-applications": "market-applications.html",
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -1083,16 +1085,21 @@ async def _load_finder_results(
 
     discover_handler = ALL_HANDLERS.get("discover_events")
     discovered_events: list[dict[str, Any]] = []
-    if discover_handler:
+    if discover_handler and city:
         try:
-            discovered_raw = await discover_handler(
-                city=city,
-                state=state,
-                keywords=[vendor_category or "popup market", "makers market", "craft fair", "flea market"],
-                sources=["google", "eventbrite", "public_event_listings", "social_media"],
+            discovered_raw = await asyncio.wait_for(
+                discover_handler(
+                    city=city,
+                    state=state,
+                    keywords=[vendor_category or "popup market", "makers market", "craft fair", "flea market"],
+                    sources=["google", "eventbrite", "public_event_listings", "social_media"],
+                ),
+                timeout=22.0,
             )
             discovered_payload = json.loads(discovered_raw) if isinstance(discovered_raw, str) else discovered_raw
             discovered_events = discovered_payload.get("events", [])
+        except asyncio.TimeoutError:
+            logger.warning("Finder discovery timed out for city=%r", city)
         except Exception as exc:
             logger.warning("Finder discovery failed: %s", exc)
 
