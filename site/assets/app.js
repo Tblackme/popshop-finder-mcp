@@ -244,7 +244,11 @@ function shopifyLoadData() {
 
 function shopifyConnectFromInput(inputId = "shopify-shop-input") {
   const input = document.getElementById(inputId);
-  const shop = input && input.value ? input.value.trim() : "";
+  let shop = input && input.value ? input.value.trim() : "";
+  // Strip protocol and trailing slashes
+  shop = shop.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  // Strip .myshopify.com suffix so server can re-add it cleanly
+  shop = shop.replace(/\.myshopify\.com$/i, "").replace(/^www\./i, "").replace(/^admin\./i, "");
   if (!shop) {
     showToast("Enter your store name (e.g. mystore)", "error");
     return;
@@ -1621,7 +1625,7 @@ async function setupDiscoverPage(auth) {
   function render() {
     let scored = allEvents
       .filter((event) => categoryMatches(event, state.eventType))
-      .filter((event) => !discoverCity || event.distance_miles <= (state.travelMode === "Local" ? Math.min(state.distance, 75) : Math.max(state.distance, 120)))
+      .filter((event) => discoverCity || event.distance_miles <= (state.travelMode === "Local" ? Math.min(state.distance, 75) : Math.max(state.distance, 120)))
       .filter((event) => event.vendor_fee <= state.maxFee)
       .filter((event) => state.dateRange === "Any" || (state.dateRange === "Soon" ? Number(event.date.slice(5, 7)) <= 6 : Number(event.date.slice(5, 7)) >= 7))
       .filter((event) => state.features.every((feature) => {
@@ -4550,8 +4554,12 @@ async function setupIntegrationsPage() {
               `
               : oauthAvailable ? `
                 <div class="field" style="margin-top:18px;">
-                  <label for="integrations_shopify_store">Store domain</label>
-                  <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore.myshopify.com" value="${escapeHtml(snapshot.shop || "")}">
+                  <label for="integrations_shopify_store">Your store name</label>
+                  <div style="display:flex;align-items:center;gap:0;">
+                    <input id="integrations_shopify_store" class="mini-input" placeholder="yourstore" value="${escapeHtml((snapshot.shop || "").replace(".myshopify.com", ""))}" style="border-radius:6px 0 0 6px;border-right:none;flex:1;">
+                    <span style="background:var(--surface-alt,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:0 6px 6px 0;padding:0 10px;height:38px;display:flex;align-items:center;color:var(--muted,#64748b);font-size:.85rem;white-space:nowrap;">.myshopify.com</span>
+                  </div>
+                  <p class="muted" style="margin-top:5px;font-size:.8rem;">Find this in your Shopify admin URL: <em>admin.shopify.com/store/<strong>yourstore</strong></em></p>
                 </div>
                 <div class="stack-row" style="margin-top:14px;">
                   <button class="btn btn-primary" type="button" data-integrations-connect ${status === "loading" ? "disabled" : ""}>${status === "loading" ? "Connecting…" : "Connect with Shopify"}</button>
@@ -4662,8 +4670,14 @@ async function setupIntegrationsPage() {
     window.history.replaceState({}, "", window.location.pathname);
   } else if (shopifyParam === "error") {
     const reason = new URLSearchParams(window.location.search).get("reason") || "";
-    const msgs = { state: "Session expired — please sign out and sign back in, then try again.", hmac: "Security check failed — make sure your Shopify API credentials are correct.", token: "Shopify rejected the connection — check your app credentials.", missing: "Shopify didn't send the required info. Please try again." };
-    showToast(msgs[reason] || "Shopify connection failed. Please try again.", "error");
+    const msgs = {
+      state: "Session expired. Please sign out, sign back in, then try connecting again.",
+      hmac: "Shopify security check failed — your store may have blocked the connection. Try again.",
+      token: "Shopify rejected the connection. Make sure you entered the correct store name.",
+      missing: "Shopify didn't complete the handshake. Please try connecting again.",
+      no_token: "Shopify approved access but didn't return a token. Please try again.",
+    };
+    showToast(msgs[reason] || `Shopify connection failed (${reason || "unknown"}). Please try again.`, "error");
     window.history.replaceState({}, "", window.location.pathname);
   }
 }
