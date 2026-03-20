@@ -236,6 +236,15 @@ def init_users_db() -> None:
             )
             """
         )
+        # Migrations: add columns added after initial schema
+        for col, definition in [
+            ("source", "TEXT DEFAULT 'manual'"),
+            ("inventory_quantity", "INTEGER DEFAULT 0"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE vendor_products ADD COLUMN {col} {definition}")
+            except Exception:
+                pass  # column already exists
         conn.commit()
     finally:
         conn.close()
@@ -971,6 +980,7 @@ def upsert_vendor_profile(user_id: int, fields: dict[str, Any]) -> dict[str, Any
 # ---------------------------------------------------------------------------
 
 def _product_from_row(row) -> dict[str, Any]:
+    keys = row.keys()
     return {
         "id": row["id"],
         "user_id": row["user_id"],
@@ -982,6 +992,8 @@ def _product_from_row(row) -> dict[str, Any]:
         "category": row["category"] or "",
         "in_stock": bool(row["in_stock"]),
         "display_order": int(row["display_order"] or 0),
+        "source": row["source"] if "source" in keys else "manual",
+        "inventory_quantity": int(row["inventory_quantity"] or 0) if "inventory_quantity" in keys else 0,
         "created_at": row["created_at"] or "",
         "updated_at": row["updated_at"] or "",
     }
@@ -1099,3 +1111,36 @@ def delete_vendor_product(product_id: int, user_id: int) -> bool:
     finally:
         conn.close()
     return deleted
+
+
+def bulk_replace_csv_products(user_id: int, products: list[dict[str, Any]]) -> int:
+    """Replace all CSV-sourced products for a user with a new set. Returns count inserted."""
+    init_users_db()
+    conn = _connect()
+    try:
+        conn.execute("DELETE FROM vendor_products WHERE user_id = ? AND source = 'csv'", (user_id,))
+        for i, p in enumerate(products):
+            name = str(p.get("name", "")).strip()
+            if not name:
+                continue
+            conn.execute(
+                """
+                INSERT INTO vendor_products
+                    (user_id, name, description, price, category, in_stock, inventory_quantity, source, display_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'csv', ?)
+                """,
+                (
+                    user_id,
+                    name[:500],
+                    str(p.get("description", "")).strip()[:1000],
+                    float(p["price"]) if p.get("price") is not None else None,
+                    str(p.get("category", "")).strip()[:100],
+                    1 if p.get("in_stock", True) else 0,
+                    int(p.get("inventory_quantity", 0) or 0),
+                    i,
+                ),
+            )
+        conn.commit()
+        return len(products)
+    finally:
+        conn.close()

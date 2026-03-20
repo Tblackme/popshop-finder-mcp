@@ -4594,6 +4594,17 @@ async function setupIntegrationsPage() {
           <div id="shopify-connect-error" class="status" style="display:none;margin-top:10px;color:var(--error,#dc2626);font-size:.85rem;"></div>
         </div>
         <div class="dashboard-card">
+          <span class="eyebrow">CSV / Other platforms</span>
+          <h2>Import inventory from a spreadsheet</h2>
+          <p class="muted" style="margin-top:10px;">Works with Etsy, WooCommerce, Square, Faire, or any spreadsheet. Export your products as CSV, then upload here.</p>
+          <p class="muted" style="margin-top:6px;font-size:.82rem;">Required column: <strong>name</strong> or <strong>title</strong>. Optional: <strong>price</strong>, <strong>quantity</strong>, <strong>category</strong>, <strong>description</strong>.</p>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-top:14px;flex-wrap:wrap;">
+            <input type="file" id="csv-inventory-file" accept=".csv,text/csv" style="flex:1;min-width:0;font-size:.85rem;">
+            <button class="btn btn-primary" type="button" id="csv-inventory-upload">Upload CSV</button>
+          </div>
+          <div id="csv-upload-status" style="display:none;margin-top:10px;font-size:.85rem;"></div>
+        </div>
+        <div class="dashboard-card">
           <span class="eyebrow">Inventory snapshot</span>
           <h2>What we can use right now</h2>
           ${
@@ -4657,6 +4668,36 @@ async function setupIntegrationsPage() {
     root.querySelector("[data-integrations-disconnect]")?.addEventListener("click", () => {
       shopifyDisconnectSoft(() => render(getShopifySnapshot()));
     });
+
+    root.querySelector("#csv-inventory-upload")?.addEventListener("click", async () => {
+      const fileInput = root.querySelector("#csv-inventory-file");
+      const statusEl = root.querySelector("#csv-upload-status");
+      const btn = root.querySelector("#csv-inventory-upload");
+      const file = fileInput?.files?.[0];
+      if (!file) { showToast("Select a CSV file first.", "error"); return; }
+      btn.disabled = true; btn.textContent = "Uploading…";
+      if (statusEl) { statusEl.style.display = "none"; statusEl.textContent = ""; }
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const r = await fetch("/api/inventory/csv", { method: "POST", credentials: "include", body: form });
+        const d = await r.json();
+        if (r.ok && d.ok) {
+          showToast(d.message || `Imported ${d.imported} products.`, "success");
+          if (statusEl) { statusEl.style.display = ""; statusEl.style.color = "var(--success,#16a34a)"; statusEl.textContent = d.message; }
+          if (fileInput) fileInput.value = "";
+        } else {
+          const msg = d.error || "Upload failed.";
+          showToast(msg, "error");
+          if (statusEl) { statusEl.style.display = ""; statusEl.style.color = "var(--error,#dc2626)"; statusEl.textContent = msg; }
+        }
+      } catch (_) {
+        showToast("Network error — try again.", "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Upload CSV";
+      }
+    });
+
     attachButtonPress(".btn", root);
   }
 

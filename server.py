@@ -110,6 +110,7 @@ from storage_users import (
     create_vendor_product,
     update_vendor_product,
     delete_vendor_product,
+    bulk_replace_csv_products,
 )
 from shopify_oauth import (
     build_authorize_url,
@@ -2499,6 +2500,74 @@ def create_app() -> FastAPI:
         if not deleted:
             return _validation_error("Product not found.", status_code=404)
         return JSONResponse({"ok": True})
+
+    @app.post("/api/inventory/csv")
+    async def handle_inventory_csv_upload(request: Request) -> JSONResponse:
+        """Upload a CSV file to replace CSV-sourced inventory for the current vendor."""
+        import csv as csv_module
+        import io
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "market"}:
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            form = await request.form()
+            file = form.get("file")
+            if not file or not hasattr(file, "read"):
+                return _validation_error("No file uploaded. Send a multipart form with field 'file'.")
+            raw = await file.read()
+            text = raw.decode("utf-8-sig")  # strip BOM if present
+        except Exception as e:
+            return _validation_error(f"Could not read file: {e}")
+
+        # Parse CSV — detect columns flexibly
+        reader = csv_module.DictReader(io.StringIO(text))
+        if not reader.fieldnames:
+            return _validation_error("CSV has no headers.")
+
+        headers = [h.strip().lower() for h in reader.fieldnames]
+
+        def _col(row, *candidates):
+            for c in candidates:
+                for h in row:
+                    if h.strip().lower() == c:
+                        return str(row[h] or "").strip()
+            return ""
+
+        products = []
+        for row in reader:
+            name = _col(row, "name", "title", "product name", "item", "product")
+            if not name:
+                continue
+            price_raw = _col(row, "price", "cost", "retail price", "sale price")
+            try:
+                price = float(price_raw.replace("$", "").replace(",", "")) if price_raw else None
+            except ValueError:
+                price = None
+            qty_raw = _col(row, "quantity", "qty", "inventory", "stock", "inventory_quantity", "count", "available")
+            try:
+                qty = int(float(qty_raw)) if qty_raw else 0
+            except ValueError:
+                qty = 0
+            in_stock_raw = _col(row, "in_stock", "in stock", "available", "status")
+            in_stock = in_stock_raw.lower() not in {"0", "false", "no", "out", "out of stock"} if in_stock_raw else qty > 0 or price is not None
+            products.append({
+                "name": name,
+                "description": _col(row, "description", "desc", "notes"),
+                "price": price,
+                "category": _col(row, "category", "type", "product type"),
+                "in_stock": in_stock,
+                "inventory_quantity": qty,
+            })
+
+        if not products:
+            return _validation_error("No valid products found in CSV. Make sure the file has a 'name' or 'title' column.")
+        if len(products) > 1000:
+            return _validation_error("CSV too large — max 1000 products per upload.")
+
+        count = bulk_replace_csv_products(int(user["id"]), products)
+        return JSONResponse({"ok": True, "imported": count, "message": f"Imported {count} products from CSV."})
 
     @app.get("/api/saved-markets")
     async def handle_saved_markets(request: Request) -> JSONResponse:
