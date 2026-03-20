@@ -5,6 +5,363 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Feed | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    /* ─── PAGE SHELL ─── */
+    .va-feed-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 28px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .va-feed-page { grid-template-columns: 1fr; }
+      .va-feed-sidebar { display: none; }
+    }
+
+    /* ─── FILTER BAR ─── */
+    .va-filter-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 20px 0 16px;
+      scrollbar-width: none;
+    }
+    .va-filter-bar::-webkit-scrollbar { display: none; }
+    .va-filter-pill {
+      padding: 6px 16px;
+      border-radius: 99px;
+      border: 1.5px solid var(--line);
+      background: var(--bg);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .va-filter-pill:hover,
+    .va-filter-pill.active {
+      border-color: var(--brand);
+      background: rgba(15, 118, 110, 0.08);
+      color: var(--brand);
+    }
+
+    /* ─── POST CARDS ─── */
+    .va-posts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .va-post-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(12, 31, 29, 0.07);
+      transition: box-shadow 0.2s;
+    }
+    .va-post-card:hover {
+      box-shadow: 0 6px 28px rgba(12, 31, 29, 0.12);
+    }
+
+    /* vendor header */
+    .va-post-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 10px;
+    }
+    .va-post-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      color: #fff;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+    .va-post-vendor-info { flex: 1; min-width: 0; }
+    .va-post-vendor-name {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+    }
+    .va-post-vendor-name:hover { color: var(--brand); }
+    .va-verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--success);
+      background: rgba(2, 122, 72, 0.09);
+      padding: 1px 6px;
+      border-radius: 99px;
+    }
+    .va-post-vendor-sub {
+      font-size: 0.74rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .va-post-follow-btn {
+      padding: 5px 14px;
+      border-radius: 99px;
+      border: 1.5px solid var(--brand);
+      background: transparent;
+      color: var(--brand);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .va-post-follow-btn:hover { background: rgba(15, 118, 110, 0.1); }
+    .va-post-follow-btn.following {
+      border-color: var(--line);
+      color: var(--muted);
+      background: var(--bg);
+    }
+
+    /* media thumb */
+    .va-post-media {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .va-post-thumb {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(48px, 8vw, 80px);
+      position: relative;
+    }
+    .va-post-thumb::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.45) 100%);
+    }
+    .va-play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      padding-left: 3px;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .va-post-media:hover .va-play-btn {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: rgba(255, 255, 255, 0.32);
+    }
+
+    /* caption + tags */
+    .va-post-body { padding: 12px 16px; }
+    .va-post-caption {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--text);
+      margin: 0 0 10px;
+    }
+    .va-post-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .va-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+    .va-tag-product {
+      background: rgba(15, 118, 110, 0.1);
+      color: var(--brand);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .va-tag-product:hover { background: rgba(15, 118, 110, 0.18); }
+    .va-tag-event {
+      background: rgba(232, 159, 71, 0.12);
+      color: #92400e;
+    }
+    .va-tag-location {
+      background: rgba(99, 102, 241, 0.1);
+      color: #4338ca;
+    }
+    .va-tag-plain {
+      background: var(--bg);
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+
+    /* action bar */
+    .va-post-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px 12px;
+      border-top: 1px solid var(--line);
+    }
+    .va-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.13s, color 0.13s;
+    }
+    .va-action-btn:hover { background: var(--bg); color: var(--text); }
+    .va-action-btn.liked { color: #ef4444; }
+    .va-action-btn.liked:hover { background: rgba(239, 68, 68, 0.08); }
+    .va-action-btn.saved { color: var(--accent); }
+    .va-action-btn.saved:hover { background: rgba(232, 159, 71, 0.1); }
+    .va-action-icon { font-size: 1rem; line-height: 1; }
+    .va-shop-btn {
+      margin-left: auto;
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: 1.5px solid var(--brand);
+      background: transparent;
+      color: var(--brand);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.13s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .va-shop-btn:hover { background: rgba(15, 118, 110, 0.08); }
+
+    /* ─── SIDEBAR ─── */
+    .va-feed-sidebar {
+      position: sticky;
+      top: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .va-sidebar-card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(12, 31, 29, 0.06);
+    }
+    .va-sidebar-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .va-sidebar-vendor {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0;
+    }
+    .va-sidebar-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: #fff;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+    .va-sidebar-info { flex: 1; min-width: 0; }
+    .va-sidebar-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: none;
+      display: block;
+    }
+    .va-sidebar-name:hover { color: var(--brand); }
+    .va-sidebar-sub { font-size: 0.7rem; color: var(--muted); }
+    .va-sidebar-follow {
+      padding: 4px 10px;
+      border-radius: 99px;
+      border: 1.5px solid var(--brand);
+      background: transparent;
+      color: var(--brand);
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.13s;
+    }
+    .va-sidebar-follow:hover { background: rgba(15, 118, 110, 0.1); }
+    .va-sidebar-follow.following { border-color: var(--line); color: var(--muted); }
+
+    /* ─── EMPTY / LOADING ─── */
+    .va-feed-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .va-feed-empty .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .va-spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(15, 118, 110, 0.12);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: va-spin 0.7s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes va-spin { to { transform: rotate(360deg); } }
+
+    /* ─── TOAST ─── */
+    .va-load-more {
+      text-align: center;
+      padding: 8px 0 0;
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -30,79 +387,56 @@
     </div>
   </header>
 
-  <main>
-    <div class="feed-shell">
-      <!-- Main feed rail -->
+  <div class="container" style="padding-top: 8px;">
+    <!-- Filter chips -->
+    <div class="va-filter-bar" id="filterBar">
+      <button class="va-filter-pill active" data-tag="">For You</button>
+      <button class="va-filter-pill" data-tag="jewelry">Jewelry</button>
+      <button class="va-filter-pill" data-tag="ceramics">Ceramics</button>
+      <button class="va-filter-pill" data-tag="food">Food</button>
+      <button class="va-filter-pill" data-tag="candles">Candles</button>
+      <button class="va-filter-pill" data-tag="art">Art</button>
+      <button class="va-filter-pill" data-tag="leather">Leather</button>
+      <button class="va-filter-pill" data-tag="vintage">Vintage</button>
+    </div>
+
+    <div class="va-feed-page">
+      <!-- Posts column -->
       <div>
-        <div class="section-heading" style="text-align:left; margin-bottom: 20px;">
-          <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Event Feed</h1>
-          <p class="muted">Upcoming markets, popups, and vendor events — browse and save what fits.</p>
+        <div class="va-posts-list" id="postsList">
+          <div class="va-spinner"></div>
         </div>
-
-        <!-- Filter chips -->
-        <div class="feed-filter-bar" id="feedFilterBar">
-          <button class="feed-filter-chip active" data-tag="">All</button>
-          <button class="feed-filter-chip" data-tag="handmade">Handmade</button>
-          <button class="feed-filter-chip" data-tag="vintage">Vintage</button>
-          <button class="feed-filter-chip" data-tag="food">Food</button>
-          <button class="feed-filter-chip" data-tag="art">Art</button>
-          <button class="feed-filter-chip" data-tag="craft">Craft</button>
-          <button class="feed-filter-chip" data-tag="jewelry">Jewelry</button>
-          <button class="feed-filter-chip" data-tag="farmers">Farmers</button>
-          <button class="feed-filter-chip" data-tag="night">Night Market</button>
-        </div>
-
-        <!-- Feed cards -->
-        <div class="feed-rail" id="feedRail">
-          <div class="community-empty">
-            <div class="community-empty-icon">🎪</div>
-            <h3>Loading events…</h3>
-          </div>
-        </div>
-
-        <div class="feed-load-more" id="feedLoadMore" style="display:none;">
-          <button class="btn btn-secondary" id="feedLoadMoreBtn">Load more</button>
+        <div class="va-load-more" id="loadMoreWrap" style="display:none;">
+          <button class="btn btn-secondary" id="loadMoreBtn">Load more</button>
         </div>
       </div>
 
       <!-- Sidebar -->
-      <aside class="feed-sidebar">
-        <div class="feed-sidebar-card">
-          <h3>Trending Tags</h3>
-          <div class="feed-card-tags" id="trendingTags">
-            <span class="feed-tag">handmade</span>
-            <span class="feed-tag">vintage</span>
-            <span class="feed-tag">jewelry</span>
-            <span class="feed-tag">ceramics</span>
-            <span class="feed-tag">food</span>
-            <span class="feed-tag">art</span>
-            <span class="feed-tag">farmers</span>
-          </div>
+      <aside class="va-feed-sidebar">
+        <div class="va-sidebar-card">
+          <div class="va-sidebar-title">Trending Vendors</div>
+          <div id="trendingVendors"><div class="va-spinner" style="width:20px;height:20px;margin:10px auto;"></div></div>
         </div>
-        <div class="feed-sidebar-card">
-          <h3>Your Communities</h3>
-          <div id="sidebarGroups">
-            <p class="muted" style="font-size:0.85rem;">
-              <a href="/signin" style="color: var(--brand);">Sign in</a> to see your groups.
-            </p>
-          </div>
-          <a class="btn btn-secondary" href="/community" style="margin-top:14px; display:block; text-align:center; font-size:0.85rem;">Browse All Groups</a>
+        <div class="va-sidebar-card">
+          <div class="va-sidebar-title">Upcoming Events</div>
+          <div id="sidebarEvents"><div class="va-spinner" style="width:20px;height:20px;margin:10px auto;"></div></div>
+          <a class="btn btn-secondary" href="/discover" style="margin-top:12px;display:block;text-align:center;font-size:0.82rem;">Browse All Events</a>
         </div>
-        <div class="feed-sidebar-card">
-          <h3>Saved Markets</h3>
-          <p class="muted" style="font-size:0.85rem;">Events you save appear here.</p>
-          <a class="btn btn-secondary" href="/discover" style="margin-top:14px; display:block; text-align:center; font-size:0.85rem;">Open Discover</a>
+        <div class="va-sidebar-card">
+          <div class="va-sidebar-title">Communities</div>
+          <p class="muted" style="font-size:0.83rem;margin:0 0 10px;">Connect with vendors and shoppers around real markets.</p>
+          <a class="btn btn-secondary" href="/community" style="display:block;text-align:center;font-size:0.82rem;">Browse Groups</a>
         </div>
       </aside>
     </div>
-  </main>
+  </div>
 
   <footer class="footer">
     <div class="container footer-grid">
       <div>Vendor Atlas</div>
-      <div>Plan smarter, run better events, and keep the right people coming back.</div>
+      <div>Discover verified small businesses at real markets.</div>
       <div class="stack-row" style="margin-top:0;">
-        <a href="/discover">Discover</a>
+        <a href="/discover">Events</a>
         <a href="/community">Community</a>
         <a href="/signin">Sign In</a>
       </div>
@@ -111,127 +445,293 @@
 
   <script src="/assets/app.js"></script>
   <script>
-    (function () {
-      const rail = document.getElementById('feedRail');
-      const loadMoreWrap = document.getElementById('feedLoadMore');
-      const loadMoreBtn = document.getElementById('feedLoadMoreBtn');
-      const filterBar = document.getElementById('feedFilterBar');
+  (function () {
+    var list = document.getElementById('postsList');
+    var filterBar = document.getElementById('filterBar');
+    var loadMoreWrap = document.getElementById('loadMoreWrap');
+    var loadMoreBtn = document.getElementById('loadMoreBtn');
 
-      let currentTag = '';
-      let currentOffset = 0;
-      const PAGE = 12;
-      let loading = false;
+    var currentTag = '';
+    var currentOffset = 0;
+    var PAGE = 10;
+    var loading = false;
+    var likedSet = new Set();
+    var savedSet = new Set();
+    var followingSet = new Set();
+    var currentUser = null;
 
-      const CATEGORY_ICONS = {
-        handmade: '🧶', vintage: '🧥', food: '🍜', art: '🎨',
-        craft: '✂️', jewelry: '💍', farmers: '🌿', night: '🌙',
-        default: '🏪',
-      };
+    // ── Auth ──────────────────────────────────────────────────────────────────
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        currentUser = (d && d.user) ? d.user : null;
+        if (currentUser) loadUserState();
+      }).catch(function(){});
 
-      function iconForTags(tags) {
-        if (!tags || !tags.length) return CATEGORY_ICONS.default;
-        for (const t of tags) {
-          const k = Object.keys(CATEGORY_ICONS).find(k => t.toLowerCase().includes(k));
-          if (k) return CATEGORY_ICONS[k];
-        }
-        return CATEGORY_ICONS.default;
-      }
-
-      function formatDate(d) {
-        if (!d) return '';
-        const dt = new Date(d);
-        if (isNaN(dt)) return d;
-        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      }
-
-      function renderCard(item) {
-        const tags = (item.tags || []).slice(0, 3);
-        const icon = iconForTags(tags);
-        const location = [item.city, item.state].filter(Boolean).join(', ');
-        const traffic = item.estimated_traffic
-          ? '~' + Number(item.estimated_traffic).toLocaleString() + ' visitors'
-          : '';
-        const vendors = item.vendor_count ? item.vendor_count + ' vendors' : '';
-
-        return [
-          '<article class="feed-card" data-event-id="' + (item.id || '') + '">',
-          '  <div class="feed-card-media">',
-          item.thumbnail_url
-            ? '    <img src="' + item.thumbnail_url + '" alt="' + (item.title || '') + '" loading="lazy">'
-            : '    <div class="feed-card-media-placeholder">' + icon + '</div>',
-          '    <div class="feed-card-play"><div class="feed-card-play-icon"></div></div>',
-          '  </div>',
-          '  <div class="feed-card-body">',
-          '    <div class="feed-card-meta">',
-          location ? '      <span class="feed-card-location">📍 ' + location + '</span>' : '',
-          item.starts_at ? '      <span class="feed-card-location" style="margin-left:auto;">' + formatDate(item.starts_at) + '</span>' : '',
-          '    </div>',
-          '    <h2 class="feed-card-title">' + (item.title || 'Untitled Event') + '</h2>',
-          tags.length ? '    <div class="feed-card-tags">' + tags.map(function(t){ return '<span class="feed-tag">' + t + '</span>'; }).join('') + '</div>' : '',
-          '    <div class="feed-card-stats">',
-          vendors ? '      <span class="feed-card-stat">🏪 ' + vendors + '</span>' : '',
-          traffic ? '      <span class="feed-card-stat">👥 ' + traffic + '</span>' : '',
-          '    </div>',
-          '  </div>',
-          '</article>',
-        ].join('\n');
-      }
-
-      function loadFeed(reset) {
-        if (loading) return;
-        loading = true;
-        if (reset) {
-          currentOffset = 0;
-          rail.innerHTML = '';
-          loadMoreWrap.style.display = 'none';
-        }
-
-        var params = new URLSearchParams({ limit: PAGE, offset: currentOffset });
-        if (currentTag) params.set('tag', currentTag);
-
-        fetch('/api/feed?' + params)
-          .then(function(r){ return r.json(); })
-          .then(function(data) {
-            if (!data.ok || !data.items.length) {
-              if (currentOffset === 0) {
-                rail.innerHTML = '<div class="community-empty"><div class="community-empty-icon">🎪</div><h3>No events found</h3><p>Try a different tag or check back soon.</p></div>';
-              }
-            } else {
-              data.items.forEach(function(item) {
-                rail.insertAdjacentHTML('beforeend', renderCard(item));
-              });
-              currentOffset += data.items.length;
-              loadMoreWrap.style.display = data.items.length === PAGE ? 'block' : 'none';
-            }
-          })
-          .catch(function() {
-            if (currentOffset === 0) {
-              rail.innerHTML = '<div class="community-empty"><div class="community-empty-icon">⚠️</div><h3>Could not load feed</h3><p>Check your connection and refresh.</p></div>';
-            }
-          })
-          .finally(function(){ loading = false; });
-      }
-
-      filterBar.addEventListener('click', function(e) {
-        var chip = e.target.closest('.feed-filter-chip');
-        if (!chip) return;
-        filterBar.querySelectorAll('.feed-filter-chip').forEach(function(c){ c.classList.remove('active'); });
-        chip.classList.add('active');
-        currentTag = chip.dataset.tag || '';
-        loadFeed(true);
+    function loadUserState() {
+      Promise.all([
+        fetch('/api/feed/my-likes', { credentials: 'include' }).then(function(r){ return r.json(); }).catch(function(){ return {}; }),
+        fetch('/api/feed/my-saves', { credentials: 'include' }).then(function(r){ return r.json(); }).catch(function(){ return {}; }),
+        fetch('/api/shopper/following', { credentials: 'include' }).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+      ]).then(function(results){
+        var liked = results[0]; var saved = results[1]; var following = results[2];
+        (liked.post_ids || []).forEach(function(id){ likedSet.add(id); });
+        (saved.post_ids || []).forEach(function(id){ savedSet.add(id); });
+        (Array.isArray(following) ? following : []).forEach(function(v){ followingSet.add(v.username || ''); });
       });
+    }
 
-      loadMoreBtn.addEventListener('click', function(){ loadFeed(false); });
+    // ── Load feed ─────────────────────────────────────────────────────────────
+    function loadPosts(reset) {
+      if (loading) return;
+      loading = true;
+      if (reset) {
+        currentOffset = 0;
+        list.innerHTML = '<div class="va-spinner"></div>';
+        loadMoreWrap.style.display = 'none';
+      }
 
-      rail.addEventListener('click', function(e) {
-        var card = e.target.closest('.feed-card');
+      var url = '/api/feed?limit=' + PAGE + '&offset=' + currentOffset;
+      if (currentTag) url += '&tag=' + encodeURIComponent(currentTag);
+
+      fetch(url, { credentials: 'include' })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (reset) list.innerHTML = '';
+          var posts = data.posts || [];
+          if (!posts.length && currentOffset === 0) {
+            list.innerHTML = '<div class="va-feed-empty"><div class="icon">🛍️</div><strong>No posts yet.</strong><p>Check back after the next market!</p></div>';
+          } else {
+            posts.forEach(function(post) {
+              list.insertAdjacentHTML('beforeend', buildCard(post));
+            });
+            currentOffset += posts.length;
+            loadMoreWrap.style.display = posts.length === PAGE ? 'block' : 'none';
+            attachHandlers(posts);
+          }
+          if (currentOffset === PAGE) loadSidebar(data.posts || []);
+        })
+        .catch(function(){
+          if (currentOffset === 0) list.innerHTML = '<div class="va-feed-empty"><div class="icon">⚠️</div><strong>Could not load feed.</strong><p>Refresh to try again.</p></div>';
+        })
+        .finally(function(){ loading = false; });
+    }
+
+    // ── Build card HTML ───────────────────────────────────────────────────────
+    function buildCard(p) {
+      var initial = (p.vendor_name || p.vendor_username || 'V')[0].toUpperCase();
+      var color = p.thumbnail_color || '#0f766e';
+      var emoji = p.thumbnail_emoji || '🛍️';
+      var dark = darken(color);
+      var fmt = function(n){ return n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n||0); };
+      var isLiked = likedSet.has(p.id);
+      var isSaved = savedSet.has(p.id);
+      var isFollowing = followingSet.has(p.vendor_username);
+
+      var tags = '';
+      if (p.product_name) tags += '<span class="va-tag va-tag-product" data-product-post="'+esc(p.id)+'">🛍️ '+esc(p.product_name)+'</span>';
+      if (p.event_name)   tags += '<span class="va-tag va-tag-event">🗓️ '+esc(p.event_name)+'</span>';
+      if (p.location)     tags += '<span class="va-tag va-tag-location">📍 '+esc(p.location)+'</span>';
+      (p.tags || []).slice(0, 3).forEach(function(t){ tags += '<span class="va-tag va-tag-plain">#'+esc(t)+'</span>'; });
+
+      return [
+        '<div class="va-post-card" data-post-id="'+esc(p.id)+'">',
+        '  <div class="va-post-header">',
+        '    <a class="va-post-avatar" href="/vendor-shop?u='+encodeURIComponent(p.vendor_username)+'" style="background:linear-gradient(135deg,'+esc(color)+','+esc(dark)+')">'+esc(initial)+'</a>',
+        '    <div class="va-post-vendor-info">',
+        '      <a class="va-post-vendor-name" href="/vendor-shop?u='+encodeURIComponent(p.vendor_username)+'">',
+        esc(p.vendor_name || p.vendor_username),
+        p.vendor_verified ? '<span class="va-verified">✓ Verified</span>' : '',
+        '      </a>',
+        '      <div class="va-post-vendor-sub">@'+esc(p.vendor_username)+(p.location ? ' · '+esc(p.location) : '')+'</div>',
+        '    </div>',
+        '    <button class="va-post-follow-btn '+(isFollowing?'following':'')+'" data-follow-username="'+esc(p.vendor_username)+'" data-follow-id="'+esc(p.vendor_id||'')+'">',
+        isFollowing ? 'Following ✓' : '+ Follow',
+        '    </button>',
+        '  </div>',
+        '  <div class="va-post-media" data-media-post="'+esc(p.id)+'">',
+        '    <div class="va-post-thumb" style="background:linear-gradient(135deg,'+esc(color)+'dd,'+esc(dark)+'ff)">'+esc(emoji)+'</div>',
+        '    <div class="va-play-btn">▶</div>',
+        '  </div>',
+        '  <div class="va-post-body">',
+        '    <p class="va-post-caption">'+esc(p.caption)+'</p>',
+        tags ? '<div class="va-post-tags">'+tags+'</div>' : '',
+        '  </div>',
+        '  <div class="va-post-actions">',
+        '    <button class="va-action-btn '+(isLiked?'liked':'')+'" data-like="'+esc(p.id)+'"><span class="va-action-icon">❤️</span><span class="va-like-count" id="lc-'+esc(p.id)+'">'+fmt(p.likes_count)+'</span></button>',
+        '    <button class="va-action-btn '+(isSaved?'saved':'')+'" data-save="'+esc(p.id)+'"><span class="va-action-icon">🔖</span><span class="va-save-count" id="sc-'+esc(p.id)+'">'+fmt(p.saves_count)+'</span></button>',
+        '    <button class="va-action-btn" data-share="'+esc(p.id)+'" data-share-name="'+esc(p.vendor_username)+'"><span class="va-action-icon">↗️</span> Share</button>',
+        p.vendor_username ? '<a class="va-shop-btn" href="/vendor-shop?u='+encodeURIComponent(p.vendor_username)+'">🏪 Shop</a>' : '',
+        '  </div>',
+        '</div>',
+      ].join('');
+    }
+
+    // ── Wire up event handlers after inserting HTML ───────────────────────────
+    function attachHandlers(posts) {
+      posts.forEach(function(p) {
+        var card = list.querySelector('[data-post-id="'+p.id+'"]');
         if (!card) return;
-        var id = card.dataset.eventId;
-        if (id) window.location.href = '/discover?event=' + id;
-      });
 
-      loadFeed(true);
-    })();
+        // Like
+        var likeBtn = card.querySelector('[data-like]');
+        if (likeBtn) likeBtn.addEventListener('click', function(){
+          if (!currentUser) { showToast('Sign in to like posts', 'error'); return; }
+          fetch('/api/feed/posts/'+p.id+'/like', { method:'POST', credentials:'include' })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+              var el = document.getElementById('lc-'+p.id);
+              if (el) el.textContent = d.likes_count >= 1000 ? (d.likes_count/1000).toFixed(1)+'K' : d.likes_count;
+              if (d.liked) { likedSet.add(p.id); likeBtn.classList.add('liked'); }
+              else { likedSet.delete(p.id); likeBtn.classList.remove('liked'); }
+            }).catch(function(){});
+        });
+
+        // Save
+        var saveBtn = card.querySelector('[data-save]');
+        if (saveBtn) saveBtn.addEventListener('click', function(){
+          if (!currentUser) { showToast('Sign in to save posts', 'error'); return; }
+          fetch('/api/feed/posts/'+p.id+'/save', { method:'POST', credentials:'include' })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+              var el = document.getElementById('sc-'+p.id);
+              if (el) el.textContent = d.saves_count >= 1000 ? (d.saves_count/1000).toFixed(1)+'K' : d.saves_count;
+              if (d.saved) { savedSet.add(p.id); saveBtn.classList.add('saved'); showToast('Saved!', 'success'); }
+              else { savedSet.delete(p.id); saveBtn.classList.remove('saved'); }
+            }).catch(function(){});
+        });
+
+        // Follow vendor
+        var followBtn = card.querySelector('[data-follow-username]');
+        if (followBtn) followBtn.addEventListener('click', function(){
+          if (!currentUser) { showToast('Sign in to follow vendors', 'error'); return; }
+          var uname = followBtn.dataset.followUsername;
+          var vid = followBtn.dataset.followId;
+          var wasFollowing = followingSet.has(uname);
+          fetch('/api/vendors/'+encodeURIComponent(vid||uname)+'/follow', { method: wasFollowing ? 'DELETE' : 'POST', credentials:'include' })
+            .then(function(){
+              if (wasFollowing) { followingSet.delete(uname); followBtn.textContent = '+ Follow'; followBtn.classList.remove('following'); }
+              else { followingSet.add(uname); followBtn.textContent = 'Following ✓'; followBtn.classList.add('following'); showToast('Following '+uname, 'success'); }
+            }).catch(function(){});
+        });
+
+        // Share
+        var shareBtn = card.querySelector('[data-share]');
+        if (shareBtn) shareBtn.addEventListener('click', function(){
+          var url = location.origin+'/vendor-shop?u='+encodeURIComponent(shareBtn.dataset.shareName||'');
+          if (navigator.share) { navigator.share({ url: url }).catch(function(){}); }
+          else if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!', 'success'); }); }
+        });
+
+        // Media click (play placeholder)
+        var media = card.querySelector('[data-media-post]');
+        if (media) media.addEventListener('click', function(){
+          showToast('Video playback coming soon!');
+        });
+
+        // Product tag click → go to shop
+        card.querySelectorAll('[data-product-post]').forEach(function(el){
+          el.addEventListener('click', function(){
+            window.location = '/vendor-shop?u='+encodeURIComponent(p.vendor_username);
+          });
+        });
+      });
+    }
+
+    // ── Filter pills ──────────────────────────────────────────────────────────
+    filterBar.addEventListener('click', function(e) {
+      var pill = e.target.closest('.va-filter-pill');
+      if (!pill) return;
+      filterBar.querySelectorAll('.va-filter-pill').forEach(function(p){ p.classList.remove('active'); });
+      pill.classList.add('active');
+      currentTag = pill.dataset.tag || '';
+      loadPosts(true);
+    });
+
+    // ── Load more ─────────────────────────────────────────────────────────────
+    loadMoreBtn.addEventListener('click', function(){ loadPosts(false); });
+
+    // ── Sidebar ───────────────────────────────────────────────────────────────
+    function loadSidebar(posts) {
+      // Trending vendors (deduplicate from feed)
+      var seen = {};
+      var vendors = posts.filter(function(p){
+        if (seen[p.vendor_username]) return false;
+        seen[p.vendor_username] = true;
+        return true;
+      }).slice(0, 5);
+
+      var tvEl = document.getElementById('trendingVendors');
+      if (vendors.length) {
+        tvEl.innerHTML = vendors.map(function(p){
+          var color = p.thumbnail_color || '#0f766e';
+          var initial = (p.vendor_name || p.vendor_username)[0].toUpperCase();
+          var isF = followingSet.has(p.vendor_username);
+          return '<div class="va-sidebar-vendor">'
+            + '<a class="va-sidebar-avatar" href="/vendor-shop?u='+encodeURIComponent(p.vendor_username)+'" style="background:linear-gradient(135deg,'+esc(color)+','+darken(color)+')">'+esc(initial)+'</a>'
+            + '<div class="va-sidebar-info">'
+            + '<a class="va-sidebar-name" href="/vendor-shop?u='+encodeURIComponent(p.vendor_username)+'">'+esc(p.vendor_name||p.vendor_username)+'</a>'
+            + '<div class="va-sidebar-sub">'+(p.vendor_verified ? '✓ Verified · ' : '')+esc(p.location||'')+'</div>'
+            + '</div>'
+            + '<button class="va-sidebar-follow '+(isF?'following':'')+'" data-sb-follow="'+esc(p.vendor_username)+'" data-sb-id="'+esc(p.vendor_id||'')+'">'+( isF ? '✓' : '+')+'</button>'
+            + '</div>';
+        }).join('');
+
+        tvEl.querySelectorAll('[data-sb-follow]').forEach(function(btn){
+          btn.addEventListener('click', function(){
+            if (!currentUser) { showToast('Sign in to follow', 'error'); return; }
+            var uname = btn.dataset.sbFollow;
+            var vid = btn.dataset.sbId;
+            var wasF = followingSet.has(uname);
+            fetch('/api/vendors/'+encodeURIComponent(vid||uname)+'/follow', { method: wasF ? 'DELETE' : 'POST', credentials:'include' })
+              .then(function(){
+                if (wasF) { followingSet.delete(uname); btn.textContent = '+'; btn.classList.remove('following'); }
+                else { followingSet.add(uname); btn.textContent = '✓'; btn.classList.add('following'); showToast('Following '+uname, 'success'); }
+              }).catch(function(){});
+          });
+        });
+      } else {
+        tvEl.innerHTML = '<p class="muted" style="font-size:0.83rem;">No vendors yet.</p>';
+      }
+
+      // Events sidebar
+      fetch('/api/markets/search?limit=4', { credentials:'include' })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(data){
+          var evEl = document.getElementById('sidebarEvents');
+          var events = (data && (data.markets || data.results || [])).slice(0, 4);
+          if (events.length) {
+            evEl.innerHTML = events.map(function(ev){
+              return '<a href="/discover" style="display:block;padding:5px 0;border-bottom:1px solid var(--line);text-decoration:none;">'
+                + '<div style="font-size:0.85rem;font-weight:600;color:var(--text);">'+esc(ev.name||ev.title||'Event')+'</div>'
+                + '<div style="font-size:0.72rem;color:var(--muted);">📍 '+esc([ev.city,ev.state].filter(Boolean).join(', ')||'')+(ev.date ? ' · '+ev.date : '')+'</div>'
+                + '</a>';
+            }).join('');
+          } else {
+            evEl.innerHTML = '<p class="muted" style="font-size:0.83rem;">No events found.</p>';
+          }
+        }).catch(function(){
+          document.getElementById('sidebarEvents').innerHTML = '<p class="muted" style="font-size:0.83rem;">Could not load events.</p>';
+        });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function esc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function darken(hex) {
+      try {
+        var n = parseInt((hex||'#0f766e').replace('#',''), 16);
+        var r = Math.max(0, (n >> 16) - 40);
+        var g = Math.max(0, (n >> 8 & 0xff) - 40);
+        var b = Math.max(0, (n & 0xff) - 40);
+        return '#' + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+      } catch(e) { return '#0b5b55'; }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadPosts(true);
+  })();
   </script>
 </body>
 </html>
