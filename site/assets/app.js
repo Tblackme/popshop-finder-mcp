@@ -5133,14 +5133,19 @@ function setupBugReport() {
     submitBtn.disabled = true;
     submitBtn.textContent = "Sending…";
     try {
-      await fetch("/api/feedback", {
+      const r = await fetch("/api/feedback", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, page_url: window.location.href }),
       });
-      close();
-      showToast("Bug report sent — thanks!", "success");
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.error || "Couldn't send report. Try again.", "error");
+      } else {
+        close();
+        showToast("Bug report sent — thanks!", "success");
+      }
     } catch (_) {
       showToast("Couldn't send report. Try again.", "error");
     } finally {
@@ -5215,17 +5220,32 @@ function setupAdminPanel(auth) {
   panel.querySelector("#admin-view-feedback").addEventListener("click", async () => {
     const el = panel.querySelector("#admin-view-feedback");
     el.disabled = true; el.textContent = "Loading…";
+    panel.style.display = "none";
     try {
       const r = await fetch("/api/feedback", { credentials: "include" });
+      if (!r.ok) { showToast("Not authorized to view reports.", "error"); return; }
       const d = await r.json();
       const items = d.feedback || [];
-      if (!items.length) { showToast("No bug reports yet.", "success"); }
-      else {
-        const txt = items.map((f) => `[${new Date(f.created_at * 1000).toLocaleDateString()}] ${f.user_email || "anonymous"}\n${f.page_url}\n${f.message}`).join("\n\n---\n\n");
-        const win = window.open("", "_blank");
-        if (win) { win.document.write(`<pre style="font-family:monospace;padding:20px;white-space:pre-wrap;">${txt.replace(/</g, "&lt;")}</pre>`); }
-        else { alert(txt); }
-      }
+      if (!items.length) { showToast("No bug reports yet.", "success"); return; }
+      const existing = document.getElementById("_feedback-viewer");
+      if (existing) existing.remove();
+      const viewer = document.createElement("div");
+      viewer.id = "_feedback-viewer";
+      viewer.style.cssText = "position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;";
+      const inner = items.map((f) =>
+        `<div style="border-bottom:1px solid var(--line,#e2e8f0);padding:12px 0;font-size:.84rem;">` +
+        `<div style="font-weight:600;">${new Date(f.created_at * 1000).toLocaleDateString()} — ${(f.user_email || "anonymous").replace(/</g,"&lt;")}</div>` +
+        `<div style="color:var(--muted,#64748b);font-size:.78rem;margin:2px 0 6px;">${(f.page_url || "").replace(/</g,"&lt;")}</div>` +
+        `<div style="white-space:pre-wrap;">${(f.message || "").replace(/</g,"&lt;")}</div></div>`
+      ).join("");
+      viewer.innerHTML = `<div style="background:var(--surface,#fff);border-radius:12px;padding:24px;max-width:560px;width:92%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">` +
+        `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">` +
+        `<strong>Bug Reports (${items.length})</strong>` +
+        `<button id="_feedback-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted,#64748b);">✕</button></div>` +
+        inner + `</div>`;
+      document.body.appendChild(viewer);
+      viewer.querySelector("#_feedback-close").addEventListener("click", () => viewer.remove());
+      viewer.addEventListener("click", (e) => { if (e.target === viewer) viewer.remove(); });
     } catch (_) { showToast("Failed to load reports.", "error"); }
     el.disabled = false; el.textContent = "View bug reports";
   });
