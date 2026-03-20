@@ -15,6 +15,8 @@
           <a class="active" href="/">Home</a>
           <a href="/dashboard">Plan</a>
           <a href="/discover">Discover</a>
+          <a href="/feed">Feed</a>
+          <a href="/community">Community</a>
           <a href="/final-plan">Profit</a>
         </nav>
         <div class="nav-actions" data-auth-nav></div>
@@ -24,6 +26,8 @@
         <a href="/">Home</a>
         <a href="/dashboard">Plan</a>
         <a href="/discover">Discover</a>
+        <a href="/feed">Feed</a>
+        <a href="/community">Community</a>
         <a href="/final-plan">Profit</a>
         <div data-mobile-auth-nav></div>
       </div>
@@ -121,6 +125,59 @@
                 <a class="btn btn-primary" href="/discover">Browse events</a>
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEED + COMMUNITY SECTION -->
+      <section style="background: var(--surface-dark); color: #fff;">
+        <div class="container">
+          <div class="section-heading" style="color: #fff;">
+            <span class="eyebrow" style="color: rgba(255,255,255,0.55);">New</span>
+            <h2 style="color: #fff;">Follow the market, live.</h2>
+            <p style="color: rgba(255,255,255,0.6); max-width: 58ch; margin: 0 auto;">A live feed of events and vendor moments, plus community groups where vendors, organizers, and shoppers connect between markets.</p>
+          </div>
+          <div class="cards-2" style="margin-top: 32px;">
+            <article class="feature-card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1);">
+              <span class="eyebrow" style="color: var(--accent);">Feed</span>
+              <h3 style="color: #fff;">Events as a scrollable feed</h3>
+              <p class="muted" style="color: rgba(255,255,255,0.55);">Browse upcoming markets as video-style cards. Filter by tag, location, or vendor type. Save anything that looks right with one tap.</p>
+              <div class="stack-row">
+                <a class="btn btn-primary" href="/feed">Open Feed</a>
+              </div>
+            </article>
+            <article class="feature-card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1);">
+              <span class="eyebrow" style="color: var(--accent);">Community</span>
+              <h3 style="color: #fff;">Groups, channels, and real chat</h3>
+              <p class="muted" style="color: rgba(255,255,255,0.55);">Join vendor circles, event rooms, and shopper communities. Ask questions, share booth tips, and stay connected between markets.</p>
+              <div class="stack-row">
+                <a class="btn btn-primary" href="/community">Browse Groups</a>
+              </div>
+            </article>
+          </div>
+          <!-- Community group type preview -->
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; justify-content: center;">
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">💍</span>
+              <div>
+                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Vendor Circles</div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Tips, events, sourcing</div>
+              </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">🌙</span>
+              <div>
+                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Event Rooms</div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Live chat per event</div>
+              </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">🛍️</span>
+              <div>
+                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Shopper Communities</div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Finds and recommendations</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

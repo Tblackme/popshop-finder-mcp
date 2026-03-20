@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Community | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/dashboard">Plan</a>
+        <a href="/discover">Discover</a>
+        <a href="/feed">Feed</a>
+        <a class="active" href="/community">Community</a>
+        <a href="/final-plan">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/dashboard">Plan</a>
+      <a href="/discover">Discover</a>
+      <a href="/feed">Feed</a>
+      <a href="/community">Community</a>
+      <a href="/final-plan">Profit</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <!-- Two-state UI: group discovery landing vs. open group (chat) -->
+
+  <!-- LANDING: group discovery -->
+  <div id="communityLanding">
+    <main style="padding: 40px 0 64px;">
+      <div class="container">
+        <div class="section-heading" style="text-align:left; margin-bottom: 28px;">
+          <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Community</h1>
+          <p class="muted">Groups, channels, and real conversation between vendors, organizers, and shoppers.</p>
+        </div>
+
+        <!-- Type filter -->
+        <div class="community-type-tabs" id="groupTypeTabs">
+          <button class="community-type-tab active" data-type="">All Groups</button>
+          <button class="community-type-tab" data-type="vendor_circle">Vendor Circles</button>
+          <button class="community-type-tab" data-type="event_room">Event Rooms</button>
+          <button class="community-type-tab" data-type="shopper_community">Shopper Communities</button>
+        </div>
+
+        <!-- Group grid -->
+        <div class="community-group-grid" id="groupGrid">
+          <div class="community-empty" style="grid-column:1/-1;">
+            <div class="community-empty-icon">🏘️</div>
+            <h3>Loading groups…</h3>
+          </div>
+        </div>
+
+        <!-- Create group CTA (shown when signed in) -->
+        <div id="createGroupCta" style="display:none; margin-top:36px; text-align:center;">
+          <button class="btn btn-secondary" id="openCreateGroup">+ Create a Group</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CREATE GROUP modal -->
+  <div id="createGroupModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; display:none; align-items:center; justify-content:center;">
+    <div style="background:var(--surface-strong); border-radius:var(--radius-xl); padding:32px; width:100%; max-width:480px; margin:20px;">
+      <h2 style="margin:0 0 20px; font-size:1.2rem;">Create a Group</h2>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Group name</label>
+        <input type="text" id="newGroupName" placeholder="e.g. Austin Jewelry Vendors">
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Type</label>
+        <select id="newGroupType">
+          <option value="vendor_circle">Vendor Circle</option>
+          <option value="event_room">Event Room</option>
+          <option value="shopper_community">Shopper Community</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Description</label>
+        <textarea id="newGroupDesc" rows="3" placeholder="What's this group about?"></textarea>
+      </div>
+      <div class="stack-row" style="justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" id="cancelCreateGroup">Cancel</button>
+        <button class="btn btn-primary" id="submitCreateGroup">Create Group</button>
+      </div>
+      <p id="createGroupError" class="status error" style="display:none; margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- CHAT VIEW: group open -->
+  <div id="communityChat" style="display:none;">
+    <div class="community-shell">
+      <!-- Group rail -->
+      <nav class="community-group-rail" id="groupRail"></nav>
+
+      <!-- Channel list -->
+      <div class="community-channel-list">
+        <div class="community-channel-list-header">
+          <span id="activeGroupName">Group</span>
+          <button id="leaveGroupBtn" title="Leave group" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.8rem; padding:4px 8px; border-radius:6px; color:var(--muted);">Leave</button>
+        </div>
+        <div class="community-channel-scroll" id="channelList"></div>
+      </div>
+
+      <!-- Message pane -->
+      <div class="community-message-pane">
+        <div class="community-message-header">
+          <span class="community-channel-hash">#</span>
+          <h2 id="activeChannelName">general</h2>
+          <span class="community-message-topic" id="activeChannelTopic"></span>
+        </div>
+        <!-- Pinned banner -->
+        <div class="community-pinned-bar" id="pinnedBar" style="display:none;">
+          <strong>📌 Pinned:</strong> <span id="pinnedText"></span>
+        </div>
+        <!-- Messages -->
+        <div class="community-message-scroll" id="messageScroll"></div>
+        <!-- Composer -->
+        <div class="community-composer">
+          <div class="community-composer-inner">
+            <textarea class="community-composer-textarea" id="composerText" rows="1" placeholder="Message #general…"></textarea>
+            <button class="community-composer-send" id="composerSend" title="Send">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="communityFooter">
+    <div class="container footer-grid">
+      <div>Vendor Atlas</div>
+      <div>Connect between markets.</div>
+      <div class="stack-row" style="margin-top:0;">
+        <a href="/feed">Feed</a>
+        <a href="/discover">Discover</a>
+        <a href="/signin">Sign In</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/app.js"></script>
+  <script>
+  (function () {
+    // ── State ──────────────────────────────────────────────────────────────
+    var state = {
+      groups: [],
+      activeGroup: null,
+      activeChannel: null,
+      messages: [],
+      pollTimer: null,
+      lastSince: null,
+      currentFilter: '',
+    };
+
+    // ── Elements ────────────────────────────────────────────────────────────
+    var landing        = document.getElementById('communityLanding');
+    var chatView       = document.getElementById('communityChat');
+    var footer         = document.getElementById('communityFooter');
+    var groupGrid      = document.getElementById('groupGrid');
+    var groupTypeTabs  = document.getElementById('groupTypeTabs');
+    var groupRail      = document.getElementById('groupRail');
+    var channelList    = document.getElementById('channelList');
+    var messageScroll  = document.getElementById('messageScroll');
+    var composerText   = document.getElementById('composerText');
+    var composerSend   = document.getElementById('composerSend');
+    var activeGroupName   = document.getElementById('activeGroupName');
+    var activeChannelName = document.getElementById('activeChannelName');
+    var activeChannelTopic = document.getElementById('activeChannelTopic');
+    var pinnedBar      = document.getElementById('pinnedBar');
+    var pinnedText     = document.getElementById('pinnedText');
+    var leaveGroupBtn  = document.getElementById('leaveGroupBtn');
+    var createGroupCta = document.getElementById('createGroupCta');
+    var openCreateGroup   = document.getElementById('openCreateGroup');
+    var cancelCreateGroup = document.getElementById('cancelCreateGroup');
+    var submitCreateGroup = document.getElementById('submitCreateGroup');
+    var createGroupModal  = document.getElementById('createGroupModal');
+    var createGroupError  = document.getElementById('createGroupError');
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function typeLabel(t) {
+      return { vendor_circle: 'Vendor Circle', event_room: 'Event Room', shopper_community: 'Shopper Community' }[t] || t;
+    }
+
+    function avatarInitials(name) {
+      return (name || 'A').split(' ').slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase();
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '';
+      var d = new Date(ts);
+      if (isNaN(d)) return '';
+      var now = new Date();
+      var diff = now - d;
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // ── Group Grid ───────────────────────────────────────────────────────────
+    function loadGroups(type) {
+      state.currentFilter = type || '';
+      var url = '/api/community/groups' + (type ? '?type=' + type : '');
+      fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          state.groups = data.groups || [];
+          renderGroupGrid();
+        })
+        .catch(function() {
+          groupGrid.innerHTML = '<div class="community-empty" style="grid-column:1/-1;"><div class="community-empty-icon">⚠️</div><h3>Could not load groups</h3></div>';
+        });
+    }
+
+    function renderGroupGrid() {
+      if (!state.groups.length) {
+        groupGrid.innerHTML = '<div class="community-empty" style="grid-column:1/-1;"><div class="community-empty-icon">🏘️</div><h3>No groups yet</h3><p>Be the first to create one.</p></div>';
+        return;
+      }
+      groupGrid.innerHTML = state.groups.map(function(g) {
+        return [
+          '<div class="community-group-card' + (g.is_member ? ' is-member' : '') + '" data-group-id="' + g.id + '">',
+          '  <div class="community-group-card-header">',
+          '    <span class="community-group-card-icon">' + (g.icon || '🏘️') + '</span>',
+          '    <div>',
+          '      <div class="community-group-card-name">' + g.name + '</div>',
+          '      <div class="community-group-card-type">' + typeLabel(g.type) + '</div>',
+          '    </div>',
+          '  </div>',
+          '  <p class="community-group-card-desc">' + (g.description || '') + '</p>',
+          '  <div class="community-group-card-footer">',
+          '    <span class="community-group-card-members">' + (g.member_count || 0) + ' members</span>',
+          g.is_verified ? '<span class="community-verified-badge">✓ Verified</span>' : '',
+          g.is_member ? '<span style="font-size:0.78rem; color:var(--brand); font-weight:700;">✓ Joined</span>' : '<span style="font-size:0.78rem; color:var(--muted);">Join</span>',
+          '  </div>',
+          '</div>',
+        ].join('');
+      }).join('');
+    }
+
+    groupGrid.addEventListener('click', function(e) {
+      var card = e.target.closest('.community-group-card');
+      if (!card) return;
+      var id = card.dataset.groupId;
+      openGroup(id);
+    });
+
+    // ── Open Group (chat view) ────────────────────────────────────────────────
+    function openGroup(groupId) {
+      fetch('/api/community/groups/' + groupId)
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (!data.ok) return;
+          state.activeGroup = data.group;
+          landing.style.display = 'none';
+          footer.style.display = 'none';
+          chatView.style.display = 'block';
+          renderGroupRail();
+          renderChannelList(data.group.channels || []);
+          activeGroupName.textContent = data.group.name;
+          // Open first channel
+          var channels = data.group.channels || [];
+          var defaultCh = channels.find(function(c){ return c.is_default; }) || channels[0];
+          if (defaultCh) openChannel(defaultCh);
+        });
+    }
+
+    function renderGroupRail() {
+      groupRail.innerHTML = [
+        '<button class="community-group-btn" id="backToLanding" style="margin-bottom:12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:12px;">← All Groups</button>',
+      ].concat(state.groups.map(function(g) {
+        var active = state.activeGroup && state.activeGroup.id === g.id ? ' active' : '';
+        return '<button class="community-group-btn' + active + '" data-group-id="' + g.id + '">'
+          + '<span class="community-group-icon">' + (g.icon || '🏘️') + '</span>'
+          + '<span class="community-group-name">' + g.name + '</span>'
+          + '<span class="community-group-badge">' + (g.member_count || 0) + '</span>'
+          + '</button>';
+      })).join('');
+
+      document.getElementById('backToLanding').addEventListener('click', function() {
+        showLanding();
+      });
+
+      groupRail.querySelectorAll('[data-group-id]').forEach(function(btn) {
+        btn.addEventListener('click', function() { openGroup(btn.dataset.groupId); });
+      });
+    }
+
+    function renderChannelList(channels) {
+      channelList.innerHTML = channels.map(function(ch) {
+        return '<div class="community-channel-item' + (state.activeChannel && state.activeChannel.id === ch.id ? ' active' : '') + '" data-channel-id="' + ch.id + '" data-channel-name="' + ch.name + '" data-channel-topic="' + (ch.description || '') + '">'
+          + '<span class="community-channel-hash">#</span>'
+          + ch.name
+          + '</div>';
+      }).join('');
+
+      channelList.querySelectorAll('.community-channel-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          openChannel({ id: item.dataset.channelId, name: item.dataset.channelName, description: item.dataset.channelTopic });
+        });
+      });
+    }
+
+    function openChannel(channel) {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      state.activeChannel = channel;
+      state.lastSince = null;
+
+      activeChannelName.textContent = channel.name;
+      activeChannelTopic.textContent = channel.description || '';
+      composerText.placeholder = 'Message #' + channel.name + '…';
+
+      // Mark active in channel list
+      channelList.querySelectorAll('.community-channel-item').forEach(function(item) {
+        item.classList.toggle('active', item.dataset.channelId === channel.id);
+      });
+
+      messageScroll.innerHTML = '';
+      loadMessages(channel.id, false);
+
+      // Poll for new messages every 4s
+      state.pollTimer = setInterval(function() { pollMessages(); }, 4000);
+    }
+
+    function loadMessages(channelId, append) {
+      fetch('/api/community/channels/' + channelId + '/messages?limit=50')
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (!data.ok) return;
+          state.messages = data.messages || [];
+
+          // Pinned
+          var pinned = data.pinned || [];
+          if (pinned.length) {
+            pinnedBar.style.display = 'flex';
+            pinnedText.textContent = pinned[pinned.length - 1].content.slice(0, 80);
+          } else {
+            pinnedBar.style.display = 'none';
+          }
+
+          renderMessages(state.messages);
+
+          if (state.messages.length) {
+            state.lastSince = state.messages[state.messages.length - 1].created_at;
+          }
+
+          // Scroll to bottom on initial load
+          if (!append) {
+            messageScroll.scrollTop = messageScroll.scrollHeight;
+          }
+        });
+    }
+
+    function pollMessages() {
+      if (!state.activeChannel || !state.lastSince) return;
+      fetch('/api/community/channels/' + state.activeChannel.id + '/messages?since=' + encodeURIComponent(state.lastSince))
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (!data.ok || !data.messages.length) return;
+          var wasAtBottom = messageScroll.scrollHeight - messageScroll.scrollTop - messageScroll.clientHeight < 80;
+          data.messages.forEach(function(msg) {
+            state.messages.push(msg);
+            appendMessage(msg, state.messages[state.messages.length - 2]);
+          });
+          state.lastSince = state.messages[state.messages.length - 1].created_at;
+          if (wasAtBottom) messageScroll.scrollTop = messageScroll.scrollHeight;
+        });
+    }
+
+    function renderMessages(msgs) {
+      messageScroll.innerHTML = '';
+      msgs.forEach(function(msg, i) {
+        appendMessage(msg, msgs[i - 1]);
+      });
+    }
+
+    function appendMessage(msg, prev) {
+      var sameAuthor = prev && prev.user_id === msg.user_id
+        && (new Date(msg.created_at) - new Date(prev.created_at)) < 300000;
+      var initials = avatarInitials(msg.display_name || msg.username);
+      var el = document.createElement('div');
+      el.className = 'community-msg' + (sameAuthor ? ' same-author' : '');
+      el.dataset.msgId = msg.id;
+      el.innerHTML = [
+        '<div class="community-msg-avatar">' + initials + '</div>',
+        '<div class="community-msg-body">',
+        '  <div class="community-msg-author-row">',
+        '    <span class="community-msg-author">' + (msg.display_name || msg.username) + '</span>',
+        '    <span class="community-msg-time">' + formatTime(msg.created_at) + '</span>',
+        msg.is_pinned ? '<span class="community-msg-pinned-badge">📌 pinned</span>' : '',
+        '  </div>',
+        '  <div class="community-msg-content">' + escapeHtml(msg.content) + '</div>',
+        '</div>',
+      ].join('');
+      messageScroll.appendChild(el);
+    }
+
+    function escapeHtml(s) {
+      return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Send message ─────────────────────────────────────────────────────────
+    function sendMessage() {
+      var content = composerText.value.trim();
+      if (!content || !state.activeChannel) return;
+      composerText.value = '';
+      composerText.style.height = 'auto';
+
+      fetch('/api/community/channels/' + state.activeChannel.id + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content }),
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            var prev = state.messages[state.messages.length - 1];
+            state.messages.push(data.message);
+            appendMessage(data.message, prev);
+            state.lastSince = data.message.created_at;
+            messageScroll.scrollTop = messageScroll.scrollHeight;
+          }
+        });
+    }
+
+    composerSend.addEventListener('click', sendMessage);
+    composerText.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    composerText.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+    });
+
+    // ── Leave group ───────────────────────────────────────────────────────────
+    leaveGroupBtn.addEventListener('click', function() {
+      if (!state.activeGroup) return;
+      fetch('/api/community/groups/' + state.activeGroup.id + '/leave', { method: 'POST' })
+        .then(function(){ showLanding(); loadGroups(state.currentFilter); });
+    });
+
+    // ── Create group ──────────────────────────────────────────────────────────
+    openCreateGroup && openCreateGroup.addEventListener('click', function() {
+      createGroupModal.style.display = 'flex';
+    });
+    cancelCreateGroup.addEventListener('click', function() {
+      createGroupModal.style.display = 'none';
+    });
+    submitCreateGroup.addEventListener('click', function() {
+      var name = document.getElementById('newGroupName').value.trim();
+      var type = document.getElementById('newGroupType').value;
+      var desc = document.getElementById('newGroupDesc').value.trim();
+      if (!name) { createGroupError.textContent = 'Name is required.'; createGroupError.style.display = 'block'; return; }
+      createGroupError.style.display = 'none';
+
+      fetch('/api/community/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, type: type, description: desc }),
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            createGroupModal.style.display = 'none';
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupDesc').value = '';
+            loadGroups(state.currentFilter);
+          } else {
+            createGroupError.textContent = data.error || 'Could not create group.';
+            createGroupError.style.display = 'block';
+          }
+        });
+    });
+
+    // ── Type filter tabs ──────────────────────────────────────────────────────
+    groupTypeTabs.addEventListener('click', function(e) {
+      var tab = e.target.closest('.community-type-tab');
+      if (!tab) return;
+      groupTypeTabs.querySelectorAll('.community-type-tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      loadGroups(tab.dataset.type || '');
+    });
+
+    // ── Show/hide landing vs chat ─────────────────────────────────────────────
+    function showLanding() {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      state.activeGroup = null;
+      state.activeChannel = null;
+      chatView.style.display = 'none';
+      footer.style.display = '';
+      landing.style.display = '';
+    }
+
+    // ── Auth check: show create CTA if signed in ──────────────────────────────
+    fetch('/api/auth/me')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data && data.id) {
+          createGroupCta.style.display = 'block';
+        }
+      })
+      .catch(function(){});
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadGroups('');
+  })();
+  </script>
+</body>
+</html>

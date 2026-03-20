@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feed | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links">
+        <a href="/dashboard">Plan</a>
+        <a href="/discover">Discover</a>
+        <a class="active" href="/feed">Feed</a>
+        <a href="/community">Community</a>
+        <a href="/final-plan">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/dashboard">Plan</a>
+      <a href="/discover">Discover</a>
+      <a href="/feed">Feed</a>
+      <a href="/community">Community</a>
+      <a href="/final-plan">Profit</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="feed-shell">
+      <!-- Main feed rail -->
+      <div>
+        <div class="section-heading" style="text-align:left; margin-bottom: 20px;">
+          <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Event Feed</h1>
+          <p class="muted">Upcoming markets, popups, and vendor events — browse and save what fits.</p>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="feed-filter-bar" id="feedFilterBar">
+          <button class="feed-filter-chip active" data-tag="">All</button>
+          <button class="feed-filter-chip" data-tag="handmade">Handmade</button>
+          <button class="feed-filter-chip" data-tag="vintage">Vintage</button>
+          <button class="feed-filter-chip" data-tag="food">Food</button>
+          <button class="feed-filter-chip" data-tag="art">Art</button>
+          <button class="feed-filter-chip" data-tag="craft">Craft</button>
+          <button class="feed-filter-chip" data-tag="jewelry">Jewelry</button>
+          <button class="feed-filter-chip" data-tag="farmers">Farmers</button>
+          <button class="feed-filter-chip" data-tag="night">Night Market</button>
+        </div>
+
+        <!-- Feed cards -->
+        <div class="feed-rail" id="feedRail">
+          <div class="community-empty">
+            <div class="community-empty-icon">🎪</div>
+            <h3>Loading events…</h3>
+          </div>
+        </div>
+
+        <div class="feed-load-more" id="feedLoadMore" style="display:none;">
+          <button class="btn btn-secondary" id="feedLoadMoreBtn">Load more</button>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="feed-sidebar">
+        <div class="feed-sidebar-card">
+          <h3>Trending Tags</h3>
+          <div class="feed-card-tags" id="trendingTags">
+            <span class="feed-tag">handmade</span>
+            <span class="feed-tag">vintage</span>
+            <span class="feed-tag">jewelry</span>
+            <span class="feed-tag">ceramics</span>
+            <span class="feed-tag">food</span>
+            <span class="feed-tag">art</span>
+            <span class="feed-tag">farmers</span>
+          </div>
+        </div>
+        <div class="feed-sidebar-card">
+          <h3>Your Communities</h3>
+          <div id="sidebarGroups">
+            <p class="muted" style="font-size:0.85rem;">
+              <a href="/signin" style="color: var(--brand);">Sign in</a> to see your groups.
+            </p>
+          </div>
+          <a class="btn btn-secondary" href="/community" style="margin-top:14px; display:block; text-align:center; font-size:0.85rem;">Browse All Groups</a>
+        </div>
+        <div class="feed-sidebar-card">
+          <h3>Saved Markets</h3>
+          <p class="muted" style="font-size:0.85rem;">Events you save appear here.</p>
+          <a class="btn btn-secondary" href="/discover" style="margin-top:14px; display:block; text-align:center; font-size:0.85rem;">Open Discover</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>Vendor Atlas</div>
+      <div>Plan smarter, run better events, and keep the right people coming back.</div>
+      <div class="stack-row" style="margin-top:0;">
+        <a href="/discover">Discover</a>
+        <a href="/community">Community</a>
+        <a href="/signin">Sign In</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (function () {
+      const rail = document.getElementById('feedRail');
+      const loadMoreWrap = document.getElementById('feedLoadMore');
+      const loadMoreBtn = document.getElementById('feedLoadMoreBtn');
+      const filterBar = document.getElementById('feedFilterBar');
+
+      let currentTag = '';
+      let currentOffset = 0;
+      const PAGE = 12;
+      let loading = false;
+
+      const CATEGORY_ICONS = {
+        handmade: '🧶', vintage: '🧥', food: '🍜', art: '🎨',
+        craft: '✂️', jewelry: '💍', farmers: '🌿', night: '🌙',
+        default: '🏪',
+      };
+
+      function iconForTags(tags) {
+        if (!tags || !tags.length) return CATEGORY_ICONS.default;
+        for (const t of tags) {
+          const k = Object.keys(CATEGORY_ICONS).find(k => t.toLowerCase().includes(k));
+          if (k) return CATEGORY_ICONS[k];
+        }
+        return CATEGORY_ICONS.default;
+      }
+
+      function formatDate(d) {
+        if (!d) return '';
+        const dt = new Date(d);
+        if (isNaN(dt)) return d;
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      function renderCard(item) {
+        const tags = (item.tags || []).slice(0, 3);
+        const icon = iconForTags(tags);
+        const location = [item.city, item.state].filter(Boolean).join(', ');
+        const traffic = item.estimated_traffic
+          ? '~' + Number(item.estimated_traffic).toLocaleString() + ' visitors'
+          : '';
+        const vendors = item.vendor_count ? item.vendor_count + ' vendors' : '';
+
+        return [
+          '<article class="feed-card" data-event-id="' + (item.id || '') + '">',
+          '  <div class="feed-card-media">',
+          item.thumbnail_url
+            ? '    <img src="' + item.thumbnail_url + '" alt="' + (item.title || '') + '" loading="lazy">'
+            : '    <div class="feed-card-media-placeholder">' + icon + '</div>',
+          '    <div class="feed-card-play"><div class="feed-card-play-icon"></div></div>',
+          '  </div>',
+          '  <div class="feed-card-body">',
+          '    <div class="feed-card-meta">',
+          location ? '      <span class="feed-card-location">📍 ' + location + '</span>' : '',
+          item.starts_at ? '      <span class="feed-card-location" style="margin-left:auto;">' + formatDate(item.starts_at) + '</span>' : '',
+          '    </div>',
+          '    <h2 class="feed-card-title">' + (item.title || 'Untitled Event') + '</h2>',
+          tags.length ? '    <div class="feed-card-tags">' + tags.map(function(t){ return '<span class="feed-tag">' + t + '</span>'; }).join('') + '</div>' : '',
+          '    <div class="feed-card-stats">',
+          vendors ? '      <span class="feed-card-stat">🏪 ' + vendors + '</span>' : '',
+          traffic ? '      <span class="feed-card-stat">👥 ' + traffic + '</span>' : '',
+          '    </div>',
+          '  </div>',
+          '</article>',
+        ].join('\n');
+      }
+
+      function loadFeed(reset) {
+        if (loading) return;
+        loading = true;
+        if (reset) {
+          currentOffset = 0;
+          rail.innerHTML = '';
+          loadMoreWrap.style.display = 'none';
+        }
+
+        var params = new URLSearchParams({ limit: PAGE, offset: currentOffset });
+        if (currentTag) params.set('tag', currentTag);
+
+        fetch('/api/feed?' + params)
+          .then(function(r){ return r.json(); })
+          .then(function(data) {
+            if (!data.ok || !data.items.length) {
+              if (currentOffset === 0) {
+                rail.innerHTML = '<div class="community-empty"><div class="community-empty-icon">🎪</div><h3>No events found</h3><p>Try a different tag or check back soon.</p></div>';
+              }
+            } else {
+              data.items.forEach(function(item) {
+                rail.insertAdjacentHTML('beforeend', renderCard(item));
+              });
+              currentOffset += data.items.length;
+              loadMoreWrap.style.display = data.items.length === PAGE ? 'block' : 'none';
+            }
+          })
+          .catch(function() {
+            if (currentOffset === 0) {
+              rail.innerHTML = '<div class="community-empty"><div class="community-empty-icon">⚠️</div><h3>Could not load feed</h3><p>Check your connection and refresh.</p></div>';
+            }
+          })
+          .finally(function(){ loading = false; });
+      }
+
+      filterBar.addEventListener('click', function(e) {
+        var chip = e.target.closest('.feed-filter-chip');
+        if (!chip) return;
+        filterBar.querySelectorAll('.feed-filter-chip').forEach(function(c){ c.classList.remove('active'); });
+        chip.classList.add('active');
+        currentTag = chip.dataset.tag || '';
+        loadFeed(true);
+      });
+
+      loadMoreBtn.addEventListener('click', function(){ loadFeed(false); });
+
+      rail.addEventListener('click', function(e) {
+        var card = e.target.closest('.feed-card');
+        if (!card) return;
+        var id = card.dataset.eventId;
+        if (id) window.location.href = '/discover?event=' + id;
+      });
+
+      loadFeed(true);
+    })();
+  </script>
+</body>
+</html>

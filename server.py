@@ -66,6 +66,36 @@ from storage_marketplace import (
     list_saved_events as list_marketplace_saved_events,
     save_event_for_user as save_marketplace_event_for_user,
 )
+from storage_community import (
+    init_community_db,
+    list_groups,
+    get_group,
+    create_group,
+    list_channels,
+    get_channel,
+    create_channel,
+    list_messages,
+    list_messages_since,
+    send_message,
+    pin_message,
+    unpin_message,
+    list_pinned_messages,
+    join_group,
+    leave_group,
+    is_member,
+    list_user_groups,
+)
+from storage_feed import (
+    init_feed_db,
+    list_feed_posts,
+    get_feed_post,
+    create_feed_post,
+    like_post,
+    save_post,
+    record_view,
+    get_user_liked_posts,
+    get_user_saved_posts,
+)
 from storage_shopify import (
     disconnect_shopify,
     get_shopify_access_token,
@@ -159,6 +189,9 @@ PUBLIC_PAGE_ROUTES = {
     "/signup": "signup.html",
     "/market-analytics": "market-analytics.html",
     "/market-applications": "market-applications.html",
+    "/feed": "feed.html",
+    "/community": "community.html",
+    "/community/room": "community-room.html",
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -1271,6 +1304,8 @@ def create_app() -> FastAPI:
     init_feedback_db()
     from storage_shopify import init_shopify_db
     init_shopify_db()
+    init_community_db()
+    init_feed_db()
 
     # AI infrastructure — init tables and register routes if enabled
     cfg = get_config()
@@ -2957,6 +2992,289 @@ def create_app() -> FastAPI:
                 "more_events": [_score_listing(event, inputs) for event in payload.get("more_events", [])],
             }
         )
+
+    # ── FEED ──────────────────────────────────────────────────────────────────
+
+    @app.get("/api/feed")
+    async def handle_feed(request: Request) -> JSONResponse:
+        """Video-first discovery feed with vendor posts."""
+        limit = min(int(request.query_params.get("limit", 20)), 100)
+        offset = int(request.query_params.get("offset", 0))
+        tag = request.query_params.get("tag", "") or None
+        location = request.query_params.get("location", "") or None
+        posts = list_feed_posts(limit=limit, offset=offset, location=location, tag=tag)
+        uid = _read_session_user_id(request)
+        if uid:
+            liked = set(get_user_liked_posts(uid))
+            saved = set(get_user_saved_posts(uid))
+            for p in posts:
+                p["is_liked"] = p["id"] in liked
+                p["is_saved"] = p["id"] in saved
+        # Also return event-based items for the feed (legacy compat)
+        events = stored_search_events({})
+        items = []
+        for ev in events[offset: offset + limit]:
+            items.append({
+                "id": ev.get("id"),
+                "title": ev.get("name"),
+                "thumbnail_url": ev.get("image_url") or ev.get("thumbnail_url"),
+                "tags": ev.get("tags") or [],
+                "city": ev.get("city"),
+                "state": ev.get("state"),
+                "starts_at": ev.get("date"),
+                "vendor_count": ev.get("vendor_count"),
+                "estimated_traffic": ev.get("estimated_traffic"),
+                "published_at": ev.get("created_at") or ev.get("date"),
+            })
+        return JSONResponse({"ok": True, "posts": posts, "items": items, "total": len(posts), "offset": offset})
+
+    @app.post("/api/feed/posts/{post_id}/like")
+    async def handle_like_post(post_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        result = like_post(post_id, uid)
+        return JSONResponse({"ok": True, **result})
+
+    @app.post("/api/feed/posts/{post_id}/save")
+    async def handle_save_post(post_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        result = save_post(post_id, uid)
+        return JSONResponse({"ok": True, **result})
+
+    @app.get("/api/feed/my-likes")
+    async def handle_my_likes(request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": True, "post_ids": []})
+        return JSONResponse({"ok": True, "post_ids": get_user_liked_posts(uid)})
+
+    @app.get("/api/feed/my-saves")
+    async def handle_my_saves(request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": True, "post_ids": []})
+        return JSONResponse({"ok": True, "post_ids": get_user_saved_posts(uid)})
+
+    @app.post("/api/feed/posts")
+    async def handle_create_post(request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+        caption = (body.get("caption") or "").strip()
+        if not caption:
+            return _validation_error("caption is required")
+        user = get_user_by_id(uid)
+        if not user:
+            return JSONResponse({"ok": False, "error": "User not found"}, status_code=404)
+        username = user.get("username", "unknown")
+        name = user.get("name") or username
+        post = create_feed_post(
+            vendor_username=username,
+            vendor_name=name,
+            caption=caption,
+            vendor_id=str(uid),
+            video_url=body.get("video_url"),
+            thumbnail_color=body.get("thumbnail_color", "#0f766e"),
+            thumbnail_emoji=body.get("thumbnail_emoji", "🎬"),
+            product_name=body.get("product_name"),
+            product_price=body.get("product_price"),
+            event_name=body.get("event_name"),
+            location=body.get("location"),
+            tags=body.get("tags", []),
+        )
+        return JSONResponse({"ok": True, "post": post}, status_code=201)
+
+    @app.get("/api/community/channels/{channel_id}/pins")
+    async def handle_channel_pins(channel_id: str) -> JSONResponse:
+        if not get_channel(channel_id):
+            return JSONResponse({"ok": False, "error": "Channel not found"}, status_code=404)
+        return JSONResponse({"ok": True, "messages": list_pinned_messages(channel_id)})
+
+    @app.get("/api/community/channels/{channel_id}/messages/since")
+    async def handle_messages_since(channel_id: str, request: Request) -> JSONResponse:
+        since = request.query_params.get("since", "")
+        if not since:
+            return JSONResponse({"ok": False, "error": "since parameter required"}, status_code=400)
+        msgs = list_messages_since(channel_id, since)
+        return JSONResponse({"ok": True, "messages": msgs})
+
+    @app.get("/api/vendors/{vendor_id}/followers")
+    async def handle_vendor_followers(vendor_id: str) -> JSONResponse:
+        followers = get_follower_user_ids_for_vendor(vendor_id)
+        return JSONResponse({"ok": True, "count": len(followers)})
+
+    # ── COMMUNITY — groups ────────────────────────────────────────────────────
+
+    @app.get("/api/community/groups")
+    async def handle_list_groups(request: Request) -> JSONResponse:
+        group_type = request.query_params.get("type") or None
+        groups = list_groups(group_type)
+        uid = _read_session_user_id(request)
+        if uid:
+            my_ids = {g["id"] for g in list_user_groups(uid)}
+            for g in groups:
+                g["is_member"] = g["id"] in my_ids
+        return JSONResponse({"ok": True, "groups": groups})
+
+    @app.get("/api/community/groups/{group_id}")
+    async def handle_get_group(group_id: str, request: Request) -> JSONResponse:
+        group = get_group(group_id)
+        if not group:
+            return JSONResponse({"ok": False, "error": "Group not found"}, status_code=404)
+        uid = _read_session_user_id(request)
+        group["is_member"] = is_member(group_id, uid) if uid else False
+        group["channels"] = list_channels(group_id)
+        return JSONResponse({"ok": True, "group": group})
+
+    @app.post("/api/community/groups")
+    async def handle_create_group(request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+        name = (body.get("name") or "").strip()
+        if not name:
+            return _validation_error("name is required")
+        group_type = body.get("type", "vendor_circle")
+        if group_type not in ("event_room", "vendor_circle", "shopper_community"):
+            return _validation_error("type must be event_room, vendor_circle, or shopper_community")
+        group = create_group(
+            name=name,
+            group_type=group_type,
+            description=body.get("description", ""),
+            icon=body.get("icon", "🏘️"),
+            event_id=body.get("event_id"),
+            created_by=uid,
+        )
+        join_group(group["id"], uid)
+        return JSONResponse({"ok": True, "group": group}, status_code=201)
+
+    @app.post("/api/community/groups/{group_id}/join")
+    async def handle_join_group(group_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        if not get_group(group_id):
+            return JSONResponse({"ok": False, "error": "Group not found"}, status_code=404)
+        join_group(group_id, uid)
+        return JSONResponse({"ok": True})
+
+    @app.post("/api/community/groups/{group_id}/leave")
+    async def handle_leave_group(group_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        leave_group(group_id, uid)
+        return JSONResponse({"ok": True})
+
+    # ── COMMUNITY — channels ──────────────────────────────────────────────────
+
+    @app.get("/api/community/groups/{group_id}/channels")
+    async def handle_list_channels(group_id: str) -> JSONResponse:
+        if not get_group(group_id):
+            return JSONResponse({"ok": False, "error": "Group not found"}, status_code=404)
+        return JSONResponse({"ok": True, "channels": list_channels(group_id)})
+
+    @app.post("/api/community/groups/{group_id}/channels")
+    async def handle_create_channel(group_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        if not get_group(group_id):
+            return JSONResponse({"ok": False, "error": "Group not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+        name = (body.get("name") or "").strip().lower().replace(" ", "-")
+        if not name:
+            return _validation_error("name is required")
+        channel = create_channel(group_id, name, body.get("description", ""))
+        return JSONResponse({"ok": True, "channel": channel}, status_code=201)
+
+    # ── COMMUNITY — messages ──────────────────────────────────────────────────
+
+    @app.get("/api/community/channels/{channel_id}/messages")
+    async def handle_list_messages(channel_id: str, request: Request) -> JSONResponse:
+        if not get_channel(channel_id):
+            return JSONResponse({"ok": False, "error": "Channel not found"}, status_code=404)
+        limit = min(int(request.query_params.get("limit", 50)), 200)
+        before = request.query_params.get("before") or None
+        since = request.query_params.get("since") or None
+        if since:
+            msgs = list_messages_since(channel_id, since)
+        else:
+            msgs = list_messages(channel_id, limit=limit, before=before)
+        pinned = list_pinned_messages(channel_id)
+        return JSONResponse({"ok": True, "messages": msgs, "pinned": pinned})
+
+    @app.post("/api/community/channels/{channel_id}/messages")
+    async def handle_send_message(channel_id: str, request: Request) -> JSONResponse:
+        ch = get_channel(channel_id)
+        if not ch:
+            return JSONResponse({"ok": False, "error": "Channel not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+        content = (body.get("content") or "").strip()
+        if not content:
+            return _validation_error("content is required")
+        if len(content) > 4000:
+            return _validation_error("Message too long (max 4000 chars)")
+
+        uid = _read_session_user_id(request)
+        username = "anonymous"
+        display_name = None
+        if uid:
+            user = get_user_by_id(uid)
+            if user:
+                username = user.get("username", "anonymous")
+                display_name = user.get("display_name") or user.get("username")
+
+        msg = send_message(
+            channel_id=channel_id,
+            content=content,
+            user_id=uid,
+            username=username,
+            display_name=display_name,
+            reply_to_id=body.get("reply_to_id"),
+            media_url=body.get("media_url"),
+        )
+        return JSONResponse({"ok": True, "message": msg}, status_code=201)
+
+    @app.post("/api/community/messages/{message_id}/pin")
+    async def handle_pin_message(message_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        pin_message(message_id)
+        return JSONResponse({"ok": True})
+
+    @app.delete("/api/community/messages/{message_id}/pin")
+    async def handle_unpin_message(message_id: str, request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        unpin_message(message_id)
+        return JSONResponse({"ok": True})
+
+    @app.get("/api/community/me/groups")
+    async def handle_my_groups(request: Request) -> JSONResponse:
+        uid = _read_session_user_id(request)
+        if not uid:
+            return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
+        return JSONResponse({"ok": True, "groups": list_user_groups(uid)})
 
     @app.post("/consumer/run")
     async def handle_consumer_run(request: Request) -> JSONResponse:
