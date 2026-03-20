@@ -44,6 +44,7 @@ from db_runtime import backend_summary
 from middleware.session_manager import get_session_manager
 from middleware.sync import get_sync_engine
 from storage_events import Event as StoredEvent, clear_discovered_events, get_event_by_id, init_events_db, search_events as stored_search_events, upsert_event
+from storage_feedback import init_feedback_db, list_feedback, save_feedback
 from storage_markets import init_db
 from storage_marketplace import (
     create_application as create_marketplace_application,
@@ -1266,6 +1267,7 @@ def create_app() -> FastAPI:
     init_events_db()
     init_users_db()
     init_marketplace_db()
+    init_feedback_db()
     from storage_shopify import init_shopify_db
     init_shopify_db()
 
@@ -2170,6 +2172,36 @@ def create_app() -> FastAPI:
             return _validation_error("Authentication required.", status_code=401)
         deleted = clear_discovered_events()
         return JSONResponse({"ok": True, "deleted": deleted})
+
+    @app.post("/api/feedback")
+    async def handle_feedback_submit(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        message = str(body.get("message") or "").strip()
+        if not message:
+            return _validation_error("message is required")
+        if len(message) > 2000:
+            return _validation_error("message too long (max 2000 chars)")
+        user = _current_user(request)
+        feedback_id = save_feedback(
+            message=message,
+            page_url=str(body.get("page_url") or "")[:500],
+            user_id=int(user["id"]) if user else None,
+            user_email=str(user.get("email") or "") if user else "",
+        )
+        return JSONResponse({"ok": True, "id": feedback_id})
+
+    @app.get("/api/feedback")
+    async def handle_feedback_list(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "market"}:
+            return _validation_error("Not authorized.", status_code=403)
+        items = list_feedback(limit=200)
+        return JSONResponse({"ok": True, "count": len(items), "feedback": items})
 
     @app.get("/api/users")
     async def handle_users_index(request: Request, role: str = "", limit: int = 25) -> JSONResponse:

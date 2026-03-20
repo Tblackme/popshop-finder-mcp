@@ -5043,9 +5043,62 @@ async function setupEventDetailPage() {
   }
 }
 
+function setupBugReport() {
+  const btn = document.createElement("button");
+  btn.textContent = "Report a bug";
+  btn.setAttribute("aria-label", "Report a bug");
+  btn.style.cssText = "position:fixed;bottom:18px;right:18px;z-index:9999;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);color:var(--muted,#64748b);font-size:.78rem;padding:6px 12px;border-radius:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);";
+  document.body.appendChild(btn);
+
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;";
+  overlay.innerHTML = `
+    <div style="background:var(--surface,#fff);border-radius:12px;padding:28px 24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+      <h3 style="margin:0 0 6px;font-size:1.05rem;">Report a bug</h3>
+      <p class="muted" style="margin:0 0 14px;font-size:.85rem;">Describe what happened and what you expected. We'll look into it.</p>
+      <textarea id="bug-report-text" rows="4" class="mini-input" placeholder="e.g. Clicked 'Find Events' and nothing happened…" style="width:100%;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+        <button id="bug-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="bug-submit" class="btn btn-primary">Send report</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  function open() { overlay.style.display = "flex"; setTimeout(() => overlay.querySelector("#bug-report-text")?.focus(), 50); }
+  function close() { overlay.style.display = "none"; overlay.querySelector("#bug-report-text").value = ""; }
+
+  btn.addEventListener("click", open);
+  overlay.querySelector("#bug-cancel").addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+  overlay.querySelector("#bug-submit").addEventListener("click", async () => {
+    const text = (overlay.querySelector("#bug-report-text")?.value || "").trim();
+    if (!text) { showToast("Please describe the bug first.", "error"); return; }
+    const submitBtn = overlay.querySelector("#bug-submit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending…";
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, page_url: window.location.href }),
+      });
+      close();
+      showToast("Bug report sent — thanks!", "success");
+    } catch (_) {
+      showToast("Couldn't send report. Try again.", "error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send report";
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   setupMobileNav();
   setupVendorScenarios();
+  setupBugReport();
 
   const auth = await getAuthState();
   renderAuthNav(auth);
