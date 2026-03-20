@@ -2168,8 +2168,6 @@ def create_app() -> FastAPI:
         user = _require_user(request)
         if not user:
             return _validation_error("Authentication required.", status_code=401)
-        if _normalized_role(user) not in {"vendor", "market", "admin"}:
-            return _validation_error("Not authorized.", status_code=403)
         deleted = clear_discovered_events()
         return JSONResponse({"ok": True, "deleted": deleted})
 
