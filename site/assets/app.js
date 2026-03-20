@@ -1460,9 +1460,33 @@ async function setupDiscoverPage(auth) {
   const root = document.querySelector("[data-discover-app]");
   if (!root) return;
 
-  root.innerHTML = `<div class="empty-state"><strong>Ranking events for you...</strong><p class="muted">Pulling together the latest event list and sorting the strongest fits first.</p></div>`;
+  root.innerHTML = `<div class="empty-state"><strong>Loading events...</strong></div>`;
   let allEvents = [];
   let discoverDataSource = "live";
+  let discoverCity = "";
+  let discoverSearching = false;
+
+  async function runCitySearch(city) {
+    if (!city || discoverSearching) return;
+    discoverSearching = true;
+    discoverCity = city;
+    root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").disabled = true);
+    root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").textContent = "Searching…");
+    try {
+      await api("/consumer/run", {
+        method: "POST",
+        body: JSON.stringify({ tool: "discover_events", arguments: { city } }),
+      });
+    } catch (_) {}
+    try {
+      const payload = await api(`/api/events?limit=120`, { method: "GET" });
+      allEvents = Array.isArray(payload.events)
+        ? payload.events.map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean)
+        : [];
+    } catch (_) { allEvents = []; }
+    discoverSearching = false;
+    requestRender();
+  }
 
   // Phase 1 — fast: stored events
   try {
@@ -1593,6 +1617,11 @@ async function setupDiscoverPage(auth) {
             </div>
             <button class="btn btn-secondary" type="button" data-map-toggle>${state.mapOpen ? "Hide Map" : "Show Map"}</button>
           </div>
+          <div class="discover-city-search" style="display:flex;gap:.5rem;margin-top:.75rem;align-items:center;">
+            <input id="discover-city-input" class="mini-input" placeholder="Search events by city (e.g. Austin, TX)" style="flex:1;max-width:340px;" value="${escapeHtml(discoverCity)}">
+            <button class="btn btn-primary" type="button" data-discover-search-btn ${discoverSearching ? "disabled" : ""}>${discoverSearching ? "Searching…" : "Find Events"}</button>
+          </div>
+          ${scored.length === 0 && !discoverSearching ? `<div class="empty-state" style="margin-top:1.5rem;"><strong>No events found.</strong><p class="muted">Enter your city above and click Find Events to discover markets near you.</p></div>` : ""}
           ${discoverDataSource === "fallback" ? `<div class="discover-why-summary"><strong>Using backup event data.</strong> Live event ranking is temporarily unavailable, so we're keeping the page useful with a local sample set.</div>` : ""}
           <div class="discover-summary-strip">
             <div class="discover-summary-pill">
@@ -1738,6 +1767,17 @@ async function setupDiscoverPage(auth) {
     attachButtonPress(".btn", root);
     attachButtonPress(".chip", root);
     attachButtonPress(".btn-add-plan", root);
+
+    root.querySelector("[data-discover-search-btn]")?.addEventListener("click", () => {
+      const city = (root.querySelector("#discover-city-input")?.value || "").trim();
+      if (city) runCitySearch(city);
+    });
+    root.querySelector("#discover-city-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const city = (e.target.value || "").trim();
+        if (city) runCitySearch(city);
+      }
+    });
 
     root.querySelector("[data-map-toggle]")?.addEventListener("click", () => {
       state.mapOpen = !state.mapOpen;
