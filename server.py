@@ -2678,6 +2678,25 @@ def create_app() -> FastAPI:
             }
         )
 
+    @app.get("/api/shopify/config-check")
+    async def handle_shopify_config_check(request: Request) -> JSONResponse:
+        """Returns Shopify OAuth config info for debugging (no secrets exposed)."""
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        cfg = get_config()
+        callback_url = f"{cfg.app_base_url}/api/shopify/callback"
+        return JSONResponse({
+            "ok": True,
+            "oauth_available": bool(cfg.shopify_api_key and cfg.shopify_api_secret),
+            "api_key_set": bool(cfg.shopify_api_key),
+            "api_secret_set": bool(cfg.shopify_api_secret),
+            "api_key_prefix": cfg.shopify_api_key[:6] + "…" if cfg.shopify_api_key else None,
+            "callback_url": callback_url,
+            "app_base_url": cfg.app_base_url,
+            "scopes": cfg.shopify_scopes,
+        })
+
     @app.post("/api/shopify/connect-token")
     async def handle_shopify_connect_token(request: Request) -> JSONResponse:
         """

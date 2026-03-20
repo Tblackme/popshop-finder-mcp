@@ -5148,6 +5148,29 @@ function setupAdminPanel(auth) {
     panel.style.display = "none";
   });
 
+  panel.querySelector("#admin-clear-events").insertAdjacentHTML("afterend", `<button id="admin-shopify-check" class="btn btn-secondary" style="width:100%;font-size:.83rem;margin-top:8px;">Shopify config check</button>`);
+  panel.querySelector("#admin-shopify-check").addEventListener("click", async () => {
+    const el = panel.querySelector("#admin-shopify-check");
+    el.disabled = true; el.textContent = "Checking…";
+    try {
+      const r = await fetch("/api/shopify/config-check", { credentials: "include" });
+      const d = await r.json();
+      const lines = [
+        `oauth_available: ${d.oauth_available}`,
+        `api_key_set: ${d.api_key_set} (prefix: ${d.api_key_prefix || "none"})`,
+        `api_secret_set: ${d.api_secret_set}`,
+        `callback_url: ${d.callback_url}`,
+        `scopes: ${d.scopes}`,
+        "",
+        "→ Register this callback URL in your Shopify Partners app:",
+        d.callback_url,
+      ];
+      alert(lines.join("\n"));
+    } catch (_) { showToast("Failed to check config.", "error"); }
+    el.disabled = false; el.textContent = "Shopify config check";
+    panel.style.display = "none";
+  });
+
   panel.querySelector("#admin-view-feedback").addEventListener("click", async () => {
     const el = panel.querySelector("#admin-view-feedback");
     el.disabled = true; el.textContent = "Loading…";
