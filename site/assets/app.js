@@ -923,7 +923,7 @@ function normalizeDiscoverEvent(event, index = 0) {
   const numericTraffic = Number(event.estimated_traffic || 0) || 0;
   const reasons = Array.isArray(event.score_reasons) ? event.score_reasons.filter(Boolean) : [];
   return {
-    id: String(event.id || `discover-${index}`),
+    id: String(event.id || event.event_id || `discover-${index}`),
     title: event.title || event.name || "Untitled event",
     name: event.name || event.title || "Untitled event",
     location: event.location || [event.city, event.state].filter(Boolean).join(", "),
@@ -950,6 +950,29 @@ function normalizeDiscoverEvent(event, index = 0) {
     application_link: event.application_link || event.apply_url || event.url || "",
     sourceLabel: event.sourceLabel || event.source || "Vendor Atlas",
   };
+}
+
+function parseCityStateInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { city: "", state: "" };
+  const parts = raw.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return { city: parts[0], state: parts[1] };
+  }
+  return { city: raw, state: "" };
+}
+
+function mergeDiscoverEvents(searchResults = [], discoveredResults = []) {
+  const merged = [];
+  const seen = new Set();
+  [...searchResults, ...discoveredResults].forEach((event) => {
+    const normalized = normalizeDiscoverEvent(event, merged.length);
+    if (!normalized) return;
+    if (seen.has(normalized.id)) return;
+    seen.add(normalized.id);
+    merged.push(normalized);
+  });
+  return merged;
 }
 
 function categoryMatches(event, category) {
@@ -1472,18 +1495,33 @@ async function setupDiscoverPage(auth) {
     discoverCity = city;
     root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").disabled = true);
     root.querySelector("[data-discover-search-btn]") && (root.querySelector("[data-discover-search-btn]").textContent = "Searching…");
+    const location = parseCityStateInput(city);
     try {
-      await api("/consumer/run", {
-        method: "POST",
-        body: JSON.stringify({ tool: "discover_events", arguments: { city } }),
-      });
-    } catch (_) {}
-    try {
-      const payload = await api(`/api/events?limit=120`, { method: "GET" });
-      allEvents = Array.isArray(payload.events)
-        ? payload.events.map((event, index) => normalizeDiscoverEvent(event, index)).filter(Boolean)
-        : [];
-    } catch (_) { allEvents = []; }
+      const query = new URLSearchParams();
+      if (location.city) query.set("city", location.city);
+      if (location.state) query.set("state", location.state);
+      const payload = await api(`/api/find-market?${query.toString()}`, { method: "GET" });
+      allEvents = mergeDiscoverEvents(payload.search_results || [], payload.discovered_results || []);
+      discoverDataSource = "live";
+      if (!allEvents.length) {
+        const fallbackPayload = await api(`/api/events?limit=120`, { method: "GET" });
+        allEvents = Array.isArray(fallbackPayload.events)
+          ? fallbackPayload.events
+            .filter((event) => {
+              if (!location.city) return true;
+              const eventCity = String(event.city || "").trim().toLowerCase();
+              const eventState = String(event.state || "").trim().toLowerCase();
+              return eventCity === location.city.trim().toLowerCase()
+                && (!location.state || eventState === location.state.trim().toLowerCase());
+            })
+            .map((event, index) => normalizeDiscoverEvent(event, index))
+            .filter(Boolean)
+          : [];
+      }
+    } catch (_) {
+      discoverDataSource = "fallback";
+      allEvents = [];
+    }
     discoverSearching = false;
     requestRender();
   }
@@ -1583,7 +1621,7 @@ async function setupDiscoverPage(auth) {
   function render() {
     let scored = allEvents
       .filter((event) => categoryMatches(event, state.eventType))
-      .filter((event) => event.distance_miles <= (state.travelMode === "Local" ? Math.min(state.distance, 75) : Math.max(state.distance, 120)))
+      .filter((event) => !discoverCity || event.distance_miles <= (state.travelMode === "Local" ? Math.min(state.distance, 75) : Math.max(state.distance, 120)))
       .filter((event) => event.vendor_fee <= state.maxFee)
       .filter((event) => state.dateRange === "Any" || (state.dateRange === "Soon" ? Number(event.date.slice(5, 7)) <= 6 : Number(event.date.slice(5, 7)) >= 7))
       .filter((event) => state.features.every((feature) => {
@@ -3677,6 +3715,7 @@ async function setupBusinessPage() {
 async function setupMarketDashboard() {
   const root = document.querySelector("[data-market-dashboard-app]");
   if (!root) return;
+  const organizerView = root.getAttribute("data-organizer-view") || "workspace";
 
   try {
     const payload = await api("/api/market-dashboard", { method: "GET" });
@@ -3735,15 +3774,136 @@ async function setupMarketDashboard() {
       `;
     }
 
-    function render() {
+    function renderApplicationsPanel(isExpanded = false) {
+      return `
+        <div class="organizer-panel${isExpanded ? " organizer-panel-expanded" : ""}" data-organizer-tool="applications">
+          <span class="eyebrow">Vendor applications</span>
+          <h2>${isExpanded ? "Applications command center" : "Review and reply"}</h2>
+          ${isExpanded ? `<p class="muted" style="margin-top:12px;">Work through the full application queue with room for notes, quick replies, and visible decision history.</p>` : ""}
+          ${
+            state.applications.length
+              ? renderStreamList(state.applications, (application) => `
+                  <div class="atlas-stream-card">
+                    <div class="atlas-stream-main">
+                      <strong>${escapeHtml(application.vendor_name || "Vendor application")}</strong>
+                      <div class="atlas-stream-meta">${escapeHtml(application.vendor_category || application.category || "Category pending")}${application.event_name ? ` | ${escapeHtml(application.event_name)}` : ""}</div>
+                      <div class="atlas-stream-note">${escapeHtml(application.notes || "No application note yet.")}</div>
+                      <input class="mini-input" data-app-message="${application.id}" placeholder="Quick message" value="${escapeHtml(application.message || "")}" style="margin-top:10px;">
+                      ${renderApplicationThread(application)}
+                    </div>
+                    <div class="atlas-stream-aside">
+                      <span class="pill">${escapeHtml(application.status)}</span>
+                      <div class="stack-row" style="justify-content:flex-end;">
+                        <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Accepted">Accept</button>
+                        <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Rejected">Reject</button>
+                        <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Messaged">Message</button>
+                      </div>
+                    </div>
+                  </div>
+                `)
+              : `<div class="empty-state"><strong>No applications yet.</strong><p class="muted">Applications from vendors will appear here once your event is live.</p></div>`
+          }
+        </div>
+      `;
+    }
+
+    function renderAnalyticsPanel(messageCount, isExpanded = false) {
       const acceptedCount = state.applications.filter((item) => item.status === "Accepted").length;
+      return `
+        <div class="organizer-panel${isExpanded ? " organizer-panel-expanded" : ""}" data-organizer-tool="analytics">
+          <span class="eyebrow">Event analytics</span>
+          <h2>${isExpanded ? "Organizer analytics overview" : "Performance at a glance"}</h2>
+          ${renderMetricGrid([
+            { label: "Listing views", value: String(analytics.views || 0) },
+            { label: "Applications", value: String(state.applications.length || analytics.applications || 0) },
+            { label: "Accepted vendors", value: String(acceptedCount || analytics.accepted_vendors || 0), tone: "profit" },
+            { label: "Active conversations", value: String(messageCount) },
+            { label: "Active events", value: String(state.events.length || analytics.active_events || 0) },
+            { label: "Avg views / event", value: String(state.events.length ? Math.round((analytics.views || 0) / state.events.length) : 0) },
+          ])}
+          <p class="muted" style="margin-top:12px;">Your strongest next step is to keep applications moving fast and make sure each event has a clear booth fee and link.</p>
+          ${
+            isExpanded
+              ? `
+                <div class="organizer-analytics-grid">
+                  <div class="organizer-panel organizer-panel-nested">
+                    <span class="eyebrow">Event momentum</span>
+                    <h3>Where the traffic is landing</h3>
+                    ${
+                      state.events.length
+                        ? renderStreamList(state.events, (event) => `
+                            <div class="atlas-stream-card compact">
+                              <div class="atlas-stream-main">
+                                <strong>${escapeHtml(event.name || "Event")}</strong>
+                                <div class="atlas-stream-meta">${escapeHtml([event.city, event.state].filter(Boolean).join(", "))}${event.date ? ` | ${escapeHtml(event.date)}` : ""}</div>
+                                <div class="atlas-stream-note">${formatMoney(event.booth_price)} booth fee | ${event.estimated_traffic || "Traffic TBD"} expected visitors</div>
+                              </div>
+                              <div class="atlas-stream-aside">
+                                <span class="pill">${escapeHtml(event.vendor_category || "General")}</span>
+                              </div>
+                            </div>
+                          `)
+                        : `<div class="empty-state"><strong>No events yet.</strong><p class="muted">Create an event to start collecting analytics.</p></div>`
+                    }
+                  </div>
+                  <div class="organizer-panel organizer-panel-nested">
+                    <span class="eyebrow">What to watch</span>
+                    <h3>Healthy organizer signals</h3>
+                    ${renderHighlightCard("Volume vs quality", "Applications should rise alongside accepted vendors, not just raw listing views.")}
+                    ${renderHighlightCard("Response speed", "If conversation count is climbing but accepted vendors are flat, the review queue may need attention.")}
+                    ${renderHighlightCard("Listing clarity", "Events with clear booth fees and application links are easier for vendors to trust and act on.")}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+      `;
+    }
+
+    function render() {
       const messageCount = state.applications.filter((item) => item.message).length;
       const organizerTiles = renderMetricGrid([
         { label: "Active events", value: String(state.events.length || analytics.active_events || 0) },
         { label: "Applications", value: String(state.applications.length || analytics.applications || 0) },
-        { label: "Accepted", value: String(acceptedCount || analytics.accepted_vendors || 0), tone: "profit" },
+        { label: "Accepted", value: String(state.applications.filter((item) => item.status === "Accepted").length || analytics.accepted_vendors || 0), tone: "profit" },
         { label: "Listing views", value: String(analytics.views || 0) },
       ]);
+      if (organizerView === "applications") {
+        root.innerHTML = `
+          <div class="organizer-shell organizer-detail-shell">
+            <div class="organizer-toolbar">
+              <div>
+                <div class="organizer-kicker">Applications workspace</div>
+                <strong>Review vendors, send replies, and keep decisions moving.</strong>
+              </div>
+              <div class="organizer-chip-row">
+                <span class="organizer-chip">${state.applications.length || analytics.applications || 0} applications</span>
+                <span class="organizer-chip">${messageCount} active threads</span>
+                <span class="organizer-chip">${state.events.length || analytics.active_events || 0} live listings</span>
+              </div>
+            </div>
+            ${renderApplicationsPanel(true)}
+          </div>
+        `;
+      } else if (organizerView === "analytics") {
+        root.innerHTML = `
+          <div class="organizer-shell organizer-detail-shell">
+            <div class="organizer-toolbar">
+              <div>
+                <div class="organizer-kicker">Analytics workspace</div>
+                <strong>See how your listings and application pipeline are performing.</strong>
+              </div>
+              <div class="organizer-chip-row">
+                <span class="organizer-chip">${analytics.views || 0} listing views</span>
+                <span class="organizer-chip">${state.applications.length || analytics.applications || 0} applications</span>
+                <span class="organizer-chip">${state.events.length || analytics.active_events || 0} active events</span>
+              </div>
+            </div>
+            ${renderAnalyticsPanel(messageCount, true)}
+          </div>
+        `;
+      } else {
       root.innerHTML = `
         <div class="organizer-shell">
           <div class="organizer-toolbar">
@@ -3775,22 +3935,20 @@ async function setupMarketDashboard() {
               <div class="tool-card">
                 <strong>Create and edit events</strong>
                 <p class="muted">Publish a new market or update an existing one without leaving this dashboard.</p>
-                <div class="stack-row">
-                  <button class="btn btn-primary" type="button" data-jump-tool="create">Open event form</button>
-                </div>
+                <p class="muted" style="margin-top:12px;">The event form is part of this workspace just below, so you can start editing immediately without another click.</p>
               </div>
               <div class="tool-card">
                 <strong>Review applications</strong>
                 <p class="muted">Accept, reject, and message vendors with a visible thread attached to each application.</p>
                 <div class="stack-row">
-                  <button class="btn btn-primary" type="button" data-jump-tool="applications">Open applications</button>
+                  <a class="btn btn-primary" href="/market-applications">Open applications</a>
                 </div>
               </div>
               <div class="tool-card">
                 <strong>Watch listing health</strong>
                 <p class="muted">See views, accepted vendors, and application volume without jumping into vendor-facing tools.</p>
                 <div class="stack-row">
-                  <button class="btn btn-primary" type="button" data-jump-tool="analytics">Open analytics</button>
+                  <a class="btn btn-primary" href="/market-analytics">Open analytics</a>
                 </div>
               </div>
               <div class="tool-card">
@@ -3853,48 +4011,13 @@ async function setupMarketDashboard() {
             </div>
 
             <div class="organizer-column">
-              <div class="organizer-panel" data-organizer-tool="applications">
-            <span class="eyebrow">Vendor applications</span>
-            <h2>Review and reply</h2>
-            ${
-              state.applications.length
-                ? renderStreamList(state.applications, (application) => `
-                    <div class="atlas-stream-card">
-                      <div class="atlas-stream-main">
-                        <strong>${escapeHtml(application.vendor_name || "Vendor application")}</strong>
-                        <div class="atlas-stream-meta">${escapeHtml(application.vendor_category || application.category || "Category pending")}${application.event_name ? ` | ${escapeHtml(application.event_name)}` : ""}</div>
-                        <div class="atlas-stream-note">${escapeHtml(application.notes || "No application note yet.")}</div>
-                        <input class="mini-input" data-app-message="${application.id}" placeholder="Quick message" value="${escapeHtml(application.message || "")}" style="margin-top:10px;">
-                        ${renderApplicationThread(application)}
-                      </div>
-                      <div class="atlas-stream-aside">
-                        <span class="pill">${escapeHtml(application.status)}</span>
-                        <div class="stack-row" style="justify-content:flex-end;">
-                          <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Accepted">Accept</button>
-                          <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Rejected">Reject</button>
-                          <button class="btn btn-secondary" type="button" data-app-action="${application.id}:Messaged">Message</button>
-                        </div>
-                      </div>
-                    </div>
-                  `)
-                : `<div class="empty-state"><strong>No applications yet.</strong><p class="muted">Applications from vendors will appear here once your event is live.</p></div>`
-            }
-              </div>
-
-              <div class="organizer-panel" data-organizer-tool="analytics">
-            <span class="eyebrow">Event analytics</span>
-            <h2>Performance at a glance</h2>
-            ${renderMetricGrid([
-              { label: "Listing views", value: String(analytics.views || 0) },
-              { label: "Active conversations", value: String(messageCount) },
-              { label: "Avg views / event", value: String(state.events.length ? Math.round((analytics.views || 0) / state.events.length) : 0) },
-            ])}
-            <p class="muted" style="margin-top:12px;">Your strongest next step is to keep applications moving fast and make sure each event has a clear booth fee and link.</p>
-              </div>
+              ${renderApplicationsPanel(false)}
+              ${renderAnalyticsPanel(messageCount, false)}
             </div>
           </div>
         </div>
       `;
+      }
 
       root.querySelector("[data-market-event-form]")?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -3947,14 +4070,6 @@ async function setupMarketDashboard() {
           if (!application) return;
           application.message = input.value || "";
           setOrganizerApplicationState(Object.fromEntries(state.applications.map((item) => [item.id, item])));
-        });
-      });
-
-      root.querySelectorAll("[data-jump-tool]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const target = button.getAttribute("data-jump-tool");
-          const section = root.querySelector(`[data-organizer-tool="${target}"]`);
-          section?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
       });
 
