@@ -383,6 +383,57 @@ def is_member(group_id: str, user_id: str) -> bool:
         conn.close()
 
 
+def get_room_preview(event_name: str) -> dict[str, Any] | None:
+    """Find an event_room whose name shares keywords with event_name, return live preview."""
+    if not event_name:
+        return None
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM community_groups WHERE type = 'event_room' ORDER BY member_count DESC"
+        ).fetchall()
+        # keyword overlap: significant words (>3 chars) shared between event_name and group name
+        keywords = {w.lower() for w in event_name.split() if len(w) > 3}
+        best = None
+        for row in rows:
+            group_words = {w.lower() for w in (row["name"] or "").split() if len(w) > 3}
+            if keywords & group_words:
+                best = _row(row)
+                break
+        if not best:
+            return None
+        # default channel first, else first channel
+        ch = conn.execute(
+            "SELECT * FROM community_channels WHERE group_id = ? ORDER BY is_default DESC, created_at ASC LIMIT 1",
+            (best["id"],),
+        ).fetchone()
+        if not ch:
+            return None
+        # last 2 messages for preview
+        msgs = conn.execute(
+            "SELECT * FROM community_messages WHERE channel_id = ? ORDER BY created_at DESC LIMIT 2",
+            (ch["id"],),
+        ).fetchall()
+        msg_count = conn.execute(
+            "SELECT COUNT(*) as c FROM community_messages WHERE channel_id = ?", (ch["id"],)
+        ).fetchone()
+        active = max(3, min(best["member_count"], best["member_count"] // 7 + 1))
+        return {
+            "group_id": best["id"],
+            "group_name": best["name"],
+            "group_icon": best["icon"] or "🏘️",
+            "group_type": best["type"],
+            "member_count": best["member_count"],
+            "active_count": active,
+            "channel_id": ch["id"],
+            "channel_name": ch["name"],
+            "message_count": msg_count["c"] if msg_count else 0,
+            "last_messages": list(reversed([{k: r[k] for k in r.keys()} for r in msgs])),
+        }
+    finally:
+        conn.close()
+
+
 def list_user_groups(user_id: str) -> list[dict[str, Any]]:
     conn = _connect()
     try:

@@ -95,6 +95,7 @@ from storage_community import (
     leave_group,
     is_member,
     list_user_groups,
+    get_room_preview,
 )
 from storage_feed import (
     init_feed_db,
@@ -3133,6 +3134,16 @@ def create_app() -> FastAPI:
     async def handle_vendor_followers(vendor_id: str) -> JSONResponse:
         followers = get_follower_user_ids_for_vendor(vendor_id)
         return JSONResponse({"ok": True, "count": len(followers)})
+
+    # ── COMMUNITY — room preview (feed integration) ───────────────────────────
+
+    @app.get("/api/community/rooms/preview")
+    async def handle_room_preview(request: Request) -> JSONResponse:
+        event_name = request.query_params.get("event_name", "").strip()
+        if not event_name:
+            return JSONResponse({"ok": False, "room": None})
+        room = get_room_preview(event_name)
+        return JSONResponse({"ok": True, "room": room})
 
     # ── COMMUNITY — groups ────────────────────────────────────────────────────
 
