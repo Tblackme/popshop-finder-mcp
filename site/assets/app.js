@@ -5109,12 +5109,71 @@ function setupBugReport() {
   });
 }
 
+function setupAdminPanel(auth) {
+  const role = auth?.user?.role || "";
+  if (!["vendor", "market"].includes(role)) return;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Admin";
+  btn.style.cssText = "position:fixed;bottom:18px;right:130px;z-index:9999;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);color:var(--muted,#64748b);font-size:.78rem;padding:6px 12px;border-radius:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);";
+  document.body.appendChild(btn);
+
+  const panel = document.createElement("div");
+  panel.style.cssText = "display:none;position:fixed;bottom:56px;right:120px;z-index:10000;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:16px;min-width:220px;box-shadow:0 4px 20px rgba(0,0,0,.15);";
+  panel.innerHTML = `
+    <p style="margin:0 0 10px;font-size:.8rem;font-weight:600;color:var(--muted,#64748b);text-transform:uppercase;letter-spacing:.05em;">Admin tools</p>
+    <button id="admin-clear-events" class="btn btn-secondary" style="width:100%;font-size:.83rem;">Clear discovered events</button>
+    <button id="admin-view-feedback" class="btn btn-secondary" style="width:100%;font-size:.83rem;margin-top:8px;">View bug reports</button>
+  `;
+  document.body.appendChild(panel);
+
+  btn.addEventListener("click", () => {
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  });
+  document.addEventListener("click", (e) => {
+    if (!panel.contains(e.target) && e.target !== btn) panel.style.display = "none";
+  });
+
+  panel.querySelector("#admin-clear-events").addEventListener("click", async () => {
+    if (!confirm("Delete all discovered (pipeline) events from the DB?")) return;
+    const el = panel.querySelector("#admin-clear-events");
+    el.disabled = true; el.textContent = "Clearing…";
+    try {
+      const r = await fetch("/api/admin/events/discovered", { method: "DELETE", credentials: "include" });
+      const d = await r.json();
+      if (d.ok) showToast(`Cleared ${d.deleted} discovered events.`, "success");
+      else showToast(d.error || "Failed to clear.", "error");
+    } catch (_) { showToast("Network error.", "error"); }
+    el.disabled = false; el.textContent = "Clear discovered events";
+    panel.style.display = "none";
+  });
+
+  panel.querySelector("#admin-view-feedback").addEventListener("click", async () => {
+    const el = panel.querySelector("#admin-view-feedback");
+    el.disabled = true; el.textContent = "Loading…";
+    try {
+      const r = await fetch("/api/feedback", { credentials: "include" });
+      const d = await r.json();
+      const items = d.feedback || [];
+      if (!items.length) { showToast("No bug reports yet.", "success"); }
+      else {
+        const txt = items.map((f) => `[${new Date(f.created_at * 1000).toLocaleDateString()}] ${f.user_email || "anonymous"}\n${f.page_url}\n${f.message}`).join("\n\n---\n\n");
+        const win = window.open("", "_blank");
+        if (win) { win.document.write(`<pre style="font-family:monospace;padding:20px;white-space:pre-wrap;">${txt.replace(/</g, "&lt;")}</pre>`); }
+        else { alert(txt); }
+      }
+    } catch (_) { showToast("Failed to load reports.", "error"); }
+    el.disabled = false; el.textContent = "View bug reports";
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   setupMobileNav();
   setupVendorScenarios();
   setupBugReport();
 
   const auth = await getAuthState();
+  setupAdminPanel(auth);
   renderAuthNav(auth);
   syncHomepageRoleEntryLinks(auth);
 
