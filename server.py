@@ -1421,7 +1421,14 @@ def create_app() -> FastAPI:
     def serve_page(filename: str) -> Response:
         page_path = site_dir / filename
         if page_path.exists():
-            return FileResponse(page_path)
+            return FileResponse(
+                page_path,
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
         return JSONResponse(
             {
                 "service": SERVER_INFO["name"],

@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Organizer Dashboard | Vendor Atlas</title>
+  <title>Organizer Analytics | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
-<body class="organizer-page">
+<body class="organizer-page organizer-detail-page">
   <header class="topbar">
     <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
       <nav class="nav-links">
         <a href="/">Home</a>
-        <a class="active" href="/market-dashboard">Organizer</a>
-        <a href="/discover">Discover</a>
+        <a href="/market-dashboard">Organizer</a>
+        <a class="active" href="/market-analytics">Analytics</a>
       </nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
@@ -21,7 +21,7 @@
     <div class="container mobile-drawer" data-mobile-drawer>
       <a href="/">Home</a>
       <a href="/market-dashboard">Organizer</a>
-      <a href="/discover">Discover</a>
+      <a href="/market-analytics">Analytics</a>
       <div data-mobile-auth-nav></div>
     </div>
   </header>
@@ -29,18 +29,18 @@
   <main>
     <section class="page-hero">
       <div class="container organizer-hero">
-        <span class="eyebrow">Market organizer</span>
-        <h1>Run your events with one clear control panel.</h1>
-        <p>Create events, review vendor applications, and keep an eye on turnout signals without digging through scattered tools.</p>
+        <span class="eyebrow">Organizer analytics</span>
+        <h1>Watch event performance on a page built for the numbers.</h1>
+        <p>Track listing views, applications, acceptance volume, and event momentum without squeezing the data into a side panel.</p>
         <div class="stack-row" style="margin-top:18px;">
+          <a class="btn btn-secondary" href="/market-dashboard">Back to workspace</a>
           <a class="btn btn-primary" href="/market-applications">Open applications</a>
-          <a class="btn btn-secondary" href="/discover">Preview public event view</a>
         </div>
       </div>
     </section>
     <section>
-      <div class="container" id="organizer-workspace" data-market-dashboard-app>
-        <div class="empty-state"><strong>Loading your organizer dashboard…</strong></div>
+      <div class="container" data-market-dashboard-app data-organizer-view="analytics">
+        <div class="empty-state"><strong>Loading organizer analytics…</strong></div>
       </div>
     </section>
   </main>
