@@ -387,6 +387,11 @@
     </div>
   </header>
 
+  <!-- DEBUG BANNER — remove after confirming feed renders -->
+  <div id="feed-debug-banner" style="background:#fef3c7;border:2px solid #f59e0b;color:#92400e;font-family:monospace;font-size:0.78rem;padding:8px 16px;text-align:center;position:relative;z-index:500;">
+    ⚡ feed.html v2 loaded — JS running…
+  </div>
+
   <div class="container" style="padding-top: 8px;">
     <!-- Filter chips -->
     <div class="va-filter-bar" id="filterBar">
@@ -495,8 +500,14 @@
       if (currentTag) url += '&tag=' + encodeURIComponent(currentTag);
 
       fetch(url, { credentials: 'include' })
-        .then(function(r){ return r.json(); })
+        .then(function(r){
+          var dbg = document.getElementById('feed-debug-banner');
+          if (dbg) dbg.textContent = '⚡ feed.html v2 — API ' + r.status + ' from ' + url;
+          return r.json();
+        })
         .then(function(data) {
+          var dbg = document.getElementById('feed-debug-banner');
+          if (dbg) dbg.textContent = '⚡ feed.html v2 — posts:' + (data.posts||[]).length + ' items:' + (data.items||[]).length + ' ok:' + data.ok;
           if (reset) list.innerHTML = '';
           var posts = data.posts || [];
           if (!posts.length && currentOffset === 0) {
@@ -511,7 +522,10 @@
           }
           if (currentOffset === PAGE) loadSidebar(data.posts || []);
         })
-        .catch(function(){
+        .catch(function(err){
+          var dbg = document.getElementById('feed-debug-banner');
+          if (dbg) dbg.style.background = '#fee2e2';
+          if (dbg) dbg.textContent = '⚡ feed.html v2 — FETCH ERROR: ' + (err && err.message || err);
           if (currentOffset === 0) list.innerHTML = '<div class="va-feed-empty"><div class="icon">⚠️</div><strong>Could not load feed.</strong><p>Refresh to try again.</p></div>';
         })
         .finally(function(){ loading = false; });

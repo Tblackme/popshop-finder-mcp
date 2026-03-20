@@ -38,6 +38,17 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
+
+class _NoCacheStaticFiles(StaticFiles):  # type: ignore[misc]
+    """StaticFiles that disables browser caching so UI changes appear immediately."""
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
 from billing import BillingConfig, UsageTracker, create_billing_middleware
 from config import get_config
 from db_runtime import backend_summary
@@ -1413,10 +1424,10 @@ def create_app() -> FastAPI:
         )
 
     if site_dir.exists():
-        app.mount("/site", StaticFiles(directory=site_dir), name="site")
+        app.mount("/site", _NoCacheStaticFiles(directory=site_dir), name="site")
         assets_dir = site_dir / "assets"
         if assets_dir.exists():
-            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+            app.mount("/assets", _NoCacheStaticFiles(directory=assets_dir), name="assets")
 
     def serve_page(filename: str) -> Response:
         page_path = site_dir / filename
@@ -1473,6 +1484,11 @@ def create_app() -> FastAPI:
 
     @app.get("/shop/{username}")
     async def handle_vendor_shop_page(username: str) -> Response:
+        return serve_page("vendor-shop.html")
+
+    @app.get("/vendor-shop")
+    async def handle_vendor_shop_query_page() -> Response:
+        # Feed links use /vendor-shop?u=username (query param style)
         return serve_page("vendor-shop.html")
 
     @app.get("/api/users/{username}")
