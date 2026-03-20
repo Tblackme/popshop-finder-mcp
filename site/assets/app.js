@@ -4546,7 +4546,9 @@ async function setupIntegrationsPage() {
     showToast("Shopify connected successfully!", "success");
     window.history.replaceState({}, "", window.location.pathname);
   } else if (shopifyParam === "error") {
-    showToast("Shopify connection failed. Please try again.", "error");
+    const reason = new URLSearchParams(window.location.search).get("reason") || "";
+    const msgs = { state: "Session expired — please sign out and sign back in, then try again.", hmac: "Security check failed — make sure your Shopify API credentials are correct.", token: "Shopify rejected the connection — check your app credentials.", missing: "Shopify didn't send the required info. Please try again." };
+    showToast(msgs[reason] || "Shopify connection failed. Please try again.", "error");
     window.history.replaceState({}, "", window.location.pathname);
   }
 }

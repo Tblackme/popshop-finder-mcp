@@ -2589,11 +2589,16 @@ def create_app() -> FastAPI:
     ) -> Response:
         config = get_config()
         user_id = _shopify_state_decode(state, config.session_secret)
-        if not user_id or not code or not shop:
-            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
+        if not user_id:
+            logger.warning("Shopify callback: state decode failed (bad state or session_secret mismatch)")
+            return RedirectResponse(url="/integrations?shopify=error&reason=state", status_code=302)
+        if not code or not shop:
+            logger.warning("Shopify callback: missing code=%r shop=%r", code, shop)
+            return RedirectResponse(url="/integrations?shopify=error&reason=missing", status_code=302)
         query = dict(request.query_params)
         if not verify_hmac(query, config.shopify_api_secret):
-            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
+            logger.warning("Shopify callback: HMAC verification failed for shop=%r", shop)
+            return RedirectResponse(url="/integrations?shopify=error&reason=hmac", status_code=302)
         try:
             token_data = exchange_code_for_token(
                 shop,
@@ -2603,10 +2608,11 @@ def create_app() -> FastAPI:
             )
         except Exception as e:
             logger.exception("Shopify token exchange failed: %s", e)
-            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
+            return RedirectResponse(url="/integrations?shopify=error&reason=token", status_code=302)
         access_token = token_data.get("access_token")
         if not access_token:
-            return RedirectResponse(url="/integrations?shopify=error", status_code=302)
+            logger.warning("Shopify callback: no access_token in response for shop=%r", shop)
+            return RedirectResponse(url="/integrations?shopify=error&reason=no_token", status_code=302)
         set_shopify_connection(user_id, shop, access_token)
         try:
             products = products_with_inventory(shop, access_token, limit=250)
