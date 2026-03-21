@@ -1340,7 +1340,8 @@
     .then(function(d){
       if (d && d.user) {
         currentUser = d.user;
-        headerAuth.innerHTML = '<a href="/dashboard" style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.7);padding:5px 0;">@'+esc(d.user.username||d.user.email||'me')+'</a>';
+        var dashPath = d.user.role === 'market' ? '/market-dashboard' : d.user.role === 'shopper' ? '/shopper-dashboard' : '/dashboard';
+        headerAuth.innerHTML = '<a href="'+dashPath+'" style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.7);padding:5px 0;">@'+esc(d.user.username||d.user.email||'me')+'</a>';
         Promise.all([
           fetch('/api/feed/my-likes',{credentials:'include'}).then(function(r){return r.json();}).catch(function(){return {};}),
           fetch('/api/feed/my-saves',{credentials:'include'}).then(function(r){return r.json();}).catch(function(){return {};})
