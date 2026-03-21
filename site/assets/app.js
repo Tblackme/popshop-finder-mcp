@@ -5220,8 +5220,11 @@ function setupAdminPanel(auth) {
   panel.querySelector("#admin-view-feedback").addEventListener("click", async () => {
     const el = panel.querySelector("#admin-view-feedback");
     el.disabled = true; el.textContent = "Loading…";
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 10000);
     try {
-      const r = await fetch("/api/feedback", { credentials: "include" });
+      const r = await fetch("/api/feedback", { credentials: "include", signal: abort.signal });
+      clearTimeout(timer);
       if (!r.ok) { showToast("Not authorized to view reports.", "error"); el.disabled = false; el.textContent = "View bug reports"; return; }
       const d = await r.json();
       const items = d.feedback || [];
@@ -5247,7 +5250,11 @@ function setupAdminPanel(auth) {
       const closeViewer = () => { viewer.remove(); el.disabled = false; el.textContent = "View bug reports"; };
       viewer.querySelector("#_feedback-close").addEventListener("click", closeViewer);
       viewer.addEventListener("click", (e) => { if (e.target === viewer) closeViewer(); });
-    } catch (_) { showToast("Failed to load reports.", "error"); el.disabled = false; el.textContent = "View bug reports"; }
+    } catch (err) {
+      clearTimeout(timer);
+      const msg = err && err.name === "AbortError" ? "Request timed out. Try again." : "Failed to load reports.";
+      showToast(msg, "error"); el.disabled = false; el.textContent = "View bug reports";
+    }
   });
 }
 
