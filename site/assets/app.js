@@ -5220,13 +5220,13 @@ function setupAdminPanel(auth) {
   panel.querySelector("#admin-view-feedback").addEventListener("click", async () => {
     const el = panel.querySelector("#admin-view-feedback");
     el.disabled = true; el.textContent = "Loading…";
-    panel.style.display = "none";
     try {
       const r = await fetch("/api/feedback", { credentials: "include" });
-      if (!r.ok) { showToast("Not authorized to view reports.", "error"); return; }
+      if (!r.ok) { showToast("Not authorized to view reports.", "error"); el.disabled = false; el.textContent = "View bug reports"; return; }
       const d = await r.json();
       const items = d.feedback || [];
-      if (!items.length) { showToast("No bug reports yet.", "success"); return; }
+      if (!items.length) { showToast("No bug reports submitted yet.", "success"); el.disabled = false; el.textContent = "View bug reports"; return; }
+      panel.style.display = "none";
       const existing = document.getElementById("_feedback-viewer");
       if (existing) existing.remove();
       const viewer = document.createElement("div");
@@ -5244,10 +5244,10 @@ function setupAdminPanel(auth) {
         `<button id="_feedback-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted,#64748b);">✕</button></div>` +
         inner + `</div>`;
       document.body.appendChild(viewer);
-      viewer.querySelector("#_feedback-close").addEventListener("click", () => viewer.remove());
-      viewer.addEventListener("click", (e) => { if (e.target === viewer) viewer.remove(); });
-    } catch (_) { showToast("Failed to load reports.", "error"); }
-    el.disabled = false; el.textContent = "View bug reports";
+      const closeViewer = () => { viewer.remove(); el.disabled = false; el.textContent = "View bug reports"; };
+      viewer.querySelector("#_feedback-close").addEventListener("click", closeViewer);
+      viewer.addEventListener("click", (e) => { if (e.target === viewer) closeViewer(); });
+    } catch (_) { showToast("Failed to load reports.", "error"); el.disabled = false; el.textContent = "View bug reports"; }
   });
 }
 
