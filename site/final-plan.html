@@ -331,6 +331,8 @@
       if (meRes.ok) me = await meRes.json();
     } catch (_) {}
 
+    if (me?.role === "shopper") { window.location.href = "/shopper-dashboard"; return; }
+
     if (me) {
       const [dashRes, statsRes] = await Promise.all([
         fetch("/api/dashboard", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),

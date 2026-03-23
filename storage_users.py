@@ -597,6 +597,48 @@ def get_rsvped_events_for_user(user_id: int) -> list[dict[str, Any]]:
     ]
 
 
+def get_rsvp_count(event_id: str) -> int:
+    """Return total RSVP count for an event."""
+    init_users_db()
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM shopper_rsvps WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        return int(row["c"]) if row else 0
+    finally:
+        conn.close()
+
+
+def get_event_attendees(event_id: str, limit: int = 12) -> list[dict[str, Any]]:
+    """Return a preview list of attendees for an event."""
+    init_users_db()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT u.id, u.username, u.name
+            FROM shopper_rsvps sr
+            JOIN users u ON u.id = sr.user_id
+            WHERE sr.event_id = ?
+            ORDER BY sr.rsvped_at DESC
+            LIMIT ?
+            """,
+            (event_id, limit),
+        ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "username": row["username"],
+                "display_name": row["name"] or row["username"],
+            }
+            for row in rows
+        ]
+    finally:
+        conn.close()
+
+
 def _availability_from_row(row) -> dict[str, Any]:
     if not row:
         return {

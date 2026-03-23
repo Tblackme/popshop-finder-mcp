@@ -427,19 +427,73 @@ function syncHomepageRoleEntryLinks(auth) {
 function setupMobileNav() {
   const button = document.querySelector("[data-mobile-toggle]");
   const drawer = document.querySelector("[data-mobile-drawer]");
-  if (!button || !drawer) return;
+  if (button && drawer) {
+    button.addEventListener("click", () => {
+      const isOpen = drawer.classList.toggle("open");
+      document.body.classList.toggle("nav-open", isOpen);
+    });
+    drawer.addEventListener("click", (event) => {
+      if (event.target instanceof HTMLElement && event.target.tagName === "A") {
+        drawer.classList.remove("open");
+        document.body.classList.remove("nav-open");
+      }
+    });
+  }
+  injectMobileBottomNav();
+}
 
-  button.addEventListener("click", () => {
-    const isOpen = drawer.classList.toggle("open");
-    document.body.classList.toggle("nav-open", isOpen);
-  });
+function injectMobileBottomNav() {
+  // Feed page has its own full-screen mobile UI — skip
+  if (document.querySelector("#feedViewport")) return;
+  if (document.getElementById("mobile-bottom-nav")) return;
 
-  drawer.addEventListener("click", (event) => {
-    if (event.target instanceof HTMLElement && event.target.tagName === "A") {
-      drawer.classList.remove("open");
-      document.body.classList.remove("nav-open");
-    }
-  });
+  const path = location.pathname.replace(/\/$/, "") || "/";
+
+  const items = [
+    { href: "/",          icon: "🏠", label: "Home",      match: ["/"] },
+    { href: "/feed",      icon: "▶️",  label: "Feed",      match: ["/feed"] },
+    { href: "/discover",  icon: "🗺️",  label: "Discover",  match: ["/discover"] },
+    { href: "/community", icon: "💬",  label: "Community", match: ["/community", "/community-room"] },
+    { href: "/dashboard", icon: "👤",  label: "Profile",   match: [
+        "/dashboard", "/market-dashboard", "/shopper-dashboard",
+        "/my-shop", "/profile", "/shop/",
+      ]},
+  ];
+
+  const nav = document.createElement("nav");
+  nav.id = "mobile-bottom-nav";
+  nav.className = "mobile-bottom-nav";
+  nav.setAttribute("aria-label", "Main navigation");
+  nav.innerHTML = `<div class="mobile-bottom-nav-inner">${
+    items.map(item => {
+      const isActive = item.match.some(m =>
+        m === "/" ? path === "" || path === "/" : path === m || path.startsWith(m)
+      );
+      return `<a href="${item.href}" class="mobile-bottom-nav-item${isActive ? " active" : ""}">
+        <span class="mobile-bottom-nav-icon" aria-hidden="true">${item.icon}</span>
+        <span class="nav-label">${item.label}</span>
+      </a>`;
+    }).join("")
+  }</div>`;
+
+  document.body.appendChild(nav);
+
+  // Update Profile link once auth is known
+  const profileItem = nav.querySelector(`a[href="/dashboard"]`);
+  if (profileItem) {
+    getAuthState().then(auth => {
+      if (!auth || !auth.authenticated) return;
+      const role = auth.user?.role;
+      const profilePath = role === "market" ? "/market-dashboard"
+                        : role === "shopper" ? "/shopper-dashboard"
+                        : "/dashboard";
+      profileItem.href = profilePath;
+      // Re-evaluate active state after resolving role path
+      if (path === profilePath || path.startsWith(profilePath)) {
+        profileItem.classList.add("active");
+      }
+    }).catch(() => {});
+  }
 }
 
 function setupVendorScenarios() {
@@ -650,6 +704,10 @@ function bindSaveButtons() {
 async function setupMarketFinder(auth) {
   const form = document.querySelector("[data-market-search-form]");
   if (!form) return;
+  if (auth.authenticated && auth.user?.role === "shopper") {
+    window.location.href = "/discover";
+    return;
+  }
   const results = document.querySelector("[data-market-results]");
   const status = document.querySelector("[data-market-status]");
 
@@ -1702,6 +1760,7 @@ async function setupDiscoverPage(auth) {
               ${["All", "Markets", "Vintage", "Oddity", "Conventions", "Craft"].map((category) => `<button class="chip${state.eventType === category ? " active" : ""}" type="button" data-event-type="${category}">${category}</button>`).join("")}
             </div>
           </div>
+          ${auth.user?.role !== "shopper" ? `
           <div class="discover-filter-group">
             <span class="discover-filter-label">Booth fee</span>
             <div class="discover-chip-row">
@@ -1712,6 +1771,7 @@ async function setupDiscoverPage(auth) {
               ].map((item) => `<button class="chip${state.maxFee === item.value ? " active" : ""}" type="button" data-fee="${item.value}">${item.label}</button>`).join("")}
             </div>
           </div>
+          ` : ""}
           <div class="discover-filter-group">
             <span class="discover-filter-label">Timing</span>
             <div class="discover-chip-row">
@@ -1748,7 +1808,7 @@ async function setupDiscoverPage(auth) {
                       </div>
                       <h3>${event.title}</h3>
                       <p class="muted">${event.location}${event.date ? ` | ${event.date}` : ""}</p>
-                      <p class="muted">Vendor fee ${formatMoney(event.vendor_fee || 0)} | ${event.indoor_outdoor || "Mixed"} | ${event.distance_miles != null ? event.distance_miles + " mi away" : ""}</p>
+                      <p class="muted">${auth.user?.role !== "shopper" ? `Vendor fee ${formatMoney(event.vendor_fee || 0)} | ` : ""}${event.indoor_outdoor || "Mixed"} | ${event.distance_miles != null ? event.distance_miles + " mi away" : ""}</p>
                       <p class="muted">${event.fit_reason || ""}</p>
                       ${event.score_reasons?.length ? renderHighlightCard("Why it ranks here", event.score_reasons.slice(0, 2).join(" ")) : ""}
                       <div class="discover-detail-list">
@@ -1762,7 +1822,7 @@ async function setupDiscoverPage(auth) {
                           ? `
                             <div class="stack-row">
                               ${detailPath ? `<a class="btn btn-secondary" href="${detailPath}">View details</a>` : ""}
-                              <button type="button" class="btn btn-add-plan${added ? " added" : ""}" data-add-plan="${event.id}">${added ? "Added to plan" : "Add to My Plan"}</button>
+                              <button type="button" class="btn btn-add-plan${added ? " added" : ""}" data-add-plan="${event.id}">${added ? (auth.user?.role === "shopper" ? "Saved" : "Added to plan") : (auth.user?.role === "shopper" ? "Save Event" : "Add to My Plan")}</button>
                             </div>
                           `
                           : ""
@@ -1781,17 +1841,11 @@ async function setupDiscoverPage(auth) {
                   <div class="discover-map-card">
                     <div class="discover-map-header">
                       <h3>Map view</h3>
-                      <p class="muted">A simple preview of your top-ranked events.</p>
+                      <p class="muted">Interactive map of all events. Click a pin to see details.</p>
                     </div>
-                    <div class="discover-map">
-                      <div class="discover-map-grid"></div>
-                      ${scored.slice(0, 8).map((event, index) => `
-                        <div class="discover-map-pin ${event.bucket === "Best Matches" ? "recurring" : ""}" style="top:${18 + ((index * 11) % 62)}%; left:${16 + ((index * 17) % 68)}%"></div>
-                        <div class="discover-map-label" style="top:${18 + ((index * 11) % 62)}%; left:${16 + ((index * 17) % 68)}%">
-                          <strong>${event.title}</strong>
-                          <div class="mini-meta"><span class="pill">Fit ${event.fit_score}</span></div>
-                        </div>
-                      `).join("")}
+                    <div id="discover-leaflet-map" style="height:460px;border-radius:10px;overflow:hidden;"></div>
+                    <div class="discover-map-filter-hint" style="margin-top:.6rem;font-size:.78rem;color:var(--muted);">
+                      Showing all geo-tagged events · zoom and pan freely
                     </div>
                   </div>
                 </aside>
@@ -1805,6 +1859,15 @@ async function setupDiscoverPage(auth) {
         </div>
       </div>
     `;
+
+    // Initialize Leaflet discover map after DOM update
+    if (state.mapOpen && window.EventMap) {
+      setTimeout(() => {
+        if (document.getElementById("discover-leaflet-map")) {
+          window.EventMap.initDiscover("discover-leaflet-map");
+        }
+      }, 0);
+    }
 
     attachButtonPress(".btn", root);
     attachButtonPress(".chip", root);
@@ -3423,6 +3486,10 @@ async function setupDashboard() {
       fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
     const user = payload.user || {};
+    if (payload.dashboard_path && payload.dashboard_path !== "/dashboard") {
+      window.location.href = payload.dashboard_path;
+      return;
+    }
     if (welcome) {
       welcome.textContent = `Hi ${user.name || "there"}, what would you like to do today?`;
     }
@@ -3497,6 +3564,7 @@ async function setupBusinessPage() {
       fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
     ]);
     const role = payload.role || "vendor";
+    if (role === "shopper") { window.location.href = "/shopper-dashboard"; return; }
     const summary = payload.summary || {};
 
     if (role === "vendor") {
@@ -3745,6 +3813,10 @@ async function setupMarketDashboard() {
         booth_price: "",
         vendor_category: "",
         application_link: "",
+        latitude: "",
+        longitude: "",
+        location_name: "",
+        address: "",
       },
     };
 
@@ -3758,6 +3830,10 @@ async function setupMarketDashboard() {
         booth_price: "",
         vendor_category: "",
         application_link: "",
+        latitude: "",
+        longitude: "",
+        location_name: "",
+        address: "",
       };
     }
 
@@ -3826,6 +3902,7 @@ async function setupMarketDashboard() {
             { label: "Avg views / event", value: String(state.events.length ? Math.round((analytics.views || 0) / state.events.length) : 0) },
           ])}
           <p class="muted" style="margin-top:12px;">Your strongest next step is to keep applications moving fast and make sure each event has a clear booth fee and link.</p>
+          <div data-ai-organizer-insights></div>
           ${
             isExpanded
               ? `
@@ -3982,6 +4059,17 @@ async function setupMarketDashboard() {
                 <div class="field" style="flex:1;"><label for="market_event_category">Category</label><input id="market_event_category" name="vendor_category" placeholder="Craft, vintage, food" value="${escapeHtml(state.eventDraft.vendor_category || "")}"></div>
                 <div class="field" style="flex:1;"><label for="market_event_link">Application link</label><input id="market_event_link" name="application_link" placeholder="https://" value="${escapeHtml(state.eventDraft.application_link || "")}"></div>
               </div>
+              <div class="field">
+                <label>Event location <span class="muted" style="font-weight:400;">(optional — click map to pin)</span></label>
+                <div id="planner-leaflet-map" style="height:320px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-top:.4rem;"></div>
+                <div style="display:flex;gap:.5rem;margin-top:.4rem;">
+                  <input id="market_event_lat" name="latitude" type="hidden" value="${escapeHtml(String(state.eventDraft.latitude || ""))}">
+                  <input id="market_event_lng" name="longitude" type="hidden" value="${escapeHtml(String(state.eventDraft.longitude || ""))}">
+                  <input id="market_event_loc_name" name="location_name" class="mini-input" style="flex:1;" placeholder="Venue / location name" value="${escapeHtml(state.eventDraft.location_name || "")}">
+                  <input id="market_event_address" name="address" class="mini-input" style="flex:2;" placeholder="Street address" value="${escapeHtml(state.eventDraft.address || "")}">
+                </div>
+                <p class="muted" style="margin-top:.35rem;font-size:.76rem;" id="planner-map-coords">${state.eventDraft.latitude ? `📍 ${Number(state.eventDraft.latitude).toFixed(4)}, ${Number(state.eventDraft.longitude).toFixed(4)}` : "No pin set yet — click the map above to place one."}</p>
+              </div>
               <div class="stack-row">
                 <button class="btn btn-primary btn-block" type="submit">${state.editingEventId ? "Save Changes" : "Create Event"}</button>
                 ${state.editingEventId ? `<button class="btn btn-secondary" type="button" data-cancel-market-edit>Cancel</button>` : ""}
@@ -4023,6 +4111,33 @@ async function setupMarketDashboard() {
       `;
       }
 
+      // Initialize AI organizer insights (Feature 8)
+      if (typeof AI !== "undefined" && document.querySelector("[data-ai-organizer-insights]")) {
+        setTimeout(() => {
+          AI.renderOrganizerInsights(
+            "[data-ai-organizer-insights]",
+            state.events,
+            state.applications,
+          );
+        }, 0);
+      }
+
+      // Initialize planner map after DOM update (workspace view only)
+      if (organizerView !== "applications" && organizerView !== "analytics" && window.EventMap) {
+        setTimeout(() => {
+          if (document.getElementById("planner-leaflet-map")) {
+            window.EventMap.initPlanner("planner-leaflet-map", (lat, lng) => {
+              const latInput = document.getElementById("market_event_lat");
+              const lngInput = document.getElementById("market_event_lng");
+              const hint = document.getElementById("planner-map-coords");
+              if (latInput) latInput.value = lat.toFixed(6);
+              if (lngInput) lngInput.value = lng.toFixed(6);
+              if (hint) hint.textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            });
+          }
+        }, 0);
+      }
+
       root.querySelector("[data-market-event-form]")?.addEventListener("submit", async (event) => {
         event.preventDefault();
         const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
@@ -4061,6 +4176,10 @@ async function setupMarketDashboard() {
             booth_price: market.booth_price ?? "",
             vendor_category: market.vendor_category || "",
             application_link: market.application_link || "",
+            latitude: market.latitude ?? "",
+            longitude: market.longitude ?? "",
+            location_name: market.location_name || "",
+            address: market.address || "",
           };
           state.statusMessage = `Editing ${market.name || "event"}.`;
           render();
@@ -4133,6 +4252,12 @@ async function setupMarketDashboard() {
 async function setupEventHistoryPage() {
   const root = document.querySelector("[data-history-app]");
   if (!root) return;
+
+  const auth = await getAuthState();
+  if (auth.authenticated && auth.user?.role === "shopper") {
+    window.location.href = "/shopper-dashboard";
+    return;
+  }
 
   const state = {
     q: "",
@@ -4524,6 +4649,12 @@ async function setupShopperDashboard() {
 async function setupIntegrationsPage() {
   const root = document.querySelector("[data-integrations-app]");
   if (!root) return;
+
+  const auth = await getAuthState();
+  if (auth.authenticated && auth.user?.role === "shopper") {
+    window.location.href = "/shopper-dashboard";
+    return;
+  }
 
   function render(snapshot = getShopifySnapshot()) {
     const connected = Boolean(snapshot.connected);
@@ -4963,13 +5094,38 @@ async function setupEventDetailPage() {
   const auth = await getAuthState();
 
   try {
-    const payload = await api(`/api/events/${encodeURIComponent(eventId)}`, { method: "GET" });
+    const [payload, attendeesPayload] = await Promise.all([
+      api(`/api/events/${encodeURIComponent(eventId)}`, { method: "GET" }),
+      fetch(`/api/events/${encodeURIComponent(eventId)}/attendees`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : { count: 0, attendees: [] })
+        .catch(() => ({ count: 0, attendees: [] })),
+    ]);
     const event = payload.event || {};
     const related = Array.isArray(payload.related_events) ? payload.related_events : [];
     const saved = Boolean(payload.is_saved);
     const rsvped = Boolean(payload.is_rsvped);
+    const rsvpCount = typeof payload.rsvp_count === "number" ? payload.rsvp_count : (attendeesPayload.count || 0);
     const isShopper = auth.authenticated && auth.user?.role === "shopper";
     const isVendor = auth.authenticated && auth.user?.role === "vendor";
+
+    function renderAttendeesSection(count, attendees, isRsvped) {
+      if (!isShopper) return "";
+      const avatars = (attendees || []).slice(0, 8).map(a => {
+        const initials = (a.display_name || a.username || "?").slice(0, 2).toUpperCase();
+        return `<span class="rsvp-avatar" title="${escapeHtml(a.display_name || a.username)}">${escapeHtml(initials)}</span>`;
+      }).join("");
+      const extra = count > 8 ? `<span class="rsvp-avatar rsvp-avatar-more">+${count - 8}</span>` : "";
+      const countLabel = count === 0 ? "No one has RSVP\u2019d yet \u2014 be the first!" : count === 1 ? "1 person is going" : `${count} people are going`;
+      return `
+        <div class="rsvp-section" id="rsvp-section">
+          <button class="btn rsvp-btn ${isRsvped ? "rsvp-btn-going" : "rsvp-btn-default"}" type="button" data-event-rsvp data-rsvped="${isRsvped ? "1" : "0"}">
+            ${isRsvped ? "Going \u2713" : "RSVP to Attend"}
+          </button>
+          <p class="rsvp-count-text" id="rsvp-count-text">${escapeHtml(countLabel)}</p>
+          ${count > 0 ? `<div class="rsvp-attendees-row" id="rsvp-attendees-row">${avatars}${extra}</div>` : ""}
+        </div>
+      `;
+    }
 
     root.innerHTML = `
       <div class="dashboard-grid">
@@ -4978,15 +5134,14 @@ async function setupEventDetailPage() {
           <h2>${escapeHtml(event.name || "Event")}</h2>
           <p class="muted" style="margin-top:10px;">${escapeHtml([event.city, event.state].filter(Boolean).join(", "))}${event.date ? ` | ${escapeHtml(event.date)}` : ""}</p>
           <div class="mini-meta" style="margin-top:14px;">
-            ${event.fit_score ? `<span class="pill">Fit ${escapeHtml(String(event.fit_score))}</span>` : ""}
-            ${event.score_label ? `<span class="pill">${escapeHtml(event.score_label)}</span>` : ""}
-            <span class="pill">${formatMoney(event.booth_price)}</span>
+            ${event.fit_score && !isShopper ? `<span class="pill">Fit ${escapeHtml(String(event.fit_score))}</span>` : ""}
+            ${event.score_label && !isShopper ? `<span class="pill">${escapeHtml(event.score_label)}</span>` : ""}
+            ${!isShopper ? `<span class="pill">${formatMoney(event.booth_price)}</span>` : ""}
             <span class="pill">${escapeHtml(event.event_size || "unknown size")}</span>
             ${renderRecurrencePill(event.recurrence)}
           </div>
-          ${event.fit_reason ? renderHighlightCard("Why it looks promising", event.fit_reason) : ""}
-          <p class="muted" style="margin-top:14px;">Traffic: ${escapeHtml(String(event.estimated_traffic || "TBD"))} | Vendors: ${escapeHtml(String(event.vendor_count || "TBD"))}</p>
-          <p class="muted" style="margin-top:8px;">Organizer: ${escapeHtml(event.organizer_contact || "Contact details not listed yet.")}</p>
+          <p class="muted" style="margin-top:14px;">${isShopper ? `Vendors: ${escapeHtml(String(event.vendor_count || "TBD"))}` : `Traffic: ${escapeHtml(String(event.estimated_traffic || "TBD"))} | Vendors: ${escapeHtml(String(event.vendor_count || "TBD"))}`}</p>
+          ${!isShopper ? `<p class="muted" style="margin-top:8px;">Organizer: ${escapeHtml(event.organizer_contact || "Contact details not listed yet.")}</p>` : ""}
           <div class="stack-row" style="margin-top:18px;">
             ${
               auth.authenticated
@@ -4994,17 +5149,47 @@ async function setupEventDetailPage() {
                 : `<a class="btn btn-primary" href="/signup">Create Account to Save</a>`
             }
             ${
-              isShopper
-                ? `<button class="btn btn-secondary" type="button" data-event-rsvp>${rsvped ? "RSVP'd" : "RSVP"}</button>`
-                : event.application_link && isVendor
-                  ? `<a class="btn btn-secondary" href="${escapeHtml(event.application_link)}" target="_blank" rel="noreferrer">Apply to Event</a>`
-                  : ""
+              !isShopper && event.application_link && isVendor
+                ? `<a class="btn btn-secondary" href="${escapeHtml(event.application_link)}" target="_blank" rel="noreferrer">Apply to Event</a>`
+                : ""
             }
             <a class="btn btn-secondary" href="/discover">Back to Discover</a>
           </div>
+          ${renderAttendeesSection(rsvpCount, attendeesPayload.attendees, rsvped)}
         </div>
 
         <div class="dashboard-card">
+          ${isShopper ? `
+          <span class="eyebrow">About this event</span>
+          <h2>What to know before you go</h2>
+          ${renderStreamList([
+            {
+              title: "Expected attendance",
+              note: "Plan around the foot traffic estimate for a better experience.",
+              value: escapeHtml(String(event.estimated_traffic || "TBD")),
+            },
+            {
+              title: "Vendors attending",
+              note: "Browse an assortment of makers, artists, and small businesses.",
+              value: escapeHtml(String(event.vendor_count || "TBD")),
+            },
+            {
+              title: "Format",
+              note: "Indoor or outdoor — dress and plan accordingly.",
+              value: escapeHtml(event.indoor_outdoor || "TBD"),
+            },
+          ], (item) => `
+            <div class="atlas-stream-card">
+              <div class="atlas-stream-main">
+                <strong>${item.title}</strong>
+                <div class="atlas-stream-note">${item.note}</div>
+              </div>
+              <div class="atlas-stream-aside">
+                <div class="pill">${item.value}</div>
+              </div>
+            </div>
+          `)}
+          ` : `
           <span class="eyebrow">Quick fit check</span>
           <h2>What to review before applying</h2>
           ${renderStreamList([
@@ -5034,6 +5219,7 @@ async function setupEventDetailPage() {
               </div>
             </div>
           `)}
+          `}
         </div>
 
         <div class="dashboard-card">
@@ -5076,20 +5262,35 @@ async function setupEventDetailPage() {
       }
     });
     root.querySelector("[data-event-rsvp]")?.addEventListener("click", async (buttonEvent) => {
+      const btn = buttonEvent.currentTarget;
+      const currentlyRsvped = btn.dataset.rsvped === "1";
+      btn.disabled = true;
       try {
-        const currentlyRsvped = buttonEvent.currentTarget.textContent.includes("RSVP'd");
-        await api(`/api/events/${encodeURIComponent(eventId)}/rsvp`, {
+        const result = await api(`/api/events/${encodeURIComponent(eventId)}/rsvp`, {
           method: currentlyRsvped ? "DELETE" : "POST",
           body: JSON.stringify({}),
         });
-        buttonEvent.currentTarget.textContent = currentlyRsvped ? "RSVP" : "RSVP'd";
-        showToast(currentlyRsvped ? "RSVP removed" : "You're on the list", "success");
+        const newRsvped = !currentlyRsvped;
+        const newCount = typeof result.rsvp_count === "number" ? result.rsvp_count : null;
+        btn.dataset.rsvped = newRsvped ? "1" : "0";
+        btn.textContent = newRsvped ? "Going \u2713" : "RSVP to Attend";
+        btn.className = `btn rsvp-btn ${newRsvped ? "rsvp-btn-going" : "rsvp-btn-default"}`;
+        if (newCount !== null) {
+          const countEl = root.querySelector("#rsvp-count-text");
+          if (countEl) {
+            const label = newCount === 0 ? "No one has RSVP\u2019d yet \u2014 be the first!" : newCount === 1 ? "1 person is going" : `${newCount} people are going`;
+            countEl.textContent = label;
+          }
+        }
+        showToast(currentlyRsvped ? "RSVP removed" : "You\u2019re on the list!", "success");
       } catch (error) {
         if (error.status === 401) {
           window.location.href = "/signup";
           return;
         }
         showToast(error.message || "We couldn't update your RSVP right now.", "error");
+      } finally {
+        btn.disabled = false;
       }
     });
     attachButtonPress(".btn", root);
@@ -5258,6 +5459,320 @@ function setupAdminPanel(auth) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Profit Dashboard
+// ---------------------------------------------------------------------------
+
+function _profitFmt(n) {
+  const v = Number(n || 0);
+  return v < 0 ? "-$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "$" + v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function _renderProfitCards(cards) {
+  return `<div class="profit-cards">${cards.map(c => `
+    <div class="profit-card">
+      <div class="pc-label">${escapeHtml(c.label)}</div>
+      <div class="pc-value${c.tone ? " " + c.tone : ""}">${escapeHtml(String(c.value))}</div>
+      ${c.sub ? `<div class="pc-sub">${escapeHtml(c.sub)}</div>` : ""}
+    </div>`).join("")}</div>`;
+}
+
+function _renderBarChart(chartData) {
+  if (!chartData || !chartData.length) {
+    return `<div class="chart-empty">No data for this period yet.</div>`;
+  }
+  const max = Math.max(...chartData.map(d => Number(d.revenue || 0)), 1);
+  const bars = chartData.map(d => {
+    const pct = Math.round((Number(d.revenue || 0) / max) * 120);
+    const lbl = (d.label || d.date || "").slice(0, 12);
+    return `<div class="chart-bar-col">
+      <div class="chart-bar" style="height:${Math.max(pct, 3)}px" title="${escapeHtml(d.label || "")} — ${_profitFmt(d.revenue)}"></div>
+      <div class="chart-bar-label">${escapeHtml(lbl)}</div>
+    </div>`;
+  }).join("");
+  return `<div class="chart-wrap"><div class="chart-bars">${bars}</div></div>`;
+}
+
+function _renderProfitTable(columns, rows, emptyMsg) {
+  if (!rows || !rows.length) {
+    return `<div class="empty-state"><strong>${emptyMsg || "No data yet."}</strong></div>`;
+  }
+  const head = columns.map(c => `<th class="${c.num ? "num" : ""}">${escapeHtml(c.label)}</th>`).join("");
+  const body = rows.map(row => {
+    const cells = columns.map(c => {
+      const val = c.render ? c.render(row) : escapeHtml(String(row[c.key] ?? ""));
+      return `<td class="${c.num ? "num" : ""}">${val}</td>`;
+    }).join("");
+    return `<tr>${cells}</tr>`;
+  }).join("");
+  return `<table class="profit-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+async function setupProfitPage() {
+  const root = document.querySelector("[data-profit-app]");
+  if (!root) return;
+
+  const auth = await getAuthState();
+  if (!auth.authenticated) {
+    window.location.href = "/signin?next=/profit";
+    return;
+  }
+  const role = auth.user?.role || "vendor";
+
+  // Update nav dashboard link based on role
+  const navLink = document.getElementById("nav-dashboard-link");
+  const mobileNavLink = document.getElementById("mobile-nav-dashboard-link");
+  const dashPath = role === "market" ? "/market-dashboard" : role === "shopper" ? "/shopper-dashboard" : "/dashboard";
+  if (navLink) { navLink.href = dashPath; navLink.textContent = role === "market" ? "Organizer" : role === "shopper" ? "Shopper" : "Dashboard"; }
+  if (mobileNavLink) { mobileNavLink.href = dashPath; mobileNavLink.textContent = navLink ? navLink.textContent : "Dashboard"; }
+
+  if (role === "shopper") {
+    window.location.href = "/shopper-dashboard";
+    return;
+  } else if (role === "vendor") {
+    await _setupVendorProfitDashboard(root);
+  } else if (role === "market") {
+    await _setupOrganizerProfitDashboard(root);
+  } else {
+    root.innerHTML = `<div class="empty-state"><strong>Profit dashboard is available for vendors and organizers.</strong><p class="muted"><a href="/signup">Create a vendor or organizer account</a> to access this dashboard.</p></div>`;
+  }
+}
+
+async function _setupVendorProfitDashboard(root) {
+  const titleEl = document.getElementById("profit-title");
+  const eyebrowEl = document.getElementById("profit-eyebrow");
+  const subtitleEl = document.getElementById("profit-subtitle");
+  if (eyebrowEl) eyebrowEl.textContent = "Vendor profit dashboard";
+  if (titleEl) titleEl.textContent = "Your revenue and market performance";
+  if (subtitleEl) subtitleEl.textContent = "Track what's selling, which events deliver, and where your money goes.";
+
+  root.innerHTML = `<div class="empty-state"><strong>Loading vendor data…</strong></div>`;
+
+  let period = "30d";
+
+  async function render() {
+    const [revData, prodData, evtData] = await Promise.all([
+      api(`/api/vendor/revenue?period=${period}`).catch(() => ({})),
+      api("/api/vendor/product-performance").catch(() => ({})),
+      api("/api/vendor/event-performance").catch(() => ({})),
+    ]);
+
+    const summary = revData.summary || {};
+    const chart = Array.isArray(revData.chart) ? revData.chart : [];
+    const products = Array.isArray(prodData.products) ? prodData.products : [];
+    const events = Array.isArray(evtData.events) ? evtData.events : [];
+
+    const summaryCards = _renderProfitCards([
+      { label: "Total Revenue", value: _profitFmt(summary.total_revenue), tone: "profit" },
+      { label: "Period Revenue", value: _profitFmt(summary.monthly_revenue), sub: period === "year" ? "This year" : `Last ${period}` },
+      { label: "Total Orders", value: String(summary.total_orders || 0) },
+      { label: "Avg Order Value", value: _profitFmt(summary.avg_order_value) },
+      { label: "Markets Attended", value: String(summary.markets_attended || 0) },
+    ]);
+
+    const periodTabs = `<div class="period-tabs" id="vendor-period-tabs">
+      ${["7d","30d","90d","year"].map(p => `<button class="period-tab${p === period ? " active" : ""}" data-period="${p}">${p === "year" ? "This year" : "Last " + p}</button>`).join("")}
+    </div>`;
+
+    // Product sort state
+    let prodSort = "revenue";
+    const sortedProducts = (by) => [...products].sort((a, b) => Number(b[by] || 0) - Number(a[by] || 0));
+
+    const prodTableHTML = (by) => _renderProfitTable(
+      [
+        { label: "Product", key: "name" },
+        { label: "Units Sold", key: "units_sold", num: true },
+        { label: "Revenue", key: "revenue", num: true, render: r => _profitFmt(r.revenue) },
+        { label: "Conv. Rate", key: "conversion_rate", num: true, render: r => (Number(r.conversion_rate || 0) * 100).toFixed(0) + "%" },
+      ],
+      sortedProducts(by),
+      "No product data yet.",
+    );
+
+    const evtTableHTML = _renderProfitTable(
+      [
+        { label: "Event", key: "event_title" },
+        { label: "Date", key: "start_date" },
+        { label: "Revenue", key: "revenue", num: true, render: r => _profitFmt(r.revenue) },
+        { label: "Expenses", key: "expenses", num: true, render: r => _profitFmt(r.expenses) },
+        { label: "Fee", key: "vendor_fee", num: true, render: r => _profitFmt(r.vendor_fee) },
+        { label: "Profit", key: "profit", num: true, render: r => `<span class="${Number(r.profit||0) >= 0 ? "profit-green" : "profit-red"}">${_profitFmt(r.profit)}</span>` },
+      ],
+      events,
+      "No event performance data yet.",
+    );
+
+    // Insights
+    const bestProd = products.length ? [...products].sort((a,b) => b.revenue - a.revenue)[0] : null;
+    const bestEvt = events.length ? [...events].sort((a,b) => b.profit - a.profit)[0] : null;
+    const insights = [
+      bestProd ? { icon: "🏆", title: "Best selling product", sub: `${bestProd.name} — ${_profitFmt(bestProd.revenue)} revenue, ${bestProd.units_sold} units sold` } : null,
+      bestEvt ? { icon: "📍", title: "Most profitable event", sub: `${bestEvt.event_title || "Event"} returned ${_profitFmt(bestEvt.profit)} profit` } : null,
+      { icon: "📦", title: "Markets in tracker", sub: `You've attended ${summary.markets_attended || 0} tracked events so far` },
+    ].filter(Boolean);
+
+    root.innerHTML = `
+      ${summaryCards}
+      <div class="profit-section">
+        <h2>Revenue over time</h2>
+        ${periodTabs}
+        <div id="vendor-chart-area">${_renderBarChart(chart)}</div>
+      </div>
+      <div class="profit-section">
+        <h2>Product performance</h2>
+        <div class="table-sort-bar">
+          <button class="sort-btn${prodSort === "revenue" ? " active" : ""}" data-sort="revenue">Most revenue</button>
+          <button class="sort-btn${prodSort === "units_sold" ? " active" : ""}" data-sort="units_sold">Most sold</button>
+        </div>
+        <div id="vendor-prod-table">${prodTableHTML(prodSort)}</div>
+      </div>
+      <div class="profit-section">
+        <h2>Event performance</h2>
+        ${evtTableHTML}
+      </div>
+      <div class="profit-section">
+        <h2>Insights</h2>
+        <ul class="insight-list">
+          ${insights.map(i => `<li><div class="insight-icon">${i.icon}</div><div class="insight-text"><strong>${escapeHtml(i.title)}</strong><span>${escapeHtml(i.sub)}</span></div></li>`).join("")}
+        </ul>
+      </div>
+    `;
+
+    // Period tab clicks — re-fetch revenue & re-render
+    root.querySelectorAll("[data-period]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        period = btn.getAttribute("data-period");
+        root.querySelectorAll("[data-period]").forEach(b => b.classList.toggle("active", b === btn));
+        const chartArea = root.querySelector("#vendor-chart-area");
+        if (chartArea) chartArea.innerHTML = `<div class="chart-empty">Loading…</div>`;
+        const fresh = await api(`/api/vendor/revenue?period=${period}`).catch(() => ({}));
+        const freshChart = Array.isArray(fresh.chart) ? fresh.chart : [];
+        if (chartArea) chartArea.innerHTML = _renderBarChart(freshChart);
+      });
+    });
+
+    // Product sort clicks
+    root.querySelectorAll("[data-sort]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        prodSort = btn.getAttribute("data-sort");
+        root.querySelectorAll("[data-sort]").forEach(b => b.classList.toggle("active", b === btn));
+        const tbl = root.querySelector("#vendor-prod-table");
+        if (tbl) tbl.innerHTML = prodTableHTML(prodSort);
+      });
+    });
+  }
+
+  await render();
+}
+
+async function _setupOrganizerProfitDashboard(root) {
+  const titleEl = document.getElementById("profit-title");
+  const eyebrowEl = document.getElementById("profit-eyebrow");
+  const subtitleEl = document.getElementById("profit-subtitle");
+  if (eyebrowEl) eyebrowEl.textContent = "Organizer profit dashboard";
+  if (titleEl) titleEl.textContent = "Event revenue and vendor participation";
+  if (subtitleEl) subtitleEl.textContent = "See how each event performed, what vendors are requesting, and where your fees add up.";
+
+  root.innerHTML = `<div class="empty-state"><strong>Loading organizer data…</strong></div>`;
+
+  let period = "year";
+
+  async function render() {
+    const [revData, evtData, demandData] = await Promise.all([
+      api(`/api/organizer/revenue?period=${period}`).catch(() => ({})),
+      api("/api/organizer/event-performance").catch(() => ({})),
+      api("/api/organizer/vendor-stats").catch(() => ({})),
+    ]);
+
+    const summary = revData.summary || {};
+    const chart = Array.isArray(revData.chart) ? revData.chart : [];
+    const events = Array.isArray(evtData.events) ? evtData.events : [];
+    const topCats = Array.isArray(demandData.top_categories) ? demandData.top_categories : [];
+    const fastest = Array.isArray(demandData.fastest_selling_events) ? demandData.fastest_selling_events : [];
+    const fillRate = Number(demandData.avg_fill_rate || 0);
+
+    const summaryCards = _renderProfitCards([
+      { label: "Total Event Revenue", value: _profitFmt(summary.total_revenue), tone: "profit" },
+      { label: "Events Hosted", value: String(summary.events_hosted || 0) },
+      { label: "Vendors Registered", value: String(summary.vendors_registered || 0) },
+      { label: "Avg Booth Fee", value: _profitFmt(summary.avg_booth_fee) },
+    ]);
+
+    const periodTabs = `<div class="period-tabs" id="org-period-tabs">
+      ${["30d","90d","year"].map(p => `<button class="period-tab${p === period ? " active" : ""}" data-period="${p}">${p === "year" ? "This year" : "Last " + p}</button>`).join("")}
+    </div>`;
+
+    const evtTableHTML = _renderProfitTable(
+      [
+        { label: "Event", key: "name" },
+        { label: "Date", key: "date" },
+        { label: "Vendors", key: "vendor_count", num: true },
+        { label: "Booth Fees", key: "booth_fees_collected", num: true, render: r => _profitFmt(r.booth_fees_collected) },
+        { label: "Profit", key: "profit", num: true, render: r => `<span class="profit-green">${_profitFmt(r.profit)}</span>` },
+      ],
+      events,
+      "No event data yet. Create events to start tracking revenue.",
+    );
+
+    const catPills = topCats.length
+      ? `<div class="cat-pills">${topCats.map(c => `<span class="cat-pill">${escapeHtml(c.category)} <strong>${c.count}</strong></span>`).join("")}</div>`
+      : `<p class="muted" style="margin:.5rem 0 0;">No application data yet.</p>`;
+
+    const fastestList = fastest.length
+      ? fastest.map(e => `<li><div class="insight-icon">⚡</div><div class="insight-text"><strong>${escapeHtml(e.name)}</strong><span>${e.applicants} applicants${e.date ? " · " + escapeHtml(e.date) : ""}</span></div></li>`).join("")
+      : `<li><div class="insight-text"><span class="muted">No event data yet.</span></div></li>`;
+
+    root.innerHTML = `
+      ${summaryCards}
+      <div class="profit-section">
+        <h2>Revenue per event</h2>
+        ${periodTabs}
+        <div id="org-chart-area">${_renderBarChart(chart)}</div>
+      </div>
+      <div class="profit-section">
+        <h2>Event breakdown</h2>
+        ${evtTableHTML}
+      </div>
+      <div class="profit-section">
+        <h2>Vendor demand insights</h2>
+        <ul class="insight-list">
+          <li>
+            <div class="insight-icon">📊</div>
+            <div class="insight-text">
+              <strong>Most requested vendor categories</strong>
+              ${catPills}
+            </div>
+          </li>
+          <li>
+            <div class="insight-icon">📈</div>
+            <div class="insight-text">
+              <strong>Average vendor fill rate</strong>
+              <span>${(fillRate * 100).toFixed(0)}% of applicants are accepted on average</span>
+            </div>
+          </li>
+        </ul>
+        <h2 style="margin-top:1.25rem;">Fastest filling events</h2>
+        <ul class="insight-list">${fastestList}</ul>
+      </div>
+    `;
+
+    // Period tab clicks
+    root.querySelectorAll("[data-period]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        period = btn.getAttribute("data-period");
+        root.querySelectorAll("[data-period]").forEach(b => b.classList.toggle("active", b === btn));
+        const chartArea = root.querySelector("#org-chart-area");
+        if (chartArea) chartArea.innerHTML = `<div class="chart-empty">Loading…</div>`;
+        const fresh = await api(`/api/organizer/revenue?period=${period}`).catch(() => ({}));
+        const freshChart = Array.isArray(fresh.chart) ? fresh.chart : [];
+        if (chartArea) chartArea.innerHTML = _renderBarChart(freshChart);
+      });
+    });
+  }
+
+  await render();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   setupMobileNav();
   setupVendorScenarios();
@@ -5281,4 +5796,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   await setupIntegrationsPage();
   await setupProfilePage();
   await setupEventDetailPage();
+  await setupProfitPage();
 });

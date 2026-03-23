@@ -814,6 +814,18 @@ def test_events_and_users_api_indexes_return_smoke_shapes(temp_user_storage):
         assert any(user["username"] == "smokevendor" for user in users_payload["users"])
 
 
+def test_event_storage_seeds_baseline_events_when_empty(temp_event_storage):
+    module, _db_path = temp_event_storage
+    assert module.search_events({}) == []
+
+    seeded = module.ensure_seed_events()
+
+    assert seeded == len(module.DEFAULT_EVENT_SEED)
+    events = module.search_events({})
+    assert len(events) == seeded
+    assert any(event["city"] == "Kansas City" for event in events)
+
+
 def test_events_index_returns_ranked_fit_fields(temp_user_storage):
     storage_events.upsert_event(storage_events.Event(
         id="test-event-ranked-001",

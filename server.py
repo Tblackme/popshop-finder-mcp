@@ -54,7 +54,7 @@ from config import get_config
 from db_runtime import backend_summary
 from middleware.session_manager import get_session_manager
 from middleware.sync import get_sync_engine
-from storage_events import Event as StoredEvent, clear_discovered_events, get_event_by_id, init_events_db, search_events as stored_search_events, upsert_event
+from storage_events import Event as StoredEvent, backfill_seed_event_coords, clear_discovered_events, ensure_seed_events, get_event_by_id, get_events_for_map, get_events_nearby, init_events_db, search_events as stored_search_events, update_event, upsert_event
 from storage_feedback import init_feedback_db, list_feedback, save_feedback
 from storage_markets import init_db
 from storage_marketplace import (
@@ -71,6 +71,11 @@ from storage_marketplace import (
     get_vendor_stats as get_marketplace_vendor_stats,
     get_organizer_analytics as get_marketplace_organizer_analytics,
     get_shopper_analytics as get_marketplace_shopper_analytics,
+    get_vendor_profit_summary as get_marketplace_vendor_profit_summary,
+    get_vendor_product_performance as get_marketplace_vendor_product_performance,
+    get_organizer_profit_summary as get_marketplace_organizer_profit_summary,
+    get_organizer_event_breakdown as get_marketplace_organizer_event_breakdown,
+    get_organizer_vendor_demand as get_marketplace_organizer_vendor_demand,
     init_marketplace_db,
     list_applications as list_marketplace_applications,
     list_events as list_marketplace_events,
@@ -100,6 +105,7 @@ from storage_community import (
 from storage_feed import (
     init_feed_db,
     list_feed_posts,
+    list_vendor_posts,
     get_feed_post,
     create_feed_post,
     like_post,
@@ -134,6 +140,8 @@ from storage_users import (
     is_username_available,
     is_following_vendor,
     is_event_rsvped_by_user,
+    get_rsvp_count,
+    get_event_attendees,
     init_users_db,
     get_vendor_visible_events,
     remove_rsvp_for_user,
@@ -204,6 +212,9 @@ PUBLIC_PAGE_ROUTES = {
     "/feed": "feed.html",
     "/community": "community.html",
     "/community/room": "community-room.html",
+    "/profit": "profit.html",
+    "/messages": "messages.html",
+    "/settings": "settings.html",
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -1311,6 +1322,12 @@ def create_app() -> FastAPI:
     site_dir = Path(__file__).resolve().parent / "site"
     init_db()
     init_events_db()
+    seeded_events = ensure_seed_events()
+    if seeded_events:
+        logger.info("Seeded %d baseline events for Discover.", seeded_events)
+    backfilled = backfill_seed_event_coords()
+    if backfilled:
+        logger.info("Backfilled geo coordinates for %d seed events.", backfilled)
     init_users_db()
     init_marketplace_db()
     init_feedback_db()
@@ -1804,6 +1821,23 @@ def create_app() -> FastAPI:
             "message": "Products are ready to browse." if all_products else "No products are published yet.",
         })
 
+    @app.get("/api/vendors/{username}/posts")
+    async def handle_vendor_posts(username: str, request: Request) -> JSONResponse:
+        vendor = get_user_by_username(username)
+        if not vendor or _normalized_role(vendor) != "vendor":
+            return _validation_error("Vendor not found.", status_code=404)
+        limit = min(int(request.query_params.get("limit", 20)), 100)
+        offset = int(request.query_params.get("offset", 0))
+        posts = list_vendor_posts(username, limit=limit, offset=offset)
+        uid = _read_session_user_id(request)
+        if uid:
+            liked = set(get_user_liked_posts(uid))
+            saved = set(get_user_saved_posts(uid))
+            for p in posts:
+                p["is_liked"] = p["id"] in liked
+                p["is_saved"] = p["id"] in saved
+        return JSONResponse({"ok": True, "posts": posts, "total": len(posts), "offset": offset})
+
     @app.post("/api/vendors/{vendor_id}/follow")
     async def handle_follow_vendor(request: Request, vendor_id: int) -> JSONResponse:
         user = _require_user(request)
@@ -2152,6 +2186,44 @@ def create_app() -> FastAPI:
             }
         )
 
+    @app.get("/api/events/map")
+    async def handle_events_map(request: Request) -> JSONResponse:
+        """Return all events that have coordinates for map display."""
+        events = get_events_for_map()
+        return JSONResponse({"ok": True, "count": len(events), "events": events})
+
+    @app.get("/api/events/nearby")
+    async def handle_events_nearby(
+        request: Request,
+        latitude: float = 0.0,
+        longitude: float = 0.0,
+        radius: float = 80.0,
+    ) -> JSONResponse:
+        """Return events within radius km of the given coordinates."""
+        if not latitude or not longitude:
+            return _validation_error("latitude and longitude are required")
+        radius_capped = max(1.0, min(float(radius), 500.0))
+        events = get_events_nearby(latitude, longitude, radius_capped)
+        return JSONResponse({"ok": True, "count": len(events), "events": events})
+
+    @app.patch("/api/events/{event_id}")
+    async def handle_event_patch(request: Request, event_id: str) -> JSONResponse:
+        """Partial update of an event. Organizer or vendor role required."""
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "market", "organizer"}:
+            return _validation_error("Organizer or vendor access required.", status_code=403)
+        existing = get_event_by_id(event_id)
+        if not existing:
+            return _validation_error("Event not found.", status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON body")
+        updated = update_event(event_id, body)
+        return JSONResponse({"ok": True, "event": updated})
+
     @app.get("/api/events/{event_id}/followed-vendors")
     async def handle_followed_vendors_for_event(request: Request, event_id: str) -> JSONResponse:
         user = _require_user(request)
@@ -2190,7 +2262,8 @@ def create_app() -> FastAPI:
             )
             if str(item.get("id")) != str(event_id)
         ], user)[:3]
-        return JSONResponse({"ok": True, "event": ranked_event, "is_saved": is_saved, "is_rsvped": is_rsvped, "related_events": related})
+        rsvp_count = get_rsvp_count(event_id)
+        return JSONResponse({"ok": True, "event": ranked_event, "is_saved": is_saved, "is_rsvped": is_rsvped, "rsvp_count": rsvp_count, "related_events": related})
 
     @app.post("/api/events/{event_id}/rsvp")
     async def handle_event_rsvp(request: Request, event_id: str) -> JSONResponse:
@@ -2203,7 +2276,8 @@ def create_app() -> FastAPI:
         if not event:
             return _validation_error("Event not found.", status_code=404)
         rsvp_event_for_user(int(user["id"]), event_id)
-        return JSONResponse({"ok": True, "event_id": event_id, "rsvped": True})
+        count = get_rsvp_count(event_id)
+        return JSONResponse({"ok": True, "event_id": event_id, "rsvped": True, "rsvp_count": count})
 
     @app.delete("/api/events/{event_id}/rsvp")
     async def handle_event_rsvp_delete(request: Request, event_id: str) -> JSONResponse:
@@ -2213,7 +2287,14 @@ def create_app() -> FastAPI:
         if _normalized_role(user) != "shopper":
             return _validation_error("Shopper access required.", status_code=403)
         remove_rsvp_for_user(int(user["id"]), event_id)
-        return JSONResponse({"ok": True, "event_id": event_id, "rsvped": False})
+        count = get_rsvp_count(event_id)
+        return JSONResponse({"ok": True, "event_id": event_id, "rsvped": False, "rsvp_count": count})
+
+    @app.get("/api/events/{event_id}/attendees")
+    async def handle_event_attendees(event_id: str) -> JSONResponse:
+        count = get_rsvp_count(event_id)
+        attendees = get_event_attendees(event_id, limit=12)
+        return JSONResponse({"ok": True, "event_id": event_id, "count": count, "attendees": attendees})
 
     @app.get("/api/events")
     async def handle_events_index(request: Request, limit: int = 25) -> JSONResponse:
@@ -2405,6 +2486,90 @@ def create_app() -> FastAPI:
             )
         payload = get_marketplace_shopper_analytics(str(shopper["id"]))
         return JSONResponse({"ok": True, "role": role, "shopper": shopper, **payload})
+
+    @app.get("/api/vendor/revenue")
+    async def handle_vendor_revenue(request: Request, period: str = "30d") -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        vendor = get_vendor_by_username(username) or get_first_vendor()
+        if not vendor:
+            return JSONResponse({"ok": True, "summary": {}, "chart": [], "period": period})
+        data = get_marketplace_vendor_profit_summary(str(vendor["id"]), period)
+        return JSONResponse({"ok": True, **data})
+
+    @app.get("/api/vendor/product-performance")
+    async def handle_vendor_product_performance(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        vendor = get_vendor_by_username(username) or get_first_vendor()
+        if not vendor:
+            return JSONResponse({"ok": True, "products": []})
+        products = get_marketplace_vendor_product_performance(str(vendor["id"]))
+        return JSONResponse({"ok": True, "products": products})
+
+    @app.get("/api/vendor/event-performance")
+    async def handle_vendor_event_performance(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        vendor = get_vendor_by_username(username) or get_first_vendor()
+        if not vendor:
+            return JSONResponse({"ok": True, "events": []})
+        stats = get_marketplace_vendor_stats(str(vendor["id"]))
+        return JSONResponse({"ok": True, "events": stats.get("events", [])})
+
+    @app.get("/api/organizer/revenue")
+    async def handle_organizer_revenue(request: Request, period: str = "year") -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "market":
+            return _validation_error("Organizer access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        organizer = get_marketplace_user_by_username(username) or get_first_marketplace_user("organizer")
+        if not organizer:
+            return JSONResponse({"ok": True, "summary": {}, "chart": [], "period": period})
+        data = get_marketplace_organizer_profit_summary(str(organizer["id"]), period)
+        return JSONResponse({"ok": True, **data})
+
+    @app.get("/api/organizer/event-performance")
+    async def handle_organizer_event_performance(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "market":
+            return _validation_error("Organizer access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        organizer = get_marketplace_user_by_username(username) or get_first_marketplace_user("organizer")
+        if not organizer:
+            return JSONResponse({"ok": True, "events": []})
+        events = get_marketplace_organizer_event_breakdown(str(organizer["id"]))
+        return JSONResponse({"ok": True, "events": events})
+
+    @app.get("/api/organizer/vendor-stats")
+    async def handle_organizer_vendor_stats(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "market":
+            return _validation_error("Organizer access required.", status_code=403)
+        username = str(user.get("username") or "").strip()
+        organizer = get_marketplace_user_by_username(username) or get_first_marketplace_user("organizer")
+        if not organizer:
+            return JSONResponse({"ok": True, "top_categories": [], "avg_fill_rate": 0.0, "fastest_selling_events": []})
+        data = get_marketplace_organizer_vendor_demand(str(organizer["id"]))
+        return JSONResponse({"ok": True, **data})
 
     @app.get("/api/vendor-tracker")
     async def handle_vendor_tracker(request: Request) -> JSONResponse:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -116,9 +117,30 @@ def init_marketplace_db() -> None:
                 FOREIGN KEY (event_id) REFERENCES marketplace_events(id) ON DELETE CASCADE,
                 UNIQUE(vendor_id, event_id)
             );
+
+            CREATE TABLE IF NOT EXISTS marketplace_products (
+                id TEXT PRIMARY KEY,
+                vendor_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT,
+                price REAL DEFAULT 0,
+                FOREIGN KEY (vendor_id) REFERENCES marketplace_vendors(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS marketplace_sales (
+                id TEXT PRIMARY KEY,
+                vendor_id TEXT NOT NULL,
+                product_id TEXT,
+                event_id TEXT,
+                price REAL DEFAULT 0,
+                quantity INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vendor_id) REFERENCES marketplace_vendors(id) ON DELETE CASCADE
+            );
             """
         )
         _seed_marketplace(conn)
+        _seed_profit_data(conn)
         conn.commit()
     finally:
         conn.close()
@@ -777,4 +799,357 @@ def get_shopper_analytics(user_id: str) -> dict[str, Any]:
             "followed_vendors": len(followed_vendors),
             "upcoming_events": len(saved_events),
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Profit dashboard seed and query helpers
+# ---------------------------------------------------------------------------
+
+def _seed_profit_data(conn) -> None:
+    """Seed products, past events, and sales for the profit dashboard demo. Safe to call on existing DBs."""
+    existing = conn.execute("SELECT COUNT(*) AS count FROM marketplace_products").fetchone()["count"]
+    if existing:
+        return
+
+    organizer_row = conn.execute(
+        "SELECT id FROM marketplace_users WHERE role = 'organizer' LIMIT 1"
+    ).fetchone()
+    if not organizer_row:
+        return
+    organizer_id = organizer_row["id"]
+
+    vendor_rows = conn.execute(
+        "SELECT id, business_name FROM marketplace_vendors LIMIT 5"
+    ).fetchall()
+    if not vendor_rows:
+        return
+    vendor_map: dict[str, str] = {row["business_name"]: row["id"] for row in vendor_rows}
+
+    # Past events (Jan-Mar 2026) for chart time-series data
+    past_events: list[tuple] = [
+        (_uuid(), organizer_id, "Winter Bazaar Austin", "Year-end handmade market.", "Craft", "Austin, TX", "2026-01-18", "2026-01-18", 110.0, "", 1),
+        (_uuid(), organizer_id, "February Flea Market", "Monthly flea with vintage and handmade.", "Flea", "Austin, TX", "2026-02-08", "2026-02-08", 95.0, "", 1),
+        (_uuid(), organizer_id, "Spring Preview Market", "Early spring market with fresh inventory.", "Craft", "Austin, TX", "2026-02-22", "2026-02-22", 130.0, "", 1),
+        (_uuid(), organizer_id, "March Makers Fair", "Local makers and artisans showcase.", "Art", "Austin, TX", "2026-03-08", "2026-03-08", 120.0, "", 1),
+    ]
+    conn.executemany(
+        """INSERT OR IGNORE INTO marketplace_events
+           (id, organizer_id, title, description, category, location, start_date, end_date, vendor_fee, application_url, is_claimed)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        past_events,
+    )
+    past_event_map: dict[str, str] = {title: eid for (eid, _, title, *_rest) in past_events}
+
+    sunlit = vendor_map.get("Sunlit Clay Studio")
+    wildflower = vendor_map.get("Wildflower Threads")
+    golden = vendor_map.get("Golden Hour Jewelry")
+    midnight = vendor_map.get("Midnight Prints")
+    juniper = vendor_map.get("Juniper Home Goods")
+
+    cat_lookup: dict[str | None, str] = {
+        sunlit: "Ceramics", wildflower: "Apparel", golden: "Jewelry",
+        midnight: "Art", juniper: "Home",
+    }
+    vendor_products: dict[str | None, list[tuple[str, float]]] = {
+        sunlit: [("Ceramic Mug", 18.0), ("Pottery Bowl", 35.0), ("Plant Pot", 28.0), ("Clay Vase", 45.0)],
+        wildflower: [("Embroidered Tote", 38.0), ("Linen Shirt", 65.0), ("Knit Cardigan", 85.0)],
+        golden: [("Gold Stack Ring", 42.0), ("Layered Necklace", 68.0), ("Statement Earrings", 55.0)],
+        midnight: [("Art Print 8x10", 22.0), ("Mini Zine", 12.0), ("Poster Roll", 35.0)],
+        juniper: [("Soy Candle", 24.0), ("Linen Pillow Cover", 42.0), ("Woven Basket", 58.0)],
+    }
+    products: list[tuple] = []
+    product_map: dict[tuple, str] = {}
+    for vid, items in vendor_products.items():
+        if not vid:
+            continue
+        cat = cat_lookup.get(vid, "General")
+        for name, price in items:
+            pid = _uuid()
+            products.append((pid, vid, name, cat, price))
+            product_map[(vid, name)] = pid
+    conn.executemany(
+        "INSERT OR IGNORE INTO marketplace_products (id, vendor_id, name, category, price) VALUES (?, ?, ?, ?, ?)",
+        products,
+    )
+
+    # Vendor event stats for past events
+    if sunlit:
+        past_stats = [
+            (sunlit, past_event_map["Winter Bazaar Austin"], 1240.0, 280.0, 110.0, "Good winter traffic, mugs sold well."),
+            (sunlit, past_event_map["February Flea Market"], 980.0, 220.0, 95.0, "Smaller crowd, steady pottery sales."),
+            (sunlit, past_event_map["Spring Preview Market"], 1680.0, 360.0, 130.0, "Strong spring opener, vases popular."),
+            (sunlit, past_event_map["March Makers Fair"], 1520.0, 310.0, 120.0, "Busy day with high conversion."),
+        ]
+        conn.executemany(
+            """INSERT OR IGNORE INTO marketplace_vendor_event_stats
+               (id, vendor_id, event_id, revenue, expenses, vendor_fee, profit, notes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            [(_uuid(), vid, eid, rev, exp, fee, rev - exp - fee, notes)
+             for vid, eid, rev, exp, fee, notes in past_stats],
+        )
+
+    # Applications for past events (organizer fill-rate data)
+    all_vids = [v for v in [sunlit, wildflower, golden, midnight, juniper] if v]
+    app_data: list[tuple[str, list[tuple[str, str]]]] = [
+        ("Winter Bazaar Austin", [(v, "accepted") for v in all_vids[:4]] + ([(all_vids[4], "waitlisted")] if len(all_vids) > 4 else [])),
+        ("February Flea Market", [(all_vids[0], "accepted"), (all_vids[1], "accepted"), (all_vids[2], "applied")] if len(all_vids) >= 3 else []),
+        ("Spring Preview Market", [(v, "accepted") for v in all_vids[:4]]),
+        ("March Makers Fair", [(all_vids[0], "accepted"), (all_vids[1], "waitlisted"), (all_vids[2], "accepted")] if len(all_vids) >= 3 else []),
+    ]
+    app_rows: list[tuple] = []
+    for event_title, vendor_statuses in app_data:
+        eid = past_event_map.get(event_title)
+        if not eid:
+            continue
+        for vid, status in vendor_statuses:
+            app_rows.append((_uuid(), eid, vid, status, ""))
+    if app_rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO marketplace_event_applications (id, event_id, vendor_id, status, message) VALUES (?, ?, ?, ?, ?)",
+            app_rows,
+        )
+
+    # Sales records with timestamps for time-series charts
+    sales: list[tuple] = []
+    if sunlit:
+        mug = product_map.get((sunlit, "Ceramic Mug"))
+        bowl = product_map.get((sunlit, "Pottery Bowl"))
+        pot = product_map.get((sunlit, "Plant Pot"))
+        vase = product_map.get((sunlit, "Clay Vase"))
+        for event_title, sale_date, items in [
+            ("Winter Bazaar Austin", "2026-01-18", [(mug, 18.0, 12), (bowl, 35.0, 6), (pot, 28.0, 4)]),
+            ("February Flea Market", "2026-02-08", [(mug, 18.0, 15), (bowl, 35.0, 8)]),
+            ("Spring Preview Market", "2026-02-22", [(mug, 18.0, 20), (pot, 28.0, 7), (vase, 45.0, 5)]),
+            ("March Makers Fair", "2026-03-08", [(mug, 18.0, 18), (bowl, 35.0, 10), (vase, 45.0, 3)]),
+        ]:
+            eid = past_event_map.get(event_title)
+            for pid, price, qty in items:
+                if pid:
+                    sales.append((_uuid(), sunlit, pid, eid, price, qty, f"{sale_date} 10:00:00"))
+    if sales:
+        conn.executemany(
+            "INSERT OR IGNORE INTO marketplace_sales (id, vendor_id, product_id, event_id, price, quantity, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            sales,
+        )
+
+
+def _period_cutoff(period: str) -> str:
+    today = date.today()
+    if period == "7d":
+        return (today - timedelta(days=7)).isoformat()
+    if period == "30d":
+        return (today - timedelta(days=30)).isoformat()
+    if period == "90d":
+        return (today - timedelta(days=90)).isoformat()
+    return date(today.year, 1, 1).isoformat()
+
+
+def get_vendor_profit_summary(vendor_id: str, period: str = "30d") -> dict[str, Any]:
+    init_marketplace_db()
+    cutoff = _period_cutoff(period)
+    conn = _connect()
+    try:
+        all_stats = conn.execute(
+            """
+            SELECT s.revenue, s.expenses, s.vendor_fee, s.profit, e.start_date, e.title AS event_title
+            FROM marketplace_vendor_event_stats s
+            JOIN marketplace_events e ON e.id = s.event_id
+            WHERE s.vendor_id = ?
+            ORDER BY date(e.start_date) ASC
+            """,
+            (vendor_id,),
+        ).fetchall()
+        all_sales = conn.execute(
+            "SELECT price, quantity FROM marketplace_sales WHERE vendor_id = ?",
+            (vendor_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    total_revenue = round(sum(float(r["revenue"] or 0) for r in all_stats), 2)
+    period_stats = [r for r in all_stats if str(r["start_date"] or "") >= cutoff]
+    period_revenue = round(sum(float(r["revenue"] or 0) for r in period_stats), 2)
+    markets = len(all_stats)
+    total_orders = sum(int(r["quantity"] or 1) for r in all_sales)
+    sales_revenue = sum(float(r["price"] or 0) * int(r["quantity"] or 1) for r in all_sales)
+    avg_order = round(sales_revenue / total_orders, 2) if total_orders else 0.0
+    chart = [
+        {"date": str(r["start_date"] or ""), "label": str(r["event_title"] or ""), "revenue": round(float(r["revenue"] or 0), 2)}
+        for r in period_stats
+    ]
+    return {
+        "summary": {
+            "total_revenue": total_revenue,
+            "monthly_revenue": period_revenue,
+            "total_orders": total_orders,
+            "avg_order_value": avg_order,
+            "markets_attended": markets,
+        },
+        "chart": chart,
+        "period": period,
+    }
+
+
+def get_vendor_product_performance(vendor_id: str) -> list[dict[str, Any]]:
+    init_marketplace_db()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT p.name, p.price,
+                   COALESCE(SUM(s.quantity), 0) AS units_sold,
+                   COALESCE(SUM(s.price * s.quantity), 0) AS revenue
+            FROM marketplace_products p
+            LEFT JOIN marketplace_sales s ON s.product_id = p.id
+            WHERE p.vendor_id = ?
+            GROUP BY p.id, p.name, p.price
+            ORDER BY COALESCE(SUM(s.price * s.quantity), 0) DESC
+            """,
+            (vendor_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    result = []
+    for row in rows:
+        units = int(row["units_sold"] or 0)
+        revenue = round(float(row["revenue"] or 0), 2)
+        est_views = max(units * 3, 1)
+        conv = round(units / est_views, 2)
+        result.append({"name": row["name"], "units_sold": units, "revenue": revenue, "conversion_rate": conv})
+    return result
+
+
+def get_organizer_profit_summary(organizer_id: str, period: str = "year") -> dict[str, Any]:
+    init_marketplace_db()
+    cutoff = _period_cutoff(period)
+    conn = _connect()
+    try:
+        event_rows = conn.execute(
+            """
+            SELECT e.*,
+                   COUNT(a.id) AS applicant_count,
+                   COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) AS accepted_count
+            FROM marketplace_events e
+            LEFT JOIN marketplace_event_applications a ON a.event_id = e.id
+            WHERE e.organizer_id = ?
+            GROUP BY e.id
+            ORDER BY date(e.start_date) ASC
+            """,
+            (organizer_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    events = _rows_to_dicts(event_rows)
+    for item in events:
+        accepted = int(item.get("accepted_count") or 0)
+        fee = float(item.get("vendor_fee") or 0)
+        item["booth_fees_collected"] = round(fee * accepted, 2)
+    all_revenue = round(sum(float(e.get("booth_fees_collected") or 0) for e in events), 2)
+    total_vendors = sum(int(e.get("accepted_count") or 0) for e in events)
+    fees = [float(e.get("vendor_fee") or 0) for e in events if float(e.get("vendor_fee") or 0) > 0]
+    avg_fee = round(sum(fees) / len(fees), 2) if fees else 0.0
+    period_events = [e for e in events if str(e.get("start_date") or "") >= cutoff]
+    chart = [
+        {"label": str(e.get("title") or "Event"), "date": str(e.get("start_date") or ""), "revenue": float(e.get("booth_fees_collected") or 0)}
+        for e in period_events
+    ]
+    return {
+        "summary": {
+            "total_revenue": all_revenue,
+            "events_hosted": len(events),
+            "vendors_registered": total_vendors,
+            "avg_booth_fee": avg_fee,
+        },
+        "chart": chart,
+        "period": period,
+    }
+
+
+def get_organizer_event_breakdown(organizer_id: str) -> list[dict[str, Any]]:
+    init_marketplace_db()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT e.id, e.title, e.start_date, e.location, e.vendor_fee,
+                   COUNT(a.id) AS applicant_count,
+                   COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) AS vendor_count
+            FROM marketplace_events e
+            LEFT JOIN marketplace_event_applications a ON a.event_id = e.id
+            WHERE e.organizer_id = ?
+            GROUP BY e.id
+            ORDER BY date(e.start_date) DESC
+            """,
+            (organizer_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    result = []
+    for row in rows:
+        vendor_count = int(row["vendor_count"] or 0)
+        fee = float(row["vendor_fee"] or 0)
+        booth_fees = round(fee * vendor_count, 2)
+        result.append({
+            "name": str(row["title"]),
+            "date": str(row["start_date"] or ""),
+            "location": str(row["location"] or ""),
+            "vendor_count": vendor_count,
+            "applicant_count": int(row["applicant_count"] or 0),
+            "booth_fee": fee,
+            "booth_fees_collected": booth_fees,
+            "ticket_revenue": 0.0,
+            "profit": booth_fees,
+        })
+    return result
+
+
+def get_organizer_vendor_demand(organizer_id: str) -> dict[str, Any]:
+    init_marketplace_db()
+    conn = _connect()
+    try:
+        cat_rows = conn.execute(
+            """
+            SELECT v.category, COUNT(a.id) AS count
+            FROM marketplace_event_applications a
+            JOIN marketplace_vendors v ON v.id = a.vendor_id
+            JOIN marketplace_events e ON e.id = a.event_id
+            WHERE e.organizer_id = ?
+            GROUP BY v.category
+            ORDER BY count DESC
+            """,
+            (organizer_id,),
+        ).fetchall()
+        fill_rows = conn.execute(
+            """
+            SELECT e.id, e.title, e.start_date,
+                   COUNT(a.id) AS applicant_count,
+                   COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) AS accepted_count
+            FROM marketplace_events e
+            LEFT JOIN marketplace_event_applications a ON a.event_id = e.id
+            WHERE e.organizer_id = ?
+            GROUP BY e.id
+            ORDER BY applicant_count DESC
+            """,
+            (organizer_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    top_categories = [
+        {"category": str(r["category"] or "Uncategorized"), "count": int(r["count"] or 0)}
+        for r in cat_rows[:5]
+    ]
+    fill_dicts = _rows_to_dicts(fill_rows)
+    with_apps = [r for r in fill_dicts if int(r.get("applicant_count") or 0) > 0]
+    avg_fill = round(
+        sum(int(r.get("accepted_count") or 0) / max(int(r.get("applicant_count") or 1), 1) for r in with_apps) / len(with_apps),
+        2,
+    ) if with_apps else 0.0
+    fastest = fill_dicts[:3]
+    return {
+        "top_categories": top_categories,
+        "avg_fill_rate": avg_fill,
+        "fastest_selling_events": [
+            {"name": str(r.get("title") or "Event"), "applicants": int(r.get("applicant_count") or 0), "date": str(r.get("start_date") or "")}
+            for r in fastest
+        ],
     }

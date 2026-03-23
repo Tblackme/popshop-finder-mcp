@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profit Dashboard | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .profit-hero {
+      padding: 2.5rem 0 1.5rem;
+    }
+    .profit-hero h1 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      margin: .35rem 0 .5rem;
+    }
+    .profit-hero .eyebrow {
+      font-size: .72rem;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .profit-hero p { color: var(--muted); margin: 0; }
+
+    /* Summary cards */
+    .profit-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .profit-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.4rem;
+      box-shadow: 0 2px 12px rgba(12,31,29,.06);
+    }
+    .profit-card .pc-label {
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: .4rem;
+    }
+    .profit-card .pc-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--heading);
+      line-height: 1.1;
+    }
+    .profit-card .pc-value.profit { color: var(--success, #027a48); }
+    .profit-card .pc-sub {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: .2rem;
+    }
+
+    /* Period selector */
+    .period-tabs {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .period-tab {
+      border: 1.5px solid var(--line);
+      background: var(--surface);
+      border-radius: 9px;
+      padding: .35rem .85rem;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .period-tab.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    /* Chart section */
+    .profit-section {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: 0 2px 12px rgba(12,31,29,.06);
+      margin-bottom: 1.5rem;
+    }
+    .profit-section h2 {
+      font-size: 1.05rem;
+      margin: 0 0 1rem;
+    }
+
+    /* SVG bar chart */
+    .chart-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: .5rem;
+      height: 140px;
+      padding-bottom: 2rem;
+      position: relative;
+    }
+    .chart-bars::after {
+      content: '';
+      position: absolute;
+      bottom: 2rem;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--line);
+    }
+    .chart-bar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 40px;
+    }
+    .chart-bar {
+      width: 100%;
+      background: var(--brand);
+      border-radius: 4px 4px 0 0;
+      min-height: 3px;
+      opacity: .85;
+      transition: opacity .15s;
+    }
+    .chart-bar:hover { opacity: 1; }
+    .chart-bar-label {
+      font-size: .66rem;
+      color: var(--muted);
+      margin-top: .4rem;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70px;
+    }
+    .chart-empty {
+      color: var(--muted);
+      font-size: .9rem;
+      padding: 1.5rem 0;
+      text-align: center;
+    }
+
+    /* Table */
+    .profit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    .profit-table th {
+      text-align: left;
+      font-size: .72rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      padding: .55rem .75rem .55rem 0;
+      border-bottom: 1.5px solid var(--line);
+    }
+    .profit-table th.num, .profit-table td.num {
+      text-align: right;
+    }
+    .profit-table td {
+      padding: .7rem .75rem .7rem 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+    }
+    .profit-table tr:last-child td { border-bottom: none; }
+    .profit-table .profit-green { color: var(--success, #027a48); font-weight: 700; }
+    .profit-table .profit-red { color: #e11d48; font-weight: 700; }
+
+    /* Sort buttons */
+    .table-sort-bar {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: .75rem;
+      flex-wrap: wrap;
+    }
+    .sort-btn {
+      border: 1.5px solid var(--line);
+      background: transparent;
+      border-radius: 8px;
+      padding: .25rem .7rem;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .sort-btn.active {
+      border-color: var(--brand);
+      color: var(--brand);
+    }
+
+    /* Insights */
+    .insight-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .insight-list li {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      padding: .65rem 0;
+      border-bottom: 1px solid var(--line);
+      font-size: .9rem;
+    }
+    .insight-list li:last-child { border-bottom: none; }
+    .insight-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: .05rem;
+    }
+    .insight-text strong { display: block; font-size: .9rem; }
+    .insight-text span { color: var(--muted); font-size: .82rem; }
+
+    /* Category pills */
+    .cat-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+    .cat-pill {
+      background: rgba(15,118,110,.08);
+      color: var(--brand);
+      border-radius: 99px;
+      padding: .2rem .7rem;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .profit-cards { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav nav-journey">
+      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
+      <nav class="nav-links" id="profit-nav-links">
+        <a href="/dashboard" id="nav-dashboard-link">Dashboard</a>
+        <a href="/discover">Discover</a>
+        <a href="/feed">Feed</a>
+        <a href="/community">Community</a>
+        <a class="active" href="/profit">Profit</a>
+      </nav>
+      <div class="nav-actions" data-auth-nav></div>
+      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/dashboard" id="mobile-nav-dashboard-link">Dashboard</a>
+      <a href="/discover">Discover</a>
+      <a href="/feed">Feed</a>
+      <a href="/community">Community</a>
+      <a href="/profit">Profit</a>
+      <div data-mobile-auth-nav></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="profit-hero">
+      <div class="container">
+        <span class="eyebrow" id="profit-eyebrow">Analytics</span>
+        <h1 id="profit-title">Loading your dashboard…</h1>
+        <p id="profit-subtitle"></p>
+      </div>
+    </section>
+    <section>
+      <div class="container" id="profit-app" data-profit-app>
+        <div class="empty-state"><strong>Loading profit data…</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

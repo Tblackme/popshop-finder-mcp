@@ -293,6 +293,26 @@ def list_feed_posts(limit: int = 20, offset: int = 0, location: str | None = Non
         conn.close()
 
 
+def list_vendor_posts(vendor_username: str, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
+    import json
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """SELECT * FROM feed_posts WHERE is_active = 1 AND vendor_username = ?
+               ORDER BY created_at DESC LIMIT ? OFFSET ?""",
+            (vendor_username, limit, offset),
+        ).fetchall()
+        result = _rows(rows)
+        for post in result:
+            try:
+                post["tags"] = json.loads(post.get("tags") or "[]")
+            except Exception:
+                post["tags"] = []
+        return result
+    finally:
+        conn.close()
+
+
 def get_feed_post(post_id: str) -> dict[str, Any] | None:
     import json
     conn = _connect()

@@ -19,6 +19,8 @@ Environment variables (all default to disabled):
     AI_CONTENT_ENABLED=true        — vendor bio / product description generation
     AI_MATCHING_ENABLED=true       — smart vendor-event matching
     AI_MARKETING_ENABLED=true      — marketing copy / social post generation
+    AI_INSIGHTS_ENABLED=true       — vendor sales insights / event predictions / organizer analytics
+    AI_ASSISTANT_ENABLED=true      — community AI assistant / Q&A
     AI_ALL_ENABLED=true            — master switch (overrides all above)
 """
 
@@ -32,12 +34,16 @@ class Feature(str, Enum):
     AI_CONTENT = "ai_content"
     AI_MATCHING = "ai_matching"
     AI_MARKETING = "ai_marketing"
+    AI_INSIGHTS = "ai_insights"
+    AI_ASSISTANT = "ai_assistant"
 
 
 _ENV_MAP: dict[Feature, str] = {
     Feature.AI_CONTENT: "AI_CONTENT_ENABLED",
     Feature.AI_MATCHING: "AI_MATCHING_ENABLED",
     Feature.AI_MARKETING: "AI_MARKETING_ENABLED",
+    Feature.AI_INSIGHTS: "AI_INSIGHTS_ENABLED",
+    Feature.AI_ASSISTANT: "AI_ASSISTANT_ENABLED",
 }
 
 _MASTER_KEY = "AI_ALL_ENABLED"

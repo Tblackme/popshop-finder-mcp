@@ -317,6 +317,10 @@
           <input id="p-link" type="url" placeholder="https://yoursite.com/product">
           <span class="form-hint">Where shoppers can buy this product</span>
         </div>
+        <div class="form-group full" id="p-tags-group" style="display:none;">
+          <label>Suggested tags <span style="font-weight:400;font-size:.8rem;color:#6b7280;">(click to select)</span></label>
+          <div id="p-tags-container" style="min-height:28px;"></div>
+        </div>
         <div class="form-group">
           <label>
             <input id="p-in-stock" type="checkbox" checked style="margin-right:.4rem;">
@@ -324,6 +328,8 @@
           </label>
         </div>
       </div>
+      <!-- AI Tag Suggester button injected here by ai-features.js -->
+      <div id="ai-tag-btn-slot" style="margin-bottom:.75rem;"></div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
         <button class="btn btn-primary" id="modal-save">Save product</button>
@@ -332,6 +338,7 @@
   </div>
 
   <script src="/assets/app.js"></script>
+  <script src="/assets/ai-features.js"></script>
   <script>
   (async function () {
     // Auth check
@@ -518,6 +525,29 @@
     function closeModal() {
       document.getElementById("product-modal").classList.remove("open");
       editingId = null;
+    }
+
+    // Inject AI product tagger once (Feature 7)
+    if (typeof AI !== "undefined") {
+      AI.injectProductTagger(
+        "#ai-tag-btn-slot",
+        () => ({
+          product_name: getVal("p-name"),
+          category: getVal("p-category"),
+          description: getVal("p-description"),
+        }),
+        "#p-tags-container"
+      );
+      // Show/hide the tags group when tags container has content
+      const observer = new MutationObserver(() => {
+        const tagsGroup = document.getElementById("p-tags-group");
+        const tagsContainer = document.getElementById("p-tags-container");
+        if (tagsGroup && tagsContainer) {
+          tagsGroup.style.display = tagsContainer.children.length ? "" : "none";
+        }
+      });
+      const tc = document.getElementById("p-tags-container");
+      if (tc) observer.observe(tc, { childList: true });
     }
 
     document.getElementById("add-product-btn").addEventListener("click", () => openModal());

@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Messages | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    .msg-layout {
+      display: flex;
+      gap: 0;
+      height: calc(100vh - 56px);
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .msg-thread-list {
+      width: 280px;
+      min-width: 280px;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .msg-thread-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .msg-thread-search {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .msg-thread-search input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .msg-thread-search input:focus {
+      outline: none;
+      border-color: rgba(15,118,110,.35);
+    }
+    .msg-threads {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .msg-thread-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(19,38,35,.05);
+      transition: background 0.15s;
+    }
+    .msg-thread-item:hover, .msg-thread-item.active {
+      background: rgba(15,118,110,.06);
+    }
+    .msg-thread-item.active {
+      border-left: 3px solid var(--brand);
+    }
+    .msg-avatar {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--accent));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .msg-thread-info { flex: 1; min-width: 0; }
+    .msg-thread-name { font-weight: 600; font-size: 0.87rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-thread-preview { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-thread-time { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+    .msg-unread-badge {
+      background: var(--brand);
+      color: #fff;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    /* ── Chat panel ── */
+    .msg-chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .msg-chat-header {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .msg-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .msg-bubble-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .msg-bubble-row.me {
+      flex-direction: row-reverse;
+    }
+    .msg-bubble {
+      max-width: 68%;
+      padding: 9px 13px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+    .msg-bubble-row:not(.me) .msg-bubble {
+      background: rgba(15,118,110,.08);
+      border-bottom-left-radius: 4px;
+      color: var(--text);
+    }
+    .msg-bubble-row.me .msg-bubble {
+      background: var(--brand);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-bubble-time {
+      font-size: 0.68rem;
+      color: var(--muted);
+      padding: 0 4px;
+      margin-bottom: 2px;
+    }
+    .msg-chat-composer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .msg-chat-composer textarea {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 14px;
+      font-size: 0.875rem;
+      resize: none;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+      max-height: 120px;
+    }
+    .msg-chat-composer textarea:focus {
+      outline: none;
+      border-color: rgba(15,118,110,.35);
+    }
+    .msg-send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .msg-send-btn:hover { background: var(--brand-deep); }
+    .msg-send-btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .msg-empty-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: 10px;
+    }
+    .msg-empty-panel svg { width: 48px; height: 48px; stroke: var(--muted); stroke-width: 1.2; fill: none; opacity: 0.5; }
+    @media (max-width: 640px) {
+      .msg-thread-list { width: 100%; display: none; }
+      .msg-thread-list.show-mobile { display: flex; }
+      .msg-chat-panel { display: none; }
+      .msg-chat-panel.show-mobile { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Mobile overlay + drawer ─────────────────────────────────────────── -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/">
+      <span>VA</span>
+      <span>Vendor Atlas</span>
+    </a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Main</div>
+      <a class="dash-nav-item" href="/dashboard">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+        <span class="dash-nav-text">Dashboard</span>
+      </a>
+      <a class="dash-nav-item" href="/feed">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+        <span class="dash-nav-text">Feed</span>
+      </a>
+      <a class="dash-nav-item" href="/community">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="dash-nav-text">Community</span>
+      </a>
+      <a class="dash-nav-item" href="/discover">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
+        <span class="dash-nav-text">Discover</span>
+      </a>
+      <a class="dash-nav-item" href="/messages">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+        <span class="dash-nav-text">Messages</span>
+      </a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <a class="dash-nav-item" href="/settings">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span class="dash-nav-text">Settings</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
+<div class="dash-shell">
+
+  <!-- Sidebar (desktop) -->
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/">
+        <span class="dash-sidebar-mark">VA</span>
+        <span class="dash-sidebar-title">Vendor Atlas</span>
+      </a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+
+    <nav class="dash-nav">
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Main</div>
+        <a class="dash-nav-item" href="/dashboard">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+          <span class="dash-nav-text">Dashboard</span>
+        </a>
+        <a class="dash-nav-item" href="/feed">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+          <span class="dash-nav-text">Feed</span>
+        </a>
+        <a class="dash-nav-item" href="/community">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="dash-nav-text">Community</span>
+        </a>
+        <a class="dash-nav-item" href="/discover">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
+          <span class="dash-nav-text">Discover</span>
+        </a>
+        <a class="dash-nav-item active" href="/messages">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+          <span class="dash-nav-text">Messages</span>
+        </a>
+      </div>
+
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Account</div>
+        <a class="dash-nav-item" href="/settings">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span class="dash-nav-text">Settings</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="dash-sidebar-footer">
+      <div data-auth-nav></div>
+    </div>
+  </aside>
+
+  <!-- Main body -->
+  <div class="dash-body">
+    <!-- Topbar -->
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Messages</span>
+      <div class="dash-topbar-actions">
+        <a class="btn btn-primary" style="font-size:.82rem;padding:.35rem .85rem;" href="#new-message">New message</a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="dash-content" style="padding: 20px; max-width: 100%;">
+      <div class="msg-layout" id="msg-layout">
+
+        <!-- Thread list -->
+        <div class="msg-thread-list" id="msg-thread-list">
+          <div class="msg-thread-header">
+            Inbox
+            <button class="btn btn-primary" style="font-size:.75rem;padding:.28rem .7rem;" onclick="document.getElementById('new-msg-modal').style.display='flex'">+ New</button>
+          </div>
+          <div class="msg-thread-search">
+            <input type="search" placeholder="Search messages…" id="msg-search-input">
+          </div>
+          <div class="msg-threads" id="msg-threads-list">
+            <div class="empty-state" style="padding:2rem 1rem;text-align:center;color:var(--muted);font-size:.875rem;">
+              <strong style="display:block;margin-bottom:.4rem;color:var(--text)">No messages yet</strong>
+              Start a conversation with a vendor or fellow shopper.
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat panel -->
+        <div class="msg-chat-panel" id="msg-chat-panel">
+          <div class="msg-empty-panel" id="msg-empty-state">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span style="font-size:.9rem;">Select a conversation to read messages</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items">
+    <li class="bottom-nav-item">
+      <a class="bottom-nav-link" href="/dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Home
+      </a>
+    </li>
+    <li class="bottom-nav-item">
+      <a class="bottom-nav-link" href="/feed">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Feed
+      </a>
+    </li>
+    <li class="bottom-nav-item">
+      <a class="bottom-nav-link" href="/discover">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        Discover
+      </a>
+    </li>
+    <li class="bottom-nav-item">
+      <a class="bottom-nav-link active" href="/messages">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Messages
+      </a>
+    </li>
+    <li class="bottom-nav-item">
+      <button class="bottom-nav-more-btn" id="bottom-nav-more">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        More
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function() {
+  // Simple demo threads — replace with real API call
+  const DEMO_THREADS = [
+    { id: '1', name: 'Prairie Goods Co.', preview: 'Thanks for your order!', time: '2m', unread: 2, initials: 'PG' },
+    { id: '2', name: 'KC Handmade Market', preview: 'Your application was reviewed', time: '1h', unread: 0, initials: 'KH' },
+    { id: '3', name: 'Sunflower Ceramics', preview: 'We\'ll be at booth 14!', time: '3h', unread: 1, initials: 'SC' },
+    { id: '4', name: 'The Fabric Nook', preview: 'Yes, custom orders welcome', time: '1d', unread: 0, initials: 'FN' },
+  ];
+
+  const DEMO_MESSAGES = {
+    '1': [
+      { from: 'them', text: 'Hi! Thanks for purchasing the lavender honey set.', time: '10:02 AM' },
+      { from: 'me', text: 'Of course! It smells amazing. Is it back in stock soon?', time: '10:05 AM' },
+      { from: 'them', text: 'Yes! We\'re restocking next Friday. I\'ll save one for you.', time: '10:07 AM' },
+      { from: 'them', text: 'Thanks for your order!', time: '10:08 AM' },
+    ],
+    '2': [
+      { from: 'them', text: 'Hello! We received your vendor application for the Spring Market.', time: 'Yesterday' },
+      { from: 'me', text: 'Great, thank you! When will I hear back?', time: 'Yesterday' },
+      { from: 'them', text: 'Your application was reviewed. We\'ll send a decision by end of week.', time: '9:00 AM' },
+    ],
+    '3': [
+      { from: 'them', text: 'We\'ll be at booth 14!', time: '3h ago' },
+    ],
+  };
+
+  const threadsEl = document.getElementById('msg-threads-list');
+  const chatPanel = document.getElementById('msg-chat-panel');
+  const emptyState = document.getElementById('msg-empty-state');
+  let activeThread = null;
+
+  function renderThreads(threads) {
+    if (!threads.length) return;
+    threadsEl.innerHTML = threads.map(t => `
+      <div class="msg-thread-item ${activeThread === t.id ? 'active' : ''}" data-thread="${t.id}">
+        <div class="msg-avatar">${t.initials}</div>
+        <div class="msg-thread-info">
+          <div class="msg-thread-name">${t.name}</div>
+          <div class="msg-thread-preview">${t.preview}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span class="msg-thread-time">${t.time}</span>
+          ${t.unread ? `<span class="msg-unread-badge">${t.unread}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    threadsEl.querySelectorAll('.msg-thread-item').forEach(el => {
+      el.addEventListener('click', () => openThread(el.dataset.thread));
+    });
+  }
+
+  function openThread(id) {
+    activeThread = id;
+    const thread = DEMO_THREADS.find(t => t.id === id);
+    const msgs = DEMO_MESSAGES[id] || [];
+    renderThreads(DEMO_THREADS);
+
+    const messagesHTML = msgs.map(m => `
+      <div class="msg-bubble-row ${m.from === 'me' ? 'me' : ''}">
+        ${m.from !== 'me' ? `<div class="msg-avatar" style="width:28px;height:28px;min-width:28px;font-size:.7rem;">${thread.initials}</div>` : ''}
+        <div>
+          <div class="msg-bubble">${m.text}</div>
+          <div class="msg-bubble-time">${m.time}</div>
+        </div>
+      </div>
+    `).join('');
+
+    chatPanel.innerHTML = `
+      <div class="msg-chat-header">
+        <div class="msg-avatar" style="width:32px;height:32px;min-width:32px;font-size:.78rem;">${thread.initials}</div>
+        <span>${thread.name}</span>
+      </div>
+      <div class="msg-chat-messages" id="msg-messages-area">${messagesHTML}</div>
+      <div class="msg-chat-composer">
+        <textarea placeholder="Type a message…" rows="1" id="msg-composer" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+        <button class="msg-send-btn" onclick="sendMsg()">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    `;
+    // scroll to bottom
+    const area = document.getElementById('msg-messages-area');
+    if (area) area.scrollTop = area.scrollHeight;
+  }
+
+  window.sendMsg = function() {
+    const composer = document.getElementById('msg-composer');
+    const text = composer && composer.value.trim();
+    if (!text) return;
+    const area = document.getElementById('msg-messages-area');
+    if (!area) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    area.insertAdjacentHTML('beforeend', `
+      <div class="msg-bubble-row me">
+        <div>
+          <div class="msg-bubble">${text.replace(/</g,'&lt;')}</div>
+          <div class="msg-bubble-time">${timeStr}</div>
+        </div>
+      </div>
+    `);
+    composer.value = '';
+    area.scrollTop = area.scrollHeight;
+  };
+
+  // Search filter
+  const searchInput = document.getElementById('msg-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const q = this.value.toLowerCase();
+      const filtered = DEMO_THREADS.filter(t => t.name.toLowerCase().includes(q) || t.preview.toLowerCase().includes(q));
+      renderThreads(filtered);
+    });
+  }
+
+  renderThreads(DEMO_THREADS);
+})();
+</script>
+</body>
+</html>

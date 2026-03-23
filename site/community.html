@@ -57,6 +57,9 @@
           </div>
         </div>
 
+        <!-- AI Assistant (Feature 6) -->
+        <div id="ai-assistant-slot" style="max-width:520px;margin:0 auto;"></div>
+
         <!-- Create group CTA (shown when signed in) -->
         <div id="createGroupCta" style="display:none; margin-top:36px; text-align:center;">
           <button class="btn btn-secondary" id="openCreateGroup">+ Create a Group</button>
@@ -150,6 +153,7 @@
   </footer>
 
   <script src="/assets/app.js"></script>
+  <script src="/assets/ai-features.js"></script>
   <script>
   (function () {
     // ── State ──────────────────────────────────────────────────────────────
@@ -514,6 +518,11 @@
         }
       })
       .catch(function(){});
+
+    // ── AI Assistant ──────────────────────────────────────────────────────────
+    if (typeof AI !== 'undefined') {
+      AI.injectCommunityAssistant('#ai-assistant-slot');
+    }
 
     // ── Init ──────────────────────────────────────────────────────────────────
     loadGroups('');

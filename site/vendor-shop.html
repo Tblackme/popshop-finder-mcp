@@ -337,11 +337,13 @@
       return;
     }
 
-    // Load vendor + products in parallel
-    const [vendorRes, productsRes] = await Promise.all([
+    // Load vendor + products + posts in parallel
+    const [vendorRes, productsRes, postsRes] = await Promise.all([
       fetch(`/api/vendors/${encodeURIComponent(username)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null).catch(() => null),
       fetch(`/api/vendors/${encodeURIComponent(username)}/products`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/api/vendors/${encodeURIComponent(username)}/posts`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
 
@@ -354,6 +356,7 @@
     const profile = vendor.profile || {};
     const products = productsRes?.products || [];
     const events = vendor.upcoming_events || [];
+    const shopPosts = postsRes?.posts || [];
     const displayName = vendor.name || ("@" + vendor.username);
     const initial = (vendor.name || vendor.username || "V")[0].toUpperCase();
     const bannerColor = profile.banner_color || "#0f766e";
@@ -394,6 +397,7 @@
               <p class="shop-handle">@${escapeHtml(vendor.username)}${profile.location ? " · " + escapeHtml(profile.location) : ""}</p>
               <div class="shop-stats">
                 ${products.length ? `<div class="shop-stat"><strong>${products.length}</strong> product${products.length === 1 ? "" : "s"}</div>` : ""}
+                ${shopPosts.length ? `<div class="shop-stat"><strong>${shopPosts.length}</strong> post${shopPosts.length === 1 ? "" : "s"}</div>` : ""}
                 ${events.length ? `<div class="shop-stat"><strong>${events.length}</strong> upcoming event${events.length === 1 ? "" : "s"}</div>` : ""}
                 <div class="shop-stat"><strong id="follower-count">—</strong> followers</div>
                 ${productsRes?.source === "shopify" ? `<div class="shop-stat"><span class="badge-verified">✓ Shopify</span></div>` : ""}
@@ -413,7 +417,7 @@
           <!-- SHOP NAV -->
           <div class="shop-nav">
             <button class="shop-nav-tab active" data-panel="products">Products${products.length ? ` (${products.length})` : ""}</button>
-            <button class="shop-nav-tab" data-panel="videos">Videos</button>
+            <button class="shop-nav-tab" data-panel="posts">Posts${shopPosts.length ? ` (${shopPosts.length})` : ""}</button>
             <button class="shop-nav-tab" data-panel="reviews">Reviews</button>
             ${events.length ? `<button class="shop-nav-tab" data-panel="events">Events (${events.length})</button>` : ""}
             <button class="shop-nav-tab" data-panel="about">About</button>
@@ -432,9 +436,9 @@
           </div>
         ` : ""}
 
-        <!-- VIDEOS PANEL -->
-        <div id="panel-videos" style="display:none;">
-          ${buildVideosPanel(vendor)}
+        <!-- POSTS PANEL -->
+        <div id="panel-posts" style="display:none;">
+          ${buildPostsPanel(shopPosts, displayName)}
         </div>
 
         <!-- REVIEWS PANEL -->
@@ -454,7 +458,7 @@
       btn.addEventListener("click", () => {
         document.querySelectorAll(".shop-nav-tab").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        ["products","videos","reviews","events","about"].forEach(panel => {
+        ["products","posts","reviews","events","about"].forEach(panel => {
           const el = document.getElementById("panel-" + panel);
           if (el) el.style.display = btn.dataset.panel === panel ? "" : "none";
         });
@@ -586,9 +590,28 @@
     async function initFollowArea(vendorId) {
       const area = document.getElementById("follow-area");
       if (!area) return;
+
+      // Share button — always visible
+      const shareBtn = document.createElement("button");
+      shareBtn.className = "btn btn-secondary";
+      shareBtn.textContent = "Share";
+      shareBtn.style.whiteSpace = "nowrap";
+      shareBtn.addEventListener("click", async () => {
+        const url = location.href;
+        if (navigator.share) {
+          try { await navigator.share({ title: displayName, url }); } catch (_) {}
+        } else {
+          await navigator.clipboard.writeText(url);
+          shareBtn.textContent = "Link copied!";
+          setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
+        }
+      });
+      area.appendChild(shareBtn);
+
+      // Follow button — for shoppers and organizers only
       try {
         const me = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
-        if (!me || me.role !== "shopper") return;
+        if (!me || me.role === "vendor") return; // vendors can't follow vendors
 
         const followed = await fetch("/api/shopper/following", { credentials: "include" })
           .then(r => r.ok ? r.json() : []);
@@ -596,48 +619,66 @@
 
         const btn = document.createElement("button");
         btn.className = "btn " + (isFollowing ? "btn-secondary" : "btn-primary");
-        btn.textContent = isFollowing ? "Following ✓" : "Follow vendor";
+        btn.textContent = isFollowing ? "Following ✓" : "Follow";
         btn.style.whiteSpace = "nowrap";
         btn.addEventListener("click", async () => {
           btn.disabled = true;
           try {
-            await fetch(`/api/vendors/${vendorId}/follow`, { method: "POST", credentials: "include" });
-            btn.textContent = "Following ✓";
-            btn.className = "btn btn-secondary";
+            const method = btn.dataset.following === "1" ? "DELETE" : "POST";
+            await fetch(`/api/vendors/${vendorId}/follow`, { method, credentials: "include" });
+            if (method === "POST") {
+              btn.textContent = "Following ✓";
+              btn.className = "btn btn-secondary";
+              btn.dataset.following = "1";
+              const fc = document.getElementById("follower-count");
+              if (fc) fc.textContent = (parseInt(fc.textContent) || 0) + 1;
+            } else {
+              btn.textContent = "Follow";
+              btn.className = "btn btn-primary";
+              btn.dataset.following = "0";
+              const fc = document.getElementById("follower-count");
+              if (fc) fc.textContent = Math.max(0, (parseInt(fc.textContent) || 1) - 1);
+            }
           } catch (_) {}
           btn.disabled = false;
         });
-        area.appendChild(btn);
+        btn.dataset.following = isFollowing ? "1" : "0";
+        area.insertBefore(btn, shareBtn);
       } catch (_) {}
     }
 
-    function buildVideosPanel(vendor) {
-      // Demo video posts — in production these come from /api/vendors/{id}/posts
-      const demoVideos = [
-        { emoji: "🎬", color: "#b45309", caption: "Behind the scenes at last weekend's market!", likes: 247 },
-        { emoji: "✨", color: "#0f766e", caption: "New collection reveal — handmade with love", likes: 512 },
-        { emoji: "🛍️", color: "#7c3aed", caption: "What I'm bringing to the Spring Bazaar", likes: 189 },
-        { emoji: "🔥", color: "#dc2626", caption: "Sold out in 2 hours! Thank you so much", likes: 834 },
-        { emoji: "🏺", color: "#92400e", caption: "Process video: from clay to finished piece", likes: 321 },
-        { emoji: "💍", color: "#0e7490", caption: "Custom orders are open this month!", likes: 456 },
-      ];
-      if (!demoVideos.length) {
-        return `<div class="no-products"><div class="icon">🎬</div><strong>No videos yet.</strong><p style="margin:.4rem 0 0;font-size:.88rem;">Videos from this vendor will appear here.</p></div>`;
+    function buildPostsPanel(posts, vendorDisplayName) {
+      if (!posts.length) {
+        return `<div class="no-products">
+          <div class="icon">📸</div>
+          <strong>${escapeHtml(vendorDisplayName)} hasn't posted yet.</strong>
+          <p style="margin:.4rem 0 0;font-size:.88rem;">Follow them to be notified when they post.</p>
+        </div>`;
       }
+      const COLORS = ["#b45309","#0f766e","#7c3aed","#dc2626","#0e7490","#92400e","#059669","#4f46e5"];
+      const EMOJIS = ["🎬","✨","🛍️","🔥","🏺","💍","🌿","🎨"];
       return `
-        <div class="videos-grid">
-          ${demoVideos.map(v => `
-            <div class="video-card" onclick="alert('Video playback coming soon!')">
-              <div class="video-thumb" style="background:linear-gradient(135deg, ${escapeHtml(v.color)}dd, ${escapeHtml(darkenHex(v.color))}ff);">
-                ${v.emoji}
-              </div>
+        <div class="videos-grid" id="posts-grid">
+          ${posts.map((p, i) => {
+            const color = p.thumbnail_color || COLORS[i % COLORS.length];
+            const emoji = p.thumbnail_emoji || EMOJIS[i % EMOJIS.length];
+            const likes = p.likes_count || 0;
+            return `
+            <div class="video-card" data-post-id="${escapeHtml(p.id)}" onclick="openPostModal(${JSON.stringify(p).replace(/</g,'\\u003c')})">
+              ${p.thumbnail_url
+                ? `<img style="width:100%;height:100%;object-fit:cover;display:block;" src="${escapeHtml(p.thumbnail_url)}" loading="lazy">`
+                : `<div class="video-thumb" style="background:linear-gradient(135deg,${escapeHtml(color)}dd,${escapeHtml(darkenHex(color))}ff)">${emoji}</div>`
+              }
               <div class="video-overlay"></div>
-              <div class="video-play">▶</div>
-              <div class="video-likes">❤️ ${v.likes}</div>
-              <div class="video-caption">${escapeHtml(v.caption)}</div>
-            </div>`).join("")}
+              ${p.video_url ? `<div class="video-play">▶</div>` : ""}
+              <div class="video-likes">❤️ ${likes.toLocaleString()}</div>
+              <div class="video-caption">${escapeHtml(p.caption || "")}</div>
+            </div>`;
+          }).join("")}
         </div>
-        <p style="margin-top:1rem;font-size:.82rem;color:var(--muted);">Follow this vendor to see new videos first.</p>`;
+        <p style="margin-top:1rem;font-size:.82rem;color:var(--muted);">
+          Showing ${posts.length} post${posts.length === 1 ? "" : "s"} from @${escapeHtml(username)}.
+        </p>`;
     }
 
     function buildReviewsPanel(vendor) {
@@ -681,6 +722,49 @@
           </div>`).join("")}
         <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem;">Reviews are from verified purchases at events and online.</p>`;
     }
+
+    // ── POST MODAL ──────────────────────────────────────────
+    window.openPostModal = function(post) {
+      let modal = document.getElementById("post-modal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "post-modal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:1rem;";
+        modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+      }
+      const COLORS = ["#b45309","#0f766e","#7c3aed","#dc2626","#0e7490","#92400e"];
+      const EMOJIS = ["🎬","✨","🛍️","🔥","🏺","💍"];
+      const color = post.thumbnail_color || COLORS[0];
+      const emoji = post.thumbnail_emoji || EMOJIS[0];
+      const likes = post.likes_count || 0;
+      const dateStr = post.created_at ? new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
+      modal.innerHTML = `
+        <div style="background:var(--surface-strong,#fff);border-radius:var(--radius-lg,20px);max-width:520px;width:100%;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);">
+          <div style="position:relative;width:100%;aspect-ratio:4/3;background:linear-gradient(135deg,${escapeHtml(color)}dd,${escapeHtml(darkenHex(color))}ff);display:flex;align-items:center;justify-content:center;font-size:5rem;">
+            ${post.thumbnail_url
+              ? `<img src="${escapeHtml(post.thumbnail_url)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">`
+              : emoji}
+            ${post.video_url ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.25);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-size:1.4rem;padding-left:.2rem;">▶</div></div>` : ""}
+            <button onclick="document.getElementById('post-modal').remove()" style="position:absolute;top:.6rem;right:.75rem;background:rgba(0,0,0,.4);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
+          <div style="padding:1.25rem 1.5rem 1.5rem;">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,${escapeHtml(color)},${escapeHtml(darkenHex(color))});flex-shrink:0;"></div>
+              <div>
+                <div style="font-weight:700;font-size:.88rem;">@${escapeHtml(username)}</div>
+                ${dateStr ? `<div style="font-size:.72rem;color:var(--muted);">${dateStr}</div>` : ""}
+              </div>
+              <div style="margin-left:auto;font-size:.88rem;color:var(--muted);">❤️ ${likes.toLocaleString()}</div>
+            </div>
+            ${post.caption ? `<p style="font-size:.93rem;line-height:1.6;margin:0 0 .75rem;">${escapeHtml(post.caption)}</p>` : ""}
+            ${post.event_name ? `<div style="font-size:.78rem;background:rgba(15,118,110,.08);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;margin-bottom:.5rem;">📅 ${escapeHtml(post.event_name)}</div>` : ""}
+            ${post.product_name ? `<div style="font-size:.78rem;background:rgba(15,118,110,.08);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;">🛍️ ${escapeHtml(post.product_name)}${post.product_price ? " · $" + Number(post.product_price).toFixed(2) : ""}</div>` : ""}
+            ${(post.tags||[]).length ? `<div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.65rem;">${post.tags.map(t=>`<span style="font-size:.72rem;background:var(--line);padding:.15rem .55rem;border-radius:99px;color:var(--muted);">#${escapeHtml(t)}</span>`).join("")}</div>` : ""}
+            <button onclick="document.getElementById('post-modal').remove()" style="margin-top:1rem;width:100%;background:var(--line);border:none;border-radius:var(--radius-md);padding:.6rem;font-size:.88rem;color:var(--muted);cursor:pointer;">Close</button>
+          </div>
+        </div>`;
+    };
 
     function darkenHex(hex) {
       try {

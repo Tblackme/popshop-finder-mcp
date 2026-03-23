@@ -3070,3 +3070,383 @@ section {
 .community-empty-icon { font-size: 3rem; opacity: 0.4; }
 .community-empty h3 { font-size: 1.1rem; color: var(--text); margin: 0; }
 .community-empty p { font-size: 0.9rem; max-width: 40ch; margin: 0; }
+
+
+/* ── Leaflet Event Map ─────────────────────────────────────────────────────── */
+
+/* Marker pin */
+.va-map-pin-wrapper { background: transparent; border: none; }
+.va-map-pin {
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; line-height: 1;
+  background: #fff;
+  border: 2px solid rgba(15, 118, 110, 0.55);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.va-map-pin > * { transform: rotate(45deg); }
+.va-map-pin:hover { box-shadow: 0 6px 18px rgba(15, 118, 110, 0.35); }
+.va-map-pin-new {
+  border-color: var(--amber, #d97706);
+  background: #fffbeb;
+}
+
+/* Cluster */
+.va-cluster-wrapper { background: transparent; border: none; }
+.va-cluster {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brand, #0f766e);
+  color: #fff;
+  font-size: .82rem; font-weight: 700;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.85);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.38);
+}
+
+/* Popup */
+.va-map-popup-wrap .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+}
+.va-map-popup-wrap .leaflet-popup-content { margin: 0; }
+.va-popup { min-width: 220px; max-width: 300px; }
+.va-popup-img {
+  width: 100%; height: 130px;
+  object-fit: cover; display: block;
+}
+.va-popup-body { padding: 14px 16px 12px; }
+.va-popup-type {
+  font-size: .7rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--brand, #0f766e);
+  margin: 0 0 4px;
+}
+.va-popup-title {
+  font-size: .97rem; font-weight: 700;
+  margin: 0 0 8px; color: var(--text, #132623);
+  line-height: 1.3;
+}
+.va-popup-meta {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: .78rem; color: var(--muted, #6b7280);
+  margin-bottom: 12px;
+}
+.va-popup-actions {
+  display: flex; gap: 6px;
+}
+.va-popup-actions .btn-sm {
+  font-size: .78rem; padding: .3rem .7rem; border-radius: 6px;
+}
+
+/* Map card wrapper used on discover + planner pages */
+.discover-map-card { padding: 0 0 14px; }
+.discover-map-card .discover-map-header { padding: 18px 18px 10px; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAVIGATION BAR
+   Shown on phones ≤ 768px. Provides quick access to 5 main sections.
+═══════════════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(255, 253, 248, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(19, 38, 35, 0.10);
+  box-shadow: 0 -4px 20px rgba(12, 31, 29, 0.08);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mobile-bottom-nav-inner {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+}
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted);
+  font-size: .62rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.mobile-bottom-nav-item:active { opacity: .7; }
+.mobile-bottom-nav-item.active { color: var(--brand); }
+.mobile-bottom-nav-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  display: block;
+}
+.mobile-bottom-nav .nav-label {
+  font-size: .6rem;
+  letter-spacing: .01em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE IMPROVEMENTS — 768px and below
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Show bottom nav */
+  .mobile-bottom-nav { display: block; }
+
+  /* Push page content above bottom nav */
+  body:not(.feed-page) main {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Toast clears the bottom nav */
+  .toast {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ── Product grids: 2 columns on mobile ─────────────────── */
+  .products-grid,
+  .vendor-product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: .65rem;
+  }
+
+  /* ── Community type filter: horizontal scroll ────────────── */
+  .community-type-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-right: -16px;
+    padding-right: 16px;
+  }
+  .community-type-tabs::-webkit-scrollbar { display: none; }
+  .community-type-tab { flex-shrink: 0; }
+
+  /* ── Community group grid: 1 col ─────────────────────────── */
+  .community-group-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Map: full-width, reasonable height ──────────────────── */
+  .discover-map {
+    min-height: 300px !important;
+  }
+  .va-map-container {
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* ── Leaflet popup: fits narrow screens ─────────────────── */
+  .va-popup {
+    min-width: 180px;
+    max-width: calc(100vw - 56px);
+  }
+
+  /* ── Prevent iOS font zoom on inputs (must be ≥ 16px) ────── */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* ── Organizer analytics: single column ──────────────────── */
+  .organizer-analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Metrics: 2-column on mobile ─────────────────────────── */
+  .atlas-metric-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: .65rem;
+  }
+
+  /* ── Hero + CTA buttons: full width ─────────────────────── */
+  .hero-actions .btn,
+  .stack-row .btn {
+    width: 100%;
+  }
+
+  /* ── Reduce card padding on small screens ────────────────── */
+  .hero-panel,
+  .feature-card,
+  .dashboard-card,
+  .bubble-panel,
+  .glass-card {
+    padding: 18px !important;
+  }
+
+  /* ── Modals: near full-screen ────────────────────────────── */
+  .form-card {
+    margin: 8px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Shop profile actions: stack vertically ──────────────── */
+  .shop-profile-actions {
+    padding-top: 8px !important;
+    gap: .5rem !important;
+    flex-wrap: wrap;
+  }
+  .shop-profile-actions .btn {
+    min-width: 100px;
+  }
+
+  /* ── Vendor shop tab bar: horizontal scroll ──────────────── */
+  .shop-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-right: 16px;
+  }
+  .shop-nav::-webkit-scrollbar { display: none; }
+  .shop-nav-tab { flex-shrink: 0; }
+
+  /* ── Feed sidebar hidden on mobile (already handled at 900px) */
+  .feed-sidebar { display: none !important; }
+
+  /* ── Topbar: slightly slimmer ────────────────────────────── */
+  .topbar { min-height: 60px; }
+
+  /* ── Brand: hide "Vendor Atlas" text, keep VA mark ──────── */
+  .topbar .brand > span:last-child { display: none; }
+  .topbar .brand { gap: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMALL PHONE (≤ 400px) — hide nav labels, larger icons
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 400px) {
+  .mobile-bottom-nav .nav-label { display: none; }
+  .mobile-bottom-nav-icon { font-size: 1.5rem; }
+  .mobile-bottom-nav-inner { height: 52px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOUCH DEVICE IMPROVEMENTS
+   Applied when device has no hover (touchscreen primary)
+═══════════════════════════════════════════════════════════════ */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover-lift on touch (no hover = no accidental trigger) */
+  .discover-event-card:hover,
+  .community-group-card:hover,
+  .product-card:hover,
+  .vendor-product-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Active press feedback instead */
+  .btn:active { transform: scale(0.97); opacity: .9; }
+  .product-card:active { transform: scale(0.98); }
+  .community-group-card:active { transform: scale(0.98); }
+
+  /* Ensure min touch target on all interactive elements */
+  .btn { min-height: 48px; touch-action: manipulation; }
+  .shop-nav-tab { min-height: 44px; padding: .6rem 1rem; }
+  .filter-pill { min-height: 40px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SAFE AREA INSETS — iPhone notch / Dynamic Island / home bar
+═══════════════════════════════════════════════════════════════ */
+@supports (padding: env(safe-area-inset-top)) {
+  .topbar {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RSVP SECTION — event detail page (shopper view)
+═══════════════════════════════════════════════════════════════ */
+.rsvp-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rsvp-btn {
+  align-self: flex-start;
+  font-weight: 600;
+  font-size: .95rem;
+  padding: .6rem 1.4rem;
+  border-radius: var(--radius-xl, 28px);
+  transition: background .15s, color .15s, transform .1s;
+}
+
+.rsvp-btn-default {
+  background: var(--brand, #0f766e);
+  color: #fff;
+  border: none;
+}
+
+.rsvp-btn-default:hover { background: #0d6560; }
+
+.rsvp-btn-going {
+  background: #dcfce7;
+  color: #166534;
+  border: 1.5px solid #86efac;
+}
+
+.rsvp-btn-going:hover { background: #bbf7d0; }
+
+.rsvp-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+.rsvp-count-text {
+  font-size: .85rem;
+  color: var(--muted, #64748b);
+  margin: 0;
+}
+
+.rsvp-attendees-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.rsvp-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand, #0f766e);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg, #f4efe6);
+  cursor: default;
+  user-select: none;
+}
+
+.rsvp-avatar-more {
+  background: var(--surface-alt, #e2e8f0);
+  color: var(--text, #1e293b);
+  font-size: .68rem;
+}
