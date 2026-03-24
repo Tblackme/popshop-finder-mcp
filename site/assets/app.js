@@ -353,15 +353,50 @@ function eventDetailPath(eventId) {
 
 function renderAuthNav(auth) {
   const desktop = document.querySelector("[data-auth-nav]");
-  const mobile = document.querySelector("[data-mobile-auth-nav]");
-  const nodes = [desktop, mobile].filter(Boolean);
-  const role = auth?.user?.role || "vendor";
-  const dashboardPath = dashboardPathForRole(role);
-  const dashboardLabel = role === "market" ? "Organizer" : role === "shopper" ? "Shopper" : "Dashboard";
   const navDesktop = document.querySelector(".nav-links");
   const navMobile = document.querySelector("[data-mobile-drawer]");
 
-  function syncRoleNav(node, mobile = false) {
+  if (!auth.authenticated) {
+    // ── Logged-out: simplified public navigation ────────────────────────────
+    const _p = location.pathname.replace(/\/$/, "") || "/";
+    const _a = (href, label) =>
+      `<a href="${href}"${_p === href ? ' class="active"' : ""}>${label}</a>`;
+    if (navDesktop) {
+      navDesktop.innerHTML =
+        _a("/", "Home") +
+        `<a href="/#vendors">Vendors</a>` +
+        `<a href="/#shoppers">Shoppers</a>` +
+        `<a href="/#organizers">Organizers</a>` +
+        _a("/feed", "Feed") +
+        _a("/community", "Community");
+    }
+    if (navMobile) {
+      navMobile.innerHTML =
+        `<a href="/">Home</a>` +
+        `<a href="/#vendors">Vendors</a>` +
+        `<a href="/#shoppers">Shoppers</a>` +
+        `<a href="/#organizers">Organizers</a>` +
+        `<a href="/feed">Feed</a>` +
+        `<a href="/community">Community</a>` +
+        `<div data-mobile-auth-nav></div>`;
+    }
+    const mobileAuth = document.querySelector("[data-mobile-auth-nav]");
+    [desktop, mobileAuth].filter(Boolean).forEach((node) => {
+      node.innerHTML =
+        `<a href="/signin">Sign In</a>` +
+        `<a class="btn btn-primary" href="/signup">Create Account</a>`;
+    });
+    return;
+  }
+
+  // ── Logged-in: role-based navigation ───────────────────────────────────────
+  const role = auth.user?.role || "vendor";
+  const dashboardPath = dashboardPathForRole(role);
+  const dashboardLabel = role === "market" ? "Organizer" : role === "shopper" ? "Shopper" : "Dashboard";
+  const mobile = document.querySelector("[data-mobile-auth-nav]");
+  const nodes = [desktop, mobile].filter(Boolean);
+
+  function syncRoleNav(node, isMobile = false) {
     if (!node) return;
     const links = [...node.querySelectorAll("a")];
     links.forEach((link) => {
@@ -380,7 +415,7 @@ function renderAuthNav(auth) {
         }
       }
     });
-    if (mobile) {
+    if (isMobile) {
       const extraVendorLink = links.find((link) => (link.getAttribute("href") || "") === "/final-plan");
       if (extraVendorLink && role !== "vendor") extraVendorLink.style.display = "none";
     }
@@ -390,18 +425,11 @@ function renderAuthNav(auth) {
   syncRoleNav(navMobile, true);
 
   nodes.forEach((node) => {
-    if (auth.authenticated && auth.user) {
-      node.innerHTML = `
-        <a href="${dashboardPath}">${dashboardLabel}</a>
-        <a href="/u/${encodeURIComponent(auth.user.username || "")}">@${escapeHtml(auth.user.username || "profile")}</a>
-        <button class="linklike" data-logout-button type="button">Logout</button>
-      `;
-    } else {
-      node.innerHTML = `
-        <a href="/signin">Sign In</a>
-        <a class="btn btn-primary" href="/signup">Sign Up</a>
-      `;
-    }
+    node.innerHTML = `
+      <a href="${dashboardPath}">${dashboardLabel}</a>
+      <a href="/u/${encodeURIComponent(auth.user.username || "")}">@${escapeHtml(auth.user.username || "profile")}</a>
+      <button class="linklike" data-logout-button type="button">Logout</button>
+    `;
   });
 
   document.querySelectorAll("[data-logout-button]").forEach((button) => {
@@ -410,6 +438,87 @@ function renderAuthNav(auth) {
       window.location.href = "/";
     });
   });
+}
+
+function setupAuthGuard(auth) {
+  if (auth.authenticated) return;
+  const protectedPaths = [
+    "/my-shop", "/messages", "/settings",
+    "/market-analytics", "/market-applications",
+  ];
+  const path = location.pathname;
+  const isProtected = protectedPaths.some(
+    (p) => path === p || path.startsWith(p + "/")
+  );
+  if (isProtected) {
+    window.location.href = "/signin?next=" + encodeURIComponent(path);
+  }
+}
+
+function setupPreviewGate(auth) {
+  if (auth.authenticated) return;
+
+  function showJoinPrompt() {
+    if (document.getElementById("va-preview-prompt")) return;
+    const el = document.createElement("div");
+    el.id = "va-preview-prompt";
+    el.innerHTML = [
+      '<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;display:flex;align-items:center;justify-content:center;" id="va-preview-backdrop">',
+      '<div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.28);">',
+      '<div style="font-size:2.2rem;margin-bottom:14px;">👋</div>',
+      '<h3 style="margin:0 0 10px;font-size:1.15rem;color:#132623;">Create an account to join the conversation.</h3>',
+      '<p style="color:#54645d;margin:0 0 22px;font-size:.9rem;line-height:1.5;">Sign up free to like posts, join groups, message vendors, and save events.</p>',
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">',
+      '<a href="/signup" style="background:#0f766e;color:#fff;padding:11px 22px;border-radius:99px;font-weight:700;font-size:.9rem;text-decoration:none;">Create Account</a>',
+      '<a href="/signin" style="background:#f4efe6;color:#132623;padding:11px 22px;border-radius:99px;font-weight:700;font-size:.9rem;text-decoration:none;border:1px solid rgba(19,38,35,0.14);">Sign In</a>',
+      '</div>',
+      '<button onclick="document.getElementById(\'va-preview-prompt\').remove()" style="margin-top:18px;background:none;border:none;color:#54645d;cursor:pointer;font-size:.85rem;text-decoration:underline;">Continue browsing</button>',
+      '</div></div>',
+    ].join("");
+    // Close on backdrop click
+    el.querySelector("#va-preview-backdrop").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) el.remove();
+    });
+    document.body.appendChild(el);
+  }
+
+  // ── Community preview ───────────────────────────────────────────────────────
+  const communityLanding = document.getElementById("communityLanding");
+  if (communityLanding) {
+    const banner = document.createElement("div");
+    banner.className = "preview-mode-banner";
+    banner.innerHTML =
+      `<span>👀 <strong>Preview mode</strong> — browsing is open.</span>` +
+      `<a href="/signup" class="preview-mode-cta">Create an account</a>` +
+      `<span>to join groups and post.</span>`;
+    const main = communityLanding.querySelector("main");
+    if (main) main.insertBefore(banner, main.firstChild);
+
+    const groupGrid = document.getElementById("groupGrid");
+    if (groupGrid) {
+      groupGrid.addEventListener("click", (e) => {
+        if (e.target.closest(".community-group-card")) {
+          e.stopPropagation();
+          showJoinPrompt();
+        }
+      }, true);
+    }
+  }
+
+  // ── Feed preview ────────────────────────────────────────────────────────────
+  const feedViewport = document.getElementById("feedViewport");
+  if (feedViewport) {
+    feedViewport.addEventListener("click", (e) => {
+      const hit = e.target.closest(
+        ".action-btn, .btn-like, .btn-save, .btn-follow, .room-banner, [data-feed-action]"
+      );
+      if (hit) {
+        e.stopPropagation();
+        e.preventDefault();
+        showJoinPrompt();
+      }
+    }, true);
+  }
 }
 
 function syncHomepageRoleEntryLinks(auth) {
@@ -445,6 +554,8 @@ function setupMobileNav() {
 function injectMobileBottomNav() {
   // Feed page has its own full-screen mobile UI — skip
   if (document.querySelector("#feedViewport")) return;
+  // Dashboard pages use dash-layout.css .bottom-nav — don't double-inject
+  if (document.querySelector(".bottom-nav")) return;
   if (document.getElementById("mobile-bottom-nav")) return;
 
   const path = location.pathname.replace(/\/$/, "") || "/";
@@ -482,7 +593,14 @@ function injectMobileBottomNav() {
   const profileItem = nav.querySelector(`a[href="/dashboard"]`);
   if (profileItem) {
     getAuthState().then(auth => {
-      if (!auth || !auth.authenticated) return;
+      if (!auth || !auth.authenticated) {
+        profileItem.href = "/signin";
+        const label = profileItem.querySelector(".nav-label");
+        if (label) label.textContent = "Sign In";
+        const icon = profileItem.querySelector(".mobile-bottom-nav-icon");
+        if (icon) icon.textContent = "🔑";
+        return;
+      }
       const role = auth.user?.role;
       const profilePath = role === "market" ? "/market-dashboard"
                         : role === "shopper" ? "/shopper-dashboard"
@@ -5782,6 +5900,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAdminPanel(auth);
   renderAuthNav(auth);
   syncHomepageRoleEntryLinks(auth);
+  setupAuthGuard(auth);
+  setupPreviewGate(auth);
 
   await setupSignupPage();
   await setupSigninPage();

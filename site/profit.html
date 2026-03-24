@@ -3,26 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Profit Dashboard | Vendor Atlas</title>
+  <title>Profit | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
   <style>
-    .profit-hero {
-      padding: 2.5rem 0 1.5rem;
-    }
-    .profit-hero h1 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
-      margin: .35rem 0 .5rem;
-    }
-    .profit-hero .eyebrow {
-      font-size: .72rem;
-      letter-spacing: .09em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .profit-hero p { color: var(--muted); margin: 0; }
-
-    /* Summary cards */
+    /* ── Profit page styles ──────────────────────────────────────────────── */
     .profit-cards {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -55,8 +40,6 @@
       color: var(--muted);
       margin-top: .2rem;
     }
-
-    /* Period selector */
     .period-tabs {
       display: flex;
       gap: .4rem;
@@ -78,8 +61,6 @@
       border-color: var(--brand);
       color: #fff;
     }
-
-    /* Chart section */
     .profit-section {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -87,16 +68,8 @@
       box-shadow: 0 2px 12px rgba(12,31,29,.06);
       margin-bottom: 1.5rem;
     }
-    .profit-section h2 {
-      font-size: 1.05rem;
-      margin: 0 0 1rem;
-    }
-
-    /* SVG bar chart */
-    .chart-wrap {
-      width: 100%;
-      overflow-x: auto;
-    }
+    .profit-section h2 { font-size: 1.05rem; margin: 0 0 1rem; }
+    .chart-wrap { width: 100%; overflow-x: auto; }
     .chart-bars {
       display: flex;
       align-items: flex-end;
@@ -109,8 +82,7 @@
       content: '';
       position: absolute;
       bottom: 2rem;
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       height: 1px;
       background: var(--line);
     }
@@ -140,14 +112,7 @@
       text-overflow: ellipsis;
       max-width: 70px;
     }
-    .chart-empty {
-      color: var(--muted);
-      font-size: .9rem;
-      padding: 1.5rem 0;
-      text-align: center;
-    }
-
-    /* Table */
+    .chart-empty { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
     .profit-table {
       width: 100%;
       border-collapse: collapse;
@@ -163,9 +128,7 @@
       padding: .55rem .75rem .55rem 0;
       border-bottom: 1.5px solid var(--line);
     }
-    .profit-table th.num, .profit-table td.num {
-      text-align: right;
-    }
+    .profit-table th.num, .profit-table td.num { text-align: right; }
     .profit-table td {
       padding: .7rem .75rem .7rem 0;
       border-bottom: 1px solid var(--line);
@@ -174,8 +137,6 @@
     .profit-table tr:last-child td { border-bottom: none; }
     .profit-table .profit-green { color: var(--success, #027a48); font-weight: 700; }
     .profit-table .profit-red { color: #e11d48; font-weight: 700; }
-
-    /* Sort buttons */
     .table-sort-bar {
       display: flex;
       gap: .5rem;
@@ -192,17 +153,8 @@
       cursor: pointer;
       color: var(--muted);
     }
-    .sort-btn.active {
-      border-color: var(--brand);
-      color: var(--brand);
-    }
-
-    /* Insights */
-    .insight-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
+    .sort-btn.active { border-color: var(--brand); color: var(--brand); }
+    .insight-list { list-style: none; padding: 0; margin: 0; }
     .insight-list li {
       display: flex;
       gap: .75rem;
@@ -212,15 +164,9 @@
       font-size: .9rem;
     }
     .insight-list li:last-child { border-bottom: none; }
-    .insight-icon {
-      font-size: 1.1rem;
-      flex-shrink: 0;
-      margin-top: .05rem;
-    }
+    .insight-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
     .insight-text strong { display: block; font-size: .9rem; }
     .insight-text span { color: var(--muted); font-size: .82rem; }
-
-    /* Category pills */
     .cat-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
     .cat-pill {
       background: rgba(15,118,110,.08);
@@ -230,51 +176,87 @@
       font-size: .78rem;
       font-weight: 600;
     }
-
     @media (max-width: 600px) {
       .profit-cards { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="container nav nav-journey">
-      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links" id="profit-nav-links">
-        <a href="/dashboard" id="nav-dashboard-link">Dashboard</a>
-        <a href="/discover">Discover</a>
-        <a href="/feed">Feed</a>
-        <a href="/community">Community</a>
-        <a class="active" href="/profit">Profit</a>
-      </nav>
-      <div class="nav-actions" data-auth-nav></div>
-      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
-    </div>
-    <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/dashboard" id="mobile-nav-dashboard-link">Dashboard</a>
-      <a href="/discover">Discover</a>
-      <a href="/feed">Feed</a>
-      <a href="/community">Community</a>
-      <a href="/profit">Profit</a>
-      <div data-mobile-auth-nav></div>
-    </div>
-  </header>
 
-  <main>
-    <section class="profit-hero">
-      <div class="container">
+<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/">
+      <span>VA</span><span>Vendor Atlas</span>
+    </a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav">
+    <!-- Populated by dash-layout.js based on role -->
+  </div>
+</nav>
+
+<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
+<div class="dash-shell">
+
+  <!-- ── Sidebar (desktop) ─────────────────────────────────────────────── -->
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/">
+        <span class="dash-sidebar-mark">VA</span>
+        <span class="dash-sidebar-title">Vendor Atlas</span>
+      </a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+
+    <nav class="dash-nav">
+      <!-- Populated by dash-layout.js based on role -->
+    </nav>
+
+    <div class="dash-sidebar-footer">
+      <div data-auth-nav></div>
+    </div>
+  </aside>
+
+  <!-- ── Main body ─────────────────────────────────────────────────────── -->
+  <div class="dash-body">
+
+    <!-- Top bar -->
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Profit</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <!-- Page content -->
+    <div class="dash-content">
+      <div class="dash-page-hero">
         <span class="eyebrow" id="profit-eyebrow">Analytics</span>
-        <h1 id="profit-title">Loading your dashboard…</h1>
+        <h1 id="profit-title">Loading your profit data…</h1>
         <p id="profit-subtitle"></p>
       </div>
-    </section>
-    <section>
-      <div class="container" id="profit-app" data-profit-app>
+      <div id="profit-app" data-profit-app>
         <div class="empty-state"><strong>Loading profit data…</strong></div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
+</div>
 
-  <script src="/assets/app.js"></script>
+<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items">
+    <!-- Populated by dash-layout.js based on role -->
+  </ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
 </body>
 </html>
