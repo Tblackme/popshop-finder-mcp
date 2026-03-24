@@ -1556,7 +1556,6 @@ def create_app() -> FastAPI:
 
         app.add_api_route(route_path, _page_handler, methods=["GET"], response_class=FileResponse)
 
-    @app.get("/dashboard", response_class=FileResponse)
     @app.get("/admin", response_class=FileResponse)
     async def handle_admin_page(request: Request) -> Response:
         user = _require_user(request)
@@ -1566,6 +1565,7 @@ def create_app() -> FastAPI:
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
         return serve_page("admin.html")
 
+    @app.get("/dashboard", response_class=FileResponse)
     async def handle_dashboard_page(request: Request) -> Response:
         user = _require_user(request)
         if not user:
