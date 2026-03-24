@@ -82,6 +82,18 @@ from storage_marketplace import (
     list_saved_events as list_marketplace_saved_events,
     save_event_for_user as save_marketplace_event_for_user,
 )
+from storage_messages import (
+    init_messages_db,
+    create_conversation,
+    get_conversation,
+    list_conversations_for_user,
+    is_participant,
+    mark_conversation_read,
+    get_total_unread,
+    send_direct_message,
+    list_messages_in_conversation,
+    list_new_messages_since,
+)
 from storage_community import (
     init_community_db,
     list_groups,
@@ -155,12 +167,18 @@ from storage_users import (
     upsert_vendor_tracker_for_user,
     get_vendor_profile,
     upsert_vendor_profile,
+    get_verification_status,
+    submit_verification_request,
+    list_verification_requests,
+    review_verification_request,
+    get_latest_verification_request,
     list_vendor_products,
     list_vendor_products_by_username,
     create_vendor_product,
     update_vendor_product,
     delete_vendor_product,
     bulk_replace_csv_products,
+    search_vendors_for_organizers,
 )
 from shopify_oauth import (
     build_authorize_url,
@@ -215,6 +233,8 @@ PUBLIC_PAGE_ROUTES = {
     "/profit": "profit.html",
     "/messages": "messages.html",
     "/settings": "settings.html",
+    "/vendor-verify": "vendor-verify.html",
+    "/admin/verify": "admin-verify.html",
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -446,6 +466,7 @@ def _serialize_vendor_profile(vendor: dict[str, Any], viewer: dict[str, Any] | N
     vendor_id = int(vendor["id"])
     upcoming_events = _apply_recurrence_signals(get_vendor_visible_events(vendor_id, visible_only=True))
     extended = get_vendor_profile(vendor_id)
+    verification_status = extended.get("verification_status", "basic")
     payload = {
         "id": vendor_id,
         "name": vendor.get("name", ""),
@@ -456,6 +477,9 @@ def _serialize_vendor_profile(vendor: dict[str, Any], viewer: dict[str, Any] | N
         "profile_url": f"/u/{vendor.get('username', '')}",
         "followers_visible_events_count": len(upcoming_events),
         "profile": extended,
+        "verification_status": verification_status,
+        "verified": verification_status == "verified",
+        "trusted": verification_status == "trusted",
     }
     if viewer and _normalized_role(viewer) == "shopper":
         payload["is_following"] = is_following_vendor(int(viewer["id"]), vendor_id)
@@ -1335,6 +1359,7 @@ def create_app() -> FastAPI:
     init_shopify_db()
     init_community_db()
     init_feed_db()
+    init_messages_db()
 
     # AI infrastructure — init tables and register routes if enabled
     cfg = get_config()
@@ -1500,6 +1525,15 @@ def create_app() -> FastAPI:
         if _normalized_role(user) != "shopper":
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
         return serve_page("shopper-dashboard.html")
+
+    @app.get("/dashboard/shop")
+    async def handle_vendor_shop_dashboard(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            return RedirectResponse(url="/signin", status_code=302)
+        if _normalized_role(user) != "vendor":
+            return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+        return serve_page("my-shop.html")
 
     @app.get("/shop/{username}")
     async def handle_vendor_shop_page(username: str) -> Response:
@@ -1760,6 +1794,46 @@ def create_app() -> FastAPI:
         if not event:
             raise HTTPException(status_code=404, detail="Event not found.")
         return serve_page("event.html")
+
+    # ── Organizer vendor discovery ────────────────────────────────────────────
+
+    @app.get("/api/organizer/vendors")
+    async def handle_organizer_vendor_search(
+        request: Request,
+        q: str = "",
+        category: str = "",
+        experience_level: str = "",
+        verification_status: str = "",
+        location: str = "",
+        limit: int = 48,
+    ) -> JSONResponse:
+        user = _require_user(request)
+        if user is None:
+            return _auth_error()
+        if _normalized_role(user) != "market":
+            return _validation_error("Only organizers can use vendor discovery.", status_code=403)
+        vendors = search_vendors_for_organizers(
+            q=q,
+            category=category,
+            experience_level=experience_level,
+            verification_status=verification_status,
+            location=location,
+            limit=limit,
+        )
+        # Attach product previews (up to 3 per vendor)
+        for v in vendors:
+            prods = list_vendor_products_by_username(v["username"])
+            v["products"] = [
+                {"name": p.get("name", ""), "category": p.get("category", ""), "image_url": p.get("image_url", "")}
+                for p in prods[:3]
+            ]
+        return JSONResponse({"ok": True, "vendors": vendors, "total": len(vendors)})
+
+    @app.get("/vendor-discovery")
+    async def serve_vendor_discovery() -> Response:
+        return serve_page("vendor-discovery.html")
+
+    # ─────────────────────────────────────────────────────────────────────────
 
     @app.get("/api/vendors/{username}")
     async def handle_vendor_profile(request: Request, username: str) -> JSONResponse:
@@ -2670,6 +2744,209 @@ def create_app() -> FastAPI:
         profile = upsert_vendor_profile(int(user["id"]), ext_fields)
         updated_user = get_user_by_id(int(user["id"]))
         return JSONResponse({"ok": True, "profile": profile, "user": updated_user})
+
+    # ── Vendor verification ──────────────────────────────────────────────────
+
+    @app.get("/api/vendor/verify/status")
+    async def handle_vendor_verify_status(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        status = get_verification_status(int(user["id"]))
+        latest_request = get_latest_verification_request(int(user["id"]))
+        return JSONResponse({"ok": True, "verification_status": status, "latest_request": latest_request})
+
+    @app.post("/api/vendor/verify/apply")
+    async def handle_vendor_verify_apply(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        business_name = str(body.get("business_name", "")).strip()
+        category = str(body.get("category", "")).strip()
+        description = str(body.get("description", "")).strip()
+        if not business_name or not description:
+            return _validation_error("Business name and description are required.")
+        social_links = body.get("social_links", {})
+        product_images = body.get("product_images", [])
+        try:
+            req = submit_verification_request(
+                int(user["id"]),
+                business_name,
+                category,
+                description,
+                social_links,
+                product_images,
+            )
+        except ValueError as e:
+            return _validation_error(str(e))
+        return JSONResponse({"ok": True, "request": req})
+
+    # ── Admin verification review ─────────────────────────────────────────────
+
+    @app.get("/api/admin/verify/requests")
+    async def handle_admin_verify_list(request: Request) -> JSONResponse:
+        status_filter = request.query_params.get("status", "")
+        reqs = list_verification_requests(status_filter or None)
+        return JSONResponse({"ok": True, "requests": reqs, "count": len(reqs)})
+
+    @app.post("/api/admin/verify/requests/{request_id}/review")
+    async def handle_admin_verify_review(request: Request, request_id: int) -> JSONResponse:
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        decision = str(body.get("decision", "")).strip().lower()
+        admin_notes = str(body.get("admin_notes", "")).strip()
+        if decision not in {"approved", "rejected"}:
+            return _validation_error("decision must be 'approved' or 'rejected'")
+        try:
+            result = review_verification_request(request_id, decision, admin_notes)
+        except ValueError as e:
+            return _validation_error(str(e))
+        return JSONResponse(result)
+
+    @app.get("/api/users/lookup")
+    async def handle_user_lookup(request: Request) -> JSONResponse:
+        """Look up a user by username — used by the new-conversation modal."""
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        username = request.query_params.get("username", "").strip()
+        if not username:
+            return _validation_error("username required")
+        found = get_user_by_username(username)
+        if not found:
+            return JSONResponse({"ok": False, "error": "User not found."}, status_code=404)
+        return JSONResponse({"ok": True, "user": {"id": found["id"], "username": found["username"], "name": found.get("name", ""), "role": _normalized_role(found)}})
+
+    # ── MESSAGING ─────────────────────────────────────────────────────────────
+
+    @app.get("/api/messages/unread")
+    async def handle_messages_unread(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        total = get_total_unread(int(user["id"]))
+        return JSONResponse({"ok": True, "unread": total})
+
+    @app.get("/api/messages/conversations")
+    async def handle_list_conversations(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        convs = list_conversations_for_user(int(user["id"]))
+        return JSONResponse({"ok": True, "conversations": convs})
+
+    @app.post("/api/messages/conversations")
+    async def handle_create_conversation(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        participant_ids = [int(p) for p in (body.get("participant_ids") or []) if str(p).isdigit()]
+        conv_type = str(body.get("type") or "direct").strip()
+        if conv_type not in {"direct", "group", "event", "application"}:
+            conv_type = "direct"
+        title = str(body.get("title") or "").strip() or None
+        event_id = str(body.get("event_id") or "").strip() or None
+        if not participant_ids:
+            return _validation_error("participant_ids required")
+        conv = create_conversation(
+            creator_id=int(user["id"]),
+            participant_ids=participant_ids,
+            conv_type=conv_type,
+            title=title,
+            event_id=event_id,
+        )
+        # Send optional opening message
+        first_msg = str(body.get("message") or "").strip()
+        if first_msg and conv:
+            send_direct_message(conv["id"], int(user["id"]), first_msg)
+        return JSONResponse({"ok": True, "conversation": conv})
+
+    @app.get("/api/messages/conversations/{conv_id}")
+    async def handle_get_conversation(request: Request, conv_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not is_participant(conv_id, int(user["id"])):
+            return _validation_error("Not a participant.", status_code=403)
+        conv = get_conversation(conv_id, viewer_id=int(user["id"]))
+        if not conv:
+            return _validation_error("Conversation not found.", status_code=404)
+        return JSONResponse({"ok": True, "conversation": conv})
+
+    @app.get("/api/messages/conversations/{conv_id}/messages")
+    async def handle_list_messages(request: Request, conv_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not is_participant(conv_id, int(user["id"])):
+            return _validation_error("Not a participant.", status_code=403)
+        before = request.query_params.get("before") or None
+        limit = min(int(request.query_params.get("limit") or 50), 100)
+        msgs = list_messages_in_conversation(conv_id, before=before, limit=limit)
+        # Reverse so oldest-first for rendering
+        msgs_asc = list(reversed(msgs))
+        mark_conversation_read(conv_id, int(user["id"]))
+        return JSONResponse({"ok": True, "messages": msgs_asc, "has_more": len(msgs) == limit})
+
+    @app.get("/api/messages/conversations/{conv_id}/poll")
+    async def handle_poll_messages(request: Request, conv_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not is_participant(conv_id, int(user["id"])):
+            return _validation_error("Not a participant.", status_code=403)
+        since = request.query_params.get("since") or "1970-01-01"
+        msgs = list_new_messages_since(conv_id, since)
+        if msgs:
+            mark_conversation_read(conv_id, int(user["id"]))
+        return JSONResponse({"ok": True, "messages": msgs})
+
+    @app.post("/api/messages/send")
+    async def handle_send_message(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        conv_id = str(body.get("conversation_id") or "").strip()
+        text = str(body.get("body") or "").strip()
+        reply_to = str(body.get("reply_to_id") or "").strip() or None
+        if not conv_id:
+            return _validation_error("conversation_id required")
+        if not text:
+            return _validation_error("body required")
+        if not is_participant(conv_id, int(user["id"])):
+            return _validation_error("Not a participant.", status_code=403)
+        msg = send_direct_message(conv_id, int(user["id"]), text, reply_to_id=reply_to)
+        return JSONResponse({"ok": True, "message": msg})
+
+    @app.post("/api/messages/read/{conv_id}")
+    async def handle_mark_read(request: Request, conv_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not is_participant(conv_id, int(user["id"])):
+            return _validation_error("Not a participant.", status_code=403)
+        mark_conversation_read(conv_id, int(user["id"]))
+        return JSONResponse({"ok": True})
+
+    # ── END MESSAGING ─────────────────────────────────────────────────────────
 
     @app.get("/api/vendor/products")
     async def handle_my_products(request: Request) -> JSONResponse:

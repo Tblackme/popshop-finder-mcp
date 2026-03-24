@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Get Verified | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    .verify-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding-bottom: 1.5rem;
+    }
+    .verify-badge-preview {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 1rem;
+      border-radius: 99px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .badge-basic    { background: rgba(19,38,35,.07); color: var(--muted); }
+    .badge-pending  { background: rgba(232,159,71,.12); color: #a16207; border: 1.5px solid rgba(232,159,71,.3); }
+    .badge-verified { background: rgba(2,122,72,.09); color: var(--success, #027a48); border: 1.5px solid rgba(2,122,72,.2); }
+    .badge-trusted  { background: rgba(234,179,8,.1); color: #854d0e; border: 1.5px solid rgba(234,179,8,.3); }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    @media (max-width: 640px) { .level-grid { grid-template-columns: 1fr; } }
+
+    .level-card {
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .level-card.highlighted { border-color: var(--brand); background: rgba(15,118,110,.04); }
+    .level-card .level-title { font-weight: 700; font-size: 0.95rem; }
+    .level-card ul { margin: 0.25rem 0 0; padding-left: 1.1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+
+    .benefit-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(19,38,35,.06);
+      font-size: 0.88rem;
+    }
+    .benefit-row:last-child { border-bottom: none; }
+    .benefit-check { color: var(--success, #027a48); font-size: 1.1rem; flex-shrink: 0; }
+
+    .verify-form-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      margin-top: 1.5rem;
+      box-shadow: 0 2px 16px rgba(12,31,29,.07);
+    }
+    .verify-form-card h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
+    .verify-form-card .form-desc { font-size: 0.875rem; color: var(--muted); margin: 0 0 1.25rem; }
+
+    .status-panel {
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+    .status-panel.pending  { background: rgba(232,159,71,.1); border: 1.5px solid rgba(232,159,71,.25); }
+    .status-panel.verified { background: rgba(2,122,72,.08); border: 1.5px solid rgba(2,122,72,.2); }
+    .status-panel.trusted  { background: rgba(234,179,8,.08); border: 1.5px solid rgba(234,179,8,.25); }
+    .status-panel h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .status-panel p  { margin: 0; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav" id="mobile-drawer-nav-content"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav" id="sidebar-nav-content"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title">Get Verified</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- Hero + current badge -->
+      <div class="verify-hero">
+        <span class="eyebrow">Vendor verification</span>
+        <h1 style="margin:4px 0 6px;">Build trust with shoppers &amp; organizers</h1>
+        <p style="color:var(--muted);margin:0 0 1rem;">Verification is optional — but it unlocks real benefits across the platform.</p>
+        <div>
+          <span style="font-size:.78rem;font-weight:600;color:var(--muted);margin-right:.5rem;">Your current status:</span>
+          <span id="current-badge-display" class="verify-badge-preview badge-basic">Vendor</span>
+        </div>
+      </div>
+
+      <!-- Verification levels -->
+      <div class="dash-card full" style="margin-bottom:1.5rem;">
+        <span class="eyebrow">Vendor levels</span>
+        <h3>What each level means</h3>
+        <div class="level-grid" style="margin-top:1rem;">
+          <div class="level-card">
+            <span class="verify-badge-preview badge-basic" style="width:fit-content;">Vendor</span>
+            <div class="level-title">Level 1 — Basic</div>
+            <ul>
+              <li>Create your shop</li>
+              <li>Add products</li>
+              <li>Post in the feed</li>
+              <li>Browse &amp; RSVP events</li>
+            </ul>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem;">Default for all vendors — no action needed.</p>
+          </div>
+          <div class="level-card highlighted">
+            <span class="verify-badge-preview badge-verified" style="width:fit-content;">Verified Vendor ✓</span>
+            <div class="level-title">Level 2 — Verified</div>
+            <ul>
+              <li>Higher ranking in search</li>
+              <li>More trust with shoppers</li>
+              <li>Easier event acceptance</li>
+              <li>Eligible for featured sections</li>
+            </ul>
+            <p style="font-size:.75rem;color:var(--brand);margin-top:.5rem;font-weight:600;">Apply below →</p>
+          </div>
+          <div class="level-card" style="opacity:.7;">
+            <span class="verify-badge-preview badge-trusted" style="width:fit-content;">Trusted Vendor ⭐</span>
+            <div class="level-title">Level 3 — Trusted</div>
+            <ul>
+              <li>Proven event track record</li>
+              <li>Positive reviews</li>
+              <li>Consistent sales activity</li>
+            </ul>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem;">Coming soon — earned automatically.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benefits of verifying -->
+      <div class="dash-card full" style="margin-bottom:1.5rem;">
+        <span class="eyebrow">Why verify?</span>
+        <h3>Benefits of becoming a Verified Vendor</h3>
+        <div style="margin-top:.75rem;">
+          <div class="benefit-row"><span class="benefit-check">✓</span><span><strong>Higher search ranking</strong> — your shop appears first when shoppers and organizers search for vendors in your category.</span></div>
+          <div class="benefit-row"><span class="benefit-check">✓</span><span><strong>Verified badge on profile</strong> — a visible checkmark on your public vendor page and product listings.</span></div>
+          <div class="benefit-row"><span class="benefit-check">✓</span><span><strong>Easier event acceptance</strong> — event organizers trust verified vendors and approve applications faster.</span></div>
+          <div class="benefit-row"><span class="benefit-check">✓</span><span><strong>Featured sections</strong> — eligible for "Verified Vendors" spotlights on the Discover page.</span></div>
+          <div class="benefit-row"><span class="benefit-check">✓</span><span><strong>Shopper confidence</strong> — shoppers can filter by verified vendors, so you show up in high-intent searches.</span></div>
+        </div>
+      </div>
+
+      <!-- Status panel (shown when pending or verified) -->
+      <div id="status-panel" style="display:none;"></div>
+
+      <!-- Application form (shown when basic) -->
+      <div id="apply-section">
+        <div class="verify-form-card">
+          <h2>Apply for Verification</h2>
+          <p class="form-desc">Fill out the form below. Our team reviews all applications within 1–3 business days. You can still use Vendor Atlas while your application is under review.</p>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="vf-business-name">Business name <span style="color:var(--danger)">*</span></label>
+              <input id="vf-business-name" type="text" placeholder="Prairie Goods Co." required>
+            </div>
+            <div class="field">
+              <label for="vf-category">Product category <span style="color:var(--danger)">*</span></label>
+              <select id="vf-category">
+                <option value="">Select…</option>
+                <option>Food &amp; Treats</option>
+                <option>Candles &amp; Home</option>
+                <option>Jewelry</option>
+                <option>Clothing &amp; Apparel</option>
+                <option>Art &amp; Prints</option>
+                <option>Ceramics &amp; Pottery</option>
+                <option>Plants &amp; Flowers</option>
+                <option>Skincare &amp; Beauty</option>
+                <option>Vintage &amp; Antiques</option>
+                <option>Handmade Crafts</option>
+                <option>Woodworking</option>
+                <option>Textiles &amp; Fiber Arts</option>
+                <option>Photography</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="vf-description">Describe your products <span style="color:var(--danger)">*</span></label>
+              <textarea id="vf-description" rows="4" placeholder="Tell us about what you make or sell, how long you've been in business, and where you typically sell. The more detail, the faster we can review."></textarea>
+              <small class="muted">Minimum 50 characters</small>
+            </div>
+
+            <div class="field">
+              <label style="font-weight:600;font-size:.85rem;margin-bottom:.6rem;display:block;">Social &amp; shop links <span style="color:var(--muted);font-weight:400;">(optional but recommended)</span></label>
+              <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <input id="vf-instagram" type="url" placeholder="Instagram URL" style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.875rem;background:var(--bg);color:var(--text);">
+                <input id="vf-tiktok" type="url" placeholder="TikTok URL" style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.875rem;background:var(--bg);color:var(--text);">
+                <input id="vf-website" type="url" placeholder="Website or Etsy URL" style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.875rem;background:var(--bg);color:var(--text);">
+              </div>
+            </div>
+
+            <div class="field">
+              <label style="font-weight:600;font-size:.85rem;margin-bottom:.4rem;display:block;">Product photos <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+              <div style="border:2px dashed var(--line);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;position:relative;" id="vf-upload-zone">
+                <input type="file" id="vf-photo-input" accept="image/*" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+                <div style="font-size:1.5rem;margin-bottom:.35rem;">📷</div>
+                <p style="margin:0;font-size:.82rem;color:var(--muted);">Click to upload product or booth photos</p>
+              </div>
+              <div id="vf-previews" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:1.5rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="submit-verify-btn" onclick="submitVerification()">Get Verified →</button>
+            <span style="font-size:.8rem;color:var(--muted);">By submitting, you agree to our <a href="/about" style="color:var(--brand);">vendor terms</a>.</span>
+          </div>
+          <div id="verify-form-status" style="margin-top:.75rem;"></div>
+        </div>
+      </div>
+
+    </div><!-- /dash-content -->
+  </div><!-- /dash-body -->
+</div><!-- /dash-shell -->
+
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items" id="bottom-nav-items"></ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  var uploadedImages = [];
+
+  // ── Load current verification status ──────────────────────────────────
+  async function loadStatus() {
+    try {
+      var res = await fetch('/api/vendor/verify/status', { credentials: 'include' });
+      if (!res.ok) { window.location.href = '/signin'; return; }
+      var data = await res.json();
+      var status = data.verification_status || 'basic';
+      renderBadge(status);
+      renderStatusPanel(status, data.latest_request);
+    } catch (_) {}
+  }
+
+  function renderBadge(status) {
+    var el = document.getElementById('current-badge-display');
+    var labels = {
+      basic: 'Vendor',
+      pending: '⏳ Review pending',
+      verified: '✓ Verified Vendor',
+      trusted: '⭐ Trusted Vendor',
+    };
+    var classes = {
+      basic: 'badge-basic',
+      pending: 'badge-pending',
+      verified: 'badge-verified',
+      trusted: 'badge-trusted',
+    };
+    el.className = 'verify-badge-preview ' + (classes[status] || 'badge-basic');
+    el.textContent = labels[status] || 'Vendor';
+  }
+
+  function renderStatusPanel(status, req) {
+    var panel = document.getElementById('status-panel');
+    var applySection = document.getElementById('apply-section');
+
+    if (status === 'basic') {
+      panel.style.display = 'none';
+      applySection.style.display = 'block';
+      return;
+    }
+
+    var content = '';
+    if (status === 'pending') {
+      content = '<div class="status-panel pending">' +
+        '<h3>⏳ Application under review</h3>' +
+        '<p>Your verification application is being reviewed. We\'ll notify you within 1–3 business days. ' +
+        'You can continue using Vendor Atlas normally while we review.</p>' +
+        (req && req.created_at ? '<p style="margin-top:.5rem;font-size:.78rem;color:var(--muted);">Submitted: ' + new Date(req.created_at).toLocaleDateString() + '</p>' : '') +
+        '</div>';
+      applySection.style.display = 'none';
+    } else if (status === 'verified') {
+      content = '<div class="status-panel verified">' +
+        '<h3>✓ You\'re a Verified Vendor!</h3>' +
+        '<p>Your business is verified. Your Verified Vendor badge is now showing on your public profile and product listings.</p>' +
+        '<p style="margin-top:.75rem;"><a class="btn btn-primary" href="/my-shop">View my shop →</a></p>' +
+        '</div>';
+      applySection.style.display = 'none';
+    } else if (status === 'trusted') {
+      content = '<div class="status-panel trusted">' +
+        '<h3>⭐ Trusted Vendor</h3>' +
+        '<p>You\'ve earned our highest vendor trust level. Thank you for being an outstanding member of the Vendor Atlas community.</p>' +
+        '</div>';
+      applySection.style.display = 'none';
+    }
+
+    panel.innerHTML = content;
+    panel.style.display = content ? 'block' : 'none';
+  }
+
+  // ── Photo upload ──────────────────────────────────────────────────────
+  var photoInput = document.getElementById('vf-photo-input');
+  photoInput?.addEventListener('change', function () {
+    Array.from(this.files).slice(0, 3).forEach(function (file) {
+      if (!file.type.startsWith('image/')) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        uploadedImages.push(ev.target.result);
+        var img = document.createElement('img');
+        img.src = ev.target.result;
+        img.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);';
+        document.getElementById('vf-previews').appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  // ── Submit ────────────────────────────────────────────────────────────
+  window.submitVerification = async function () {
+    var btn = document.getElementById('submit-verify-btn');
+    var statusEl = document.getElementById('verify-form-status');
+    statusEl.textContent = '';
+
+    var businessName = document.getElementById('vf-business-name').value.trim();
+    var category = document.getElementById('vf-category').value;
+    var description = document.getElementById('vf-description').value.trim();
+
+    if (!businessName) {
+      statusEl.textContent = 'Please enter your business name.';
+      statusEl.className = 'status error';
+      return;
+    }
+    if (!description || description.length < 50) {
+      statusEl.textContent = 'Please write at least 50 characters about your products.';
+      statusEl.className = 'status error';
+      return;
+    }
+
+    var socialLinks = {
+      instagram: document.getElementById('vf-instagram').value.trim(),
+      tiktok: document.getElementById('vf-tiktok').value.trim(),
+      website: document.getElementById('vf-website').value.trim(),
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    try {
+      var res = await fetch('/api/vendor/verify/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: businessName,
+          category: category,
+          description: description,
+          social_links: socialLinks,
+          product_images: uploadedImages,
+        }),
+        credentials: 'include',
+      });
+      var data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Submission failed.');
+      showToast('Application submitted! We\'ll review within 1–3 business days.', 'success');
+      await loadStatus();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'status error';
+      btn.disabled = false;
+      btn.textContent = 'Get Verified →';
+    }
+  };
+
+  loadStatus();
+})();
+</script>
+</body>
+</html>

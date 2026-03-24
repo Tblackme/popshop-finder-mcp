@@ -608,10 +608,51 @@
       });
       area.appendChild(shareBtn);
 
-      // Follow button — for shoppers and organizers only
+      // Follow + Message buttons — for shoppers and organizers only
+      // Edit Shop button — for the vendor who owns this shop
       try {
-        const me = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
-        if (!me || me.role === "vendor") return; // vendors can't follow vendors
+        const meRes = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
+        if (!meRes || !meRes.authenticated) return;
+        const me = meRes.user || meRes;
+        const viewerRole = me.role || "";
+
+        // If this vendor is viewing their own shop, show "Manage Shop" instead of follow/message
+        if (viewerRole === "vendor" && (me.username === username || String(me.id) === String(vendorId))) {
+          const editBtn = document.createElement("a");
+          editBtn.className = "btn btn-primary";
+          editBtn.textContent = "Manage Shop";
+          editBtn.href = "/my-shop";
+          editBtn.style.whiteSpace = "nowrap";
+          area.insertBefore(editBtn, shareBtn);
+          return;
+        }
+
+        if (viewerRole === "vendor") return; // other vendors can't follow/message
+
+        // Message button
+        const msgBtn = document.createElement("button");
+        msgBtn.className = "btn btn-secondary";
+        msgBtn.textContent = "Message";
+        msgBtn.style.whiteSpace = "nowrap";
+        msgBtn.addEventListener("click", async () => {
+          msgBtn.disabled = true;
+          try {
+            const res = await fetch("/api/messages/conversations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ participant_ids: [vendorId], type: "direct" }),
+            });
+            const d = await res.json();
+            if (d.ok && d.conversation) {
+              window.location.href = "/messages?conv=" + d.conversation.id;
+            } else {
+              showToast(d.error || "Could not open conversation", "error");
+            }
+          } catch (_) { showToast("Network error", "error"); }
+          msgBtn.disabled = false;
+        });
+        area.insertBefore(msgBtn, shareBtn);
 
         const followed = await fetch("/api/shopper/following", { credentials: "include" })
           .then(r => r.ok ? r.json() : []);

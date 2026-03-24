@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vendor Discovery | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    /* ── Page layout ─────────────────────────────────────────────────────── */
+    .vd-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── Top search bar ─────────────────────────────────────────────────── */
+    .vd-search-bar {
+      background: var(--surface-strong);
+      border-bottom: 1px solid var(--line);
+      padding: 18px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .vd-search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      max-width: 860px;
+    }
+    .vd-search-input {
+      flex: 1;
+      height: 44px;
+      padding: 0 16px 0 42px;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2354645d' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 14px center;
+      font-size: .94rem;
+      color: var(--text);
+      transition: border-color .15s;
+    }
+    .vd-search-input:focus { outline: none; border-color: var(--brand); }
+    .vd-search-btn {
+      height: 44px;
+      padding: 0 20px;
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: .9rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .vd-search-btn:hover { background: var(--brand-deep); }
+
+    /* ── Body: filters sidebar + grid ──────────────────────────────────── */
+    .vd-body {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 0;
+      flex: 1;
+    }
+
+    /* ── Filter panel ────────────────────────────────────────────────────── */
+    .vd-filters {
+      background: var(--surface-strong);
+      border-right: 1px solid var(--line);
+      padding: 24px 20px;
+      position: sticky;
+      top: 81px;
+      height: calc(100vh - 81px);
+      overflow-y: auto;
+    }
+    .vd-filter-title {
+      font-size: .7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+    .vd-filter-group {
+      margin-bottom: 20px;
+    }
+    .vd-filter-group label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    .vd-filter-select {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: .85rem;
+    }
+    .vd-filter-select:focus { outline: none; border-color: var(--brand); }
+    .vd-filter-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: .85rem;
+      box-sizing: border-box;
+    }
+    .vd-filter-input:focus { outline: none; border-color: var(--brand); }
+    .vd-filter-reset {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 0;
+      background: none;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: .82rem;
+      cursor: pointer;
+    }
+    .vd-filter-reset:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* ── Vendor grid ─────────────────────────────────────────────────────── */
+    .vd-main {
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .vd-results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 12px;
+    }
+    .vd-results-count {
+      font-size: .85rem;
+      color: var(--muted);
+    }
+    .vd-tag-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .vd-tag-pill {
+      background: rgba(15,118,110,0.09);
+      color: var(--brand);
+      border: 1px solid rgba(15,118,110,0.2);
+      border-radius: 99px;
+      padding: 3px 12px;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .vd-tag-pill:hover, .vd-tag-pill.active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    .vd-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Vendor card ─────────────────────────────────────────────────────── */
+    .vd-card {
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow .18s, transform .18s;
+      cursor: pointer;
+    }
+    .vd-card:hover {
+      box-shadow: 0 6px 24px rgba(12,31,29,.1);
+      transform: translateY(-2px);
+    }
+    .vd-card-banner {
+      height: 6px;
+    }
+    .vd-card-body {
+      padding: 18px 18px 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .vd-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .vd-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .vd-card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 2px;
+      line-height: 1.25;
+    }
+    .vd-card-meta {
+      font-size: .78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+    }
+    .vd-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      margin-top: 4px;
+    }
+    .vd-badge-verified { background: rgba(2,122,72,0.1); color: #027a48; }
+    .vd-badge-trusted  { background: rgba(232,159,71,0.15); color: #b25e00; }
+    .vd-badge-exp      { background: rgba(15,118,110,0.09); color: var(--brand); }
+    .vd-card-bio {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0 0 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .vd-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    .vd-card-tag {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      padding: 2px 9px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
+    .vd-product-strip {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .vd-product-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .vd-product-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .vd-product-more {
+      font-size: .7rem;
+      color: var(--muted);
+      align-self: center;
+      margin-left: 2px;
+    }
+    .vd-card-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: auto;
+      padding-top: 2px;
+    }
+    .vd-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .vd-btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+    .vd-btn-primary:hover { background: var(--brand-deep); }
+    .vd-btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border-color: var(--line);
+    }
+    .vd-btn-secondary:hover { border-color: var(--brand); color: var(--brand); }
+    .vd-btn-invite {
+      background: rgba(232,159,71,0.15);
+      color: #b25e00;
+      border-color: rgba(232,159,71,0.3);
+    }
+    .vd-btn-invite:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Empty / loading states ──────────────────────────────────────────── */
+    .vd-loading {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      gap: 12px;
+    }
+    .vd-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--line);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: vd-spin .7s linear infinite;
+    }
+    @keyframes vd-spin { to { transform: rotate(360deg); } }
+
+    /* ── Vendor detail panel (slide-in) ─────────────────────────────────── */
+    .vd-panel-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 500;
+      display: none;
+    }
+    .vd-panel-overlay.open { display: block; }
+    .vd-panel {
+      position: fixed;
+      top: 0;
+      right: -480px;
+      width: 460px;
+      max-width: 96vw;
+      height: 100%;
+      background: var(--surface-strong);
+      border-left: 1px solid var(--line);
+      z-index: 501;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      transition: right .28s cubic-bezier(0.32,.72,0,1);
+      box-shadow: -8px 0 32px rgba(12,31,29,.12);
+    }
+    .vd-panel.open { right: 0; }
+    .vd-panel-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .vd-panel-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.3rem;
+      line-height: 1;
+      padding: 2px 4px;
+      flex-shrink: 0;
+    }
+    .vd-panel-body {
+      padding: 20px 24px;
+      flex: 1;
+    }
+    .vd-panel-section {
+      margin-bottom: 22px;
+    }
+    .vd-panel-section-title {
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+    .vd-panel-products {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .vd-panel-product {
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .vd-panel-product-img {
+      width: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      background: var(--bg);
+    }
+    .vd-panel-product-img img { width: 100%; height: 100%; object-fit: cover; }
+    .vd-panel-product-name {
+      padding: 5px 7px;
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vd-panel-social {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .vd-panel-social a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--brand);
+      text-decoration: none;
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .vd-panel-social a:hover { background: var(--bg); }
+    .vd-panel-invite-bar {
+      padding: 16px 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* ── Invite modal ────────────────────────────────────────────────────── */
+    .vd-invite-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .vd-invite-modal-overlay.open { display: flex; }
+    .vd-invite-modal {
+      background: var(--surface-strong);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 440px;
+      margin: 20px;
+      box-shadow: 0 16px 48px rgba(0,0,0,.22);
+    }
+    .vd-invite-modal h3 { margin: 0 0 6px; font-size: 1.1rem; }
+    .vd-invite-modal p { margin: 0 0 20px; font-size: .88rem; color: var(--muted); }
+    .vd-invite-event-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .vd-invite-event-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .vd-invite-event-item:hover { border-color: var(--brand); }
+    .vd-invite-event-item.selected { border-color: var(--brand); background: rgba(15,118,110,0.06); }
+    .vd-invite-event-item input { accent-color: var(--brand); }
+    .vd-invite-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Mobile responsive ───────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .vd-body { grid-template-columns: 1fr; }
+      .vd-filters {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+        padding: 16px 20px;
+      }
+      .vd-filter-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .vd-filter-reset { margin-top: 0; }
+      .vd-main { padding: 16px; }
+      .vd-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .vd-filter-row { grid-template-columns: 1fr; }
+      .vd-grid { grid-template-columns: 1fr; }
+      .vd-panel { width: 100%; max-width: 100%; }
+    }
+  </style>
+</head>
+<body class="organizer-page">
+
+<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Main</div>
+      <a class="dash-nav-item" href="/market-dashboard">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+        <span class="dash-nav-text">Dashboard</span>
+      </a>
+      <a class="dash-nav-item" href="/feed"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="dash-nav-text">Feed</span></a>
+      <a class="dash-nav-item" href="/community"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="dash-nav-text">Community</span></a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Organizer</div>
+      <a class="dash-nav-item active" href="/vendor-discovery">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+        <span class="dash-nav-text">Find Vendors</span>
+      </a>
+      <a class="dash-nav-item" href="/market-applications"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg></span><span class="dash-nav-text">My Events</span></a>
+      <a class="dash-nav-item" href="/market-analytics"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="dash-nav-text">Analytics</span></a>
+      <a class="dash-nav-item" href="/messages"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span><span class="dash-nav-text">Messages</span></a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <a class="dash-nav-item" href="/settings"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="dash-nav-text">Settings</span></a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
+<div class="dash-shell">
+
+  <!-- ── Sidebar (desktop) ─────────────────────────────────────────────── -->
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+
+    <nav class="dash-nav">
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Main</div>
+        <a class="dash-nav-item" href="/market-dashboard">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+          <span class="dash-nav-text">Dashboard</span>
+        </a>
+        <a class="dash-nav-item" href="/feed"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="dash-nav-text">Feed</span></a>
+        <a class="dash-nav-item" href="/community"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="dash-nav-text">Community</span></a>
+      </div>
+
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Organizer</div>
+        <a class="dash-nav-item active" href="/vendor-discovery">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+          <span class="dash-nav-text">Find Vendors</span>
+        </a>
+        <a class="dash-nav-item" href="/market-applications"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg></span><span class="dash-nav-text">My Events</span></a>
+        <a class="dash-nav-item" href="/market-analytics"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="dash-nav-text">Analytics</span></a>
+        <a class="dash-nav-item" href="/messages"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span><span class="dash-nav-text">Messages</span></a>
+      </div>
+
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Account</div>
+        <a class="dash-nav-item" href="/settings"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="dash-nav-text">Settings</span></a>
+      </div>
+    </nav>
+
+    <div class="dash-sidebar-footer">
+      <div data-auth-nav></div>
+    </div>
+  </aside>
+
+  <!-- ── Main body ─────────────────────────────────────────────────────── -->
+  <div class="dash-body" style="overflow:hidden;display:flex;flex-direction:column;">
+
+    <!-- Top bar -->
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Find Vendors</span>
+      <div class="dash-topbar-actions">
+        <div data-auth-nav></div>
+      </div>
+    </header>
+
+    <!-- Page content — full-height flex column -->
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;" id="vd-root">
+
+      <!-- ── Search bar ─────────────────────────────────────────────────── -->
+      <div class="vd-search-bar">
+        <div class="vd-search-row">
+          <input
+            class="vd-search-input"
+            id="vd-q"
+            type="search"
+            placeholder="Search by name, product type, tags, or location…"
+            autocomplete="off"
+          >
+          <button class="vd-search-btn" id="vd-search-btn">Search</button>
+        </div>
+        <!-- Quick-tag chips -->
+        <div class="vd-tag-pills" id="vd-quick-tags" style="margin-top:10px;">
+          <button class="vd-tag-pill" data-quick-tag="">All vendors</button>
+          <button class="vd-tag-pill" data-quick-tag="handmade">Handmade</button>
+          <button class="vd-tag-pill" data-quick-tag="food">Food</button>
+          <button class="vd-tag-pill" data-quick-tag="vintage">Vintage</button>
+          <button class="vd-tag-pill" data-quick-tag="art">Art</button>
+          <button class="vd-tag-pill" data-quick-tag="jewelry">Jewelry</button>
+          <button class="vd-tag-pill" data-quick-tag="candles">Candles</button>
+          <button class="vd-tag-pill" data-quick-tag="eco-friendly">Eco-friendly</button>
+          <button class="vd-tag-pill" data-quick-tag="women-owned">Women-owned</button>
+        </div>
+      </div>
+
+      <!-- ── Body: filters + grid ───────────────────────────────────────── -->
+      <div class="vd-body" style="flex:1;overflow:hidden;">
+
+        <!-- Filters sidebar -->
+        <div class="vd-filters">
+          <p class="vd-filter-title">Filter vendors</p>
+
+          <div class="vd-filter-row" id="vd-filter-row">
+
+            <div class="vd-filter-group">
+              <label for="vd-f-category">Category</label>
+              <select class="vd-filter-select" id="vd-f-category">
+                <option value="">All categories</option>
+                <option value="Candles">Candles</option>
+                <option value="Jewelry">Jewelry</option>
+                <option value="Clothing">Clothing &amp; Apparel</option>
+                <option value="Art">Art &amp; Prints</option>
+                <option value="Food">Food &amp; Beverage</option>
+                <option value="Home Decor">Home Décor</option>
+                <option value="Plants">Plants &amp; Botanicals</option>
+                <option value="Vintage">Vintage &amp; Antiques</option>
+                <option value="Crafts">Crafts &amp; DIY</option>
+                <option value="Skincare">Skincare &amp; Beauty</option>
+                <option value="Ceramics">Ceramics &amp; Pottery</option>
+                <option value="Photography">Photography</option>
+                <option value="Books">Books &amp; Zines</option>
+                <option value="Services">Services</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="vd-filter-group">
+              <label for="vd-f-exp">Experience Level</label>
+              <select class="vd-filter-select" id="vd-f-exp">
+                <option value="">Any experience</option>
+                <option value="beginner">New Vendor (0–2 events)</option>
+                <option value="growing">Growing (3–10 events)</option>
+                <option value="experienced">Experienced (10+ events)</option>
+                <option value="expert">Top Vendor (50+ events)</option>
+              </select>
+            </div>
+
+            <div class="vd-filter-group">
+              <label for="vd-f-verified">Verification</label>
+              <select class="vd-filter-select" id="vd-f-verified">
+                <option value="">Any status</option>
+                <option value="verified">Verified ✓</option>
+                <option value="trusted">Trusted ★</option>
+              </select>
+            </div>
+
+            <div class="vd-filter-group">
+              <label for="vd-f-location">Location</label>
+              <input class="vd-filter-input" id="vd-f-location" placeholder="City or state…" type="text">
+            </div>
+
+          </div><!-- /.vd-filter-row -->
+
+          <button class="vd-filter-reset" id="vd-filter-reset">Reset filters</button>
+        </div>
+
+        <!-- Vendor grid -->
+        <div class="vd-main" id="vd-main">
+          <div class="vd-results-header">
+            <span class="vd-results-count" id="vd-results-count">Loading…</span>
+          </div>
+          <div class="vd-grid" id="vd-grid">
+            <div class="vd-loading">
+              <div class="vd-spinner"></div>
+              <p>Finding vendors…</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.vd-body -->
+    </div><!-- /#vd-root -->
+
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
+<!-- ── Vendor detail panel ───────────────────────────────────────────── -->
+<div class="vd-panel-overlay" id="vd-panel-overlay"></div>
+<div class="vd-panel" id="vd-panel" role="dialog" aria-modal="true" aria-label="Vendor details">
+  <div class="vd-panel-header" id="vd-panel-header">
+    <!-- populated by JS -->
+    <button class="vd-panel-close" id="vd-panel-close" aria-label="Close panel">×</button>
+  </div>
+  <div class="vd-panel-body" id="vd-panel-body"><!-- populated by JS --></div>
+  <div class="vd-panel-invite-bar" id="vd-panel-invite-bar" style="display:none;">
+    <button class="vd-btn vd-btn-invite" id="vd-panel-invite-btn" style="flex:1;">
+      📩 Invite to Event
+    </button>
+    <a class="vd-btn vd-btn-secondary" id="vd-panel-view-btn" href="#" target="_blank" style="text-decoration:none;">View Profile</a>
+  </div>
+</div>
+
+<!-- ── Invite modal ──────────────────────────────────────────────────── -->
+<div class="vd-invite-modal-overlay" id="vd-invite-overlay">
+  <div class="vd-invite-modal">
+    <h3 id="vd-invite-title">Invite vendor to event</h3>
+    <p id="vd-invite-subtitle">Choose which event to invite this vendor to:</p>
+    <div class="vd-invite-event-list" id="vd-invite-event-list">
+      <!-- populated by JS -->
+    </div>
+    <div class="vd-invite-modal-actions">
+      <button class="btn btn-secondary" id="vd-invite-cancel">Cancel</button>
+      <button class="btn btn-primary" id="vd-invite-send">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items">
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/market-dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Home</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link active" href="/vendor-discovery"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Vendors</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/market-applications"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>Events</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/community"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Community</a></li>
+    <li class="bottom-nav-item"><button class="bottom-nav-more-btn" id="bottom-nav-more"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More</button></li>
+  </ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── State ────────────────────────────────────────────────────────────────
+  var state = {
+    vendors: [],
+    events: [],           // organizer's own events (for invite modal)
+    loading: false,
+    activeVendor: null,
+    selectedEventId: null,
+    filters: { q: '', category: '', experience_level: '', verification_status: '', location: '' },
+  };
+
+  // ── Elements ─────────────────────────────────────────────────────────────
+  var grid         = document.getElementById('vd-grid');
+  var countEl      = document.getElementById('vd-results-count');
+  var searchInput  = document.getElementById('vd-q');
+  var searchBtn    = document.getElementById('vd-search-btn');
+  var filterReset  = document.getElementById('vd-filter-reset');
+  var fCategory    = document.getElementById('vd-f-category');
+  var fExp         = document.getElementById('vd-f-exp');
+  var fVerified    = document.getElementById('vd-f-verified');
+  var fLocation    = document.getElementById('vd-f-location');
+  var quickTags    = document.getElementById('vd-quick-tags');
+
+  var panelOverlay = document.getElementById('vd-panel-overlay');
+  var panel        = document.getElementById('vd-panel');
+  var panelHeader  = document.getElementById('vd-panel-header');
+  var panelBody    = document.getElementById('vd-panel-body');
+  var panelInvBar  = document.getElementById('vd-panel-invite-bar');
+  var panelInvBtn  = document.getElementById('vd-panel-invite-btn');
+  var panelViewBtn = document.getElementById('vd-panel-view-btn');
+  var panelClose   = document.getElementById('vd-panel-close');
+
+  var invOverlay   = document.getElementById('vd-invite-overlay');
+  var invTitle     = document.getElementById('vd-invite-title');
+  var invEventList = document.getElementById('vd-invite-event-list');
+  var invCancel    = document.getElementById('vd-invite-cancel');
+  var invSend      = document.getElementById('vd-invite-send');
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function esc(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function initials(name) {
+    return (name || 'V').split(' ').slice(0, 2).map(function (w) { return w[0] || ''; }).join('').toUpperCase() || 'V';
+  }
+
+  function expLabel(level) {
+    var map = { beginner: 'New Vendor', growing: 'Growing', experienced: 'Experienced', expert: 'Top Vendor' };
+    return map[level] || level || '';
+  }
+
+  // ── API calls ────────────────────────────────────────────────────────────
+  function buildParams() {
+    var p = new URLSearchParams();
+    if (state.filters.q)                    p.set('q', state.filters.q);
+    if (state.filters.category)             p.set('category', state.filters.category);
+    if (state.filters.experience_level)     p.set('experience_level', state.filters.experience_level);
+    if (state.filters.verification_status)  p.set('verification_status', state.filters.verification_status);
+    if (state.filters.location)             p.set('location', state.filters.location);
+    return p.toString();
+  }
+
+  async function loadVendors() {
+    if (state.loading) return;
+    state.loading = true;
+    grid.innerHTML = '<div class="vd-loading"><div class="vd-spinner"></div><p>Finding vendors…</p></div>';
+    countEl.textContent = 'Loading…';
+    try {
+      var qs = buildParams();
+      var resp = await fetch('/api/organizer/vendors' + (qs ? '?' + qs : ''), { credentials: 'include' });
+      if (!resp.ok) {
+        var err = await resp.json().catch(function () { return {}; });
+        if (resp.status === 401) { window.location.href = '/signin?next=/vendor-discovery'; return; }
+        if (resp.status === 403) { renderError('Only organizers can access vendor discovery.'); return; }
+        renderError(err.detail || 'Could not load vendors.');
+        return;
+      }
+      var data = await resp.json();
+      state.vendors = data.vendors || [];
+      renderGrid();
+    } catch (e) {
+      renderError('Network error. Please try again.');
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  async function loadOrganizerEvents() {
+    try {
+      var resp = await fetch('/api/market-dashboard', { credentials: 'include' });
+      if (!resp.ok) return;
+      var data = await resp.json();
+      state.events = data.events || [];
+    } catch (_) {}
+  }
+
+  // ── Render grid ──────────────────────────────────────────────────────────
+  function renderGrid() {
+    var vendors = state.vendors;
+    countEl.textContent = vendors.length + ' vendor' + (vendors.length !== 1 ? 's' : '') + ' found';
+    if (!vendors.length) {
+      grid.innerHTML = '<div class="vd-loading"><p style="font-size:1.1rem;">No vendors matched your search.</p><p style="color:var(--muted);font-size:.88rem;">Try a different keyword or remove some filters.</p></div>';
+      return;
+    }
+    grid.innerHTML = vendors.map(function (v) { return renderCard(v); }).join('');
+
+    // Attach card click handlers
+    grid.querySelectorAll('[data-vendor-id]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.vd-btn')) return; // let buttons handle their own clicks
+        var vid = card.getAttribute('data-vendor-id');
+        var vendor = state.vendors.find(function (v) { return String(v.id) === String(vid); });
+        if (vendor) openPanel(vendor);
+      });
+    });
+
+    // Button handlers
+    grid.querySelectorAll('[data-view-vendor]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var username = btn.getAttribute('data-view-vendor');
+        window.open('/u/' + encodeURIComponent(username), '_blank');
+      });
+    });
+    grid.querySelectorAll('[data-invite-vendor]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var vid = btn.getAttribute('data-invite-vendor');
+        var vendor = state.vendors.find(function (v) { return String(v.id) === String(vid); });
+        if (vendor) openInviteModal(vendor);
+      });
+    });
+  }
+
+  function renderCard(v) {
+    var avatarColor = v.banner_color || '#0f766e';
+    var badge = '';
+    if (v.verification_status === 'verified') {
+      badge = '<span class="vd-badge vd-badge-verified">✓ Verified</span>';
+    } else if (v.verification_status === 'trusted') {
+      badge = '<span class="vd-badge vd-badge-trusted">★ Trusted</span>';
+    }
+    var expBadge = v.experience_level ? '<span class="vd-badge vd-badge-exp">' + esc(expLabel(v.experience_level)) + '</span>' : '';
+    var tags = (v.tags || []).slice(0, 4).map(function (t) {
+      return '<span class="vd-card-tag">' + esc(t) + '</span>';
+    }).join('');
+    var products = (v.products || []).slice(0, 3).map(function (p) {
+      var img = p.image_url
+        ? '<img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '" loading="lazy">'
+        : '<span style="font-size:1.2rem;">🛍</span>';
+      return '<div class="vd-product-thumb" title="' + esc(p.name) + '">' + img + '</div>';
+    }).join('');
+    var productMore = (v.products || []).length > 3 ? '<span class="vd-product-more">+' + ((v.products.length) - 3) + ' more</span>' : '';
+
+    return [
+      '<div class="vd-card" data-vendor-id="' + esc(String(v.id)) + '">',
+      '  <div class="vd-card-banner" style="background:' + esc(avatarColor) + ';"></div>',
+      '  <div class="vd-card-body">',
+      '    <div class="vd-card-header">',
+      '      <div class="vd-avatar" style="background:' + esc(avatarColor) + ';">' + esc(initials(v.business_name || v.name)) + '</div>',
+      '      <div style="flex:1;min-width:0;">',
+      '        <div class="vd-card-name">' + esc(v.business_name || v.name) + '</div>',
+      '        <div class="vd-card-meta">',
+      v.category ? '<span>' + esc(v.category) + '</span>' : '',
+      v.location ? '<span>📍 ' + esc(v.location) + '</span>' : '',
+      '        </div>',
+      '        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">' + badge + expBadge + '</div>',
+      '      </div>',
+      '    </div>',
+      v.bio ? '<p class="vd-card-bio">' + esc(v.bio) + '</p>' : '',
+      tags ? '<div class="vd-card-tags">' + tags + '</div>' : '',
+      products ? '<div class="vd-product-strip">' + products + productMore + '</div>' : '',
+      '    <div class="vd-card-actions">',
+      '      <button class="vd-btn vd-btn-secondary" data-view-vendor="' + esc(v.username) + '">View</button>',
+      '      <button class="vd-btn vd-btn-invite" data-invite-vendor="' + esc(String(v.id)) + '">📩 Invite</button>',
+      '    </div>',
+      '  </div>',
+      '</div>',
+    ].join('');
+  }
+
+  function renderError(msg) {
+    grid.innerHTML = '<div class="vd-loading"><p style="color:var(--danger);">⚠️ ' + esc(msg) + '</p></div>';
+    countEl.textContent = '';
+  }
+
+  // ── Vendor detail panel ──────────────────────────────────────────────────
+  function openPanel(vendor) {
+    state.activeVendor = vendor;
+    var avatarColor = vendor.banner_color || '#0f766e';
+    var badge = '';
+    if (vendor.verification_status === 'verified') badge = ' <span class="vd-badge vd-badge-verified">✓ Verified</span>';
+    else if (vendor.verification_status === 'trusted') badge = ' <span class="vd-badge vd-badge-trusted">★ Trusted</span>';
+
+    panelHeader.innerHTML =
+      '<div class="vd-avatar" style="background:' + esc(avatarColor) + ';width:52px;height:52px;font-size:1.3rem;flex-shrink:0;">' + esc(initials(vendor.business_name || vendor.name)) + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:1.1rem;font-weight:800;color:var(--text);">' + esc(vendor.business_name || vendor.name) + '</div>' +
+        '<div style="font-size:.82rem;color:var(--muted);">' + (vendor.category ? esc(vendor.category) : '') + (vendor.location ? ' · 📍 ' + esc(vendor.location) : '') + '</div>' +
+        '<div style="margin-top:4px;">' + badge + (vendor.experience_level ? '<span class="vd-badge vd-badge-exp">' + esc(expLabel(vendor.experience_level)) + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<button class="vd-panel-close" id="vd-panel-close" aria-label="Close">×</button>';
+
+    var sections = [];
+
+    if (vendor.bio) {
+      sections.push(
+        '<div class="vd-panel-section">' +
+        '<p class="vd-panel-section-title">About</p>' +
+        '<p style="font-size:.88rem;line-height:1.55;color:var(--text);">' + esc(vendor.bio) + '</p>' +
+        '</div>'
+      );
+    }
+
+    var tags = (vendor.tags || []);
+    if (tags.length) {
+      sections.push(
+        '<div class="vd-panel-section">' +
+        '<p class="vd-panel-section-title">Tags</p>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:5px;">' +
+        tags.map(function (t) { return '<span class="vd-card-tag">' + esc(t) + '</span>'; }).join('') +
+        '</div></div>'
+      );
+    }
+
+    var products = vendor.products || [];
+    if (products.length) {
+      sections.push(
+        '<div class="vd-panel-section">' +
+        '<p class="vd-panel-section-title">Products</p>' +
+        '<div class="vd-panel-products">' +
+        products.map(function (p) {
+          var img = p.image_url
+            ? '<img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '" loading="lazy">'
+            : '<div style="font-size:2rem;display:flex;align-items:center;justify-content:center;height:100%;">🛍</div>';
+          return '<div class="vd-panel-product"><div class="vd-panel-product-img">' + img + '</div><div class="vd-panel-product-name">' + esc(p.name || 'Product') + '</div></div>';
+        }).join('') +
+        '</div></div>'
+      );
+    }
+
+    var socials = [];
+    if (vendor.instagram_url) socials.push('<a href="' + esc(vendor.instagram_url) + '" target="_blank" rel="noopener">📸 Instagram</a>');
+    if (vendor.website_url)   socials.push('<a href="' + esc(vendor.website_url) + '" target="_blank" rel="noopener">🌐 Website</a>');
+    if (vendor.etsy_url)      socials.push('<a href="' + esc(vendor.etsy_url) + '" target="_blank" rel="noopener">🛍 Etsy</a>');
+    if (socials.length) {
+      sections.push(
+        '<div class="vd-panel-section">' +
+        '<p class="vd-panel-section-title">Links</p>' +
+        '<div class="vd-panel-social">' + socials.join('') + '</div>' +
+        '</div>'
+      );
+    }
+
+    panelBody.innerHTML = sections.join('') || '<p class="muted" style="font-size:.88rem;">No additional details available.</p>';
+    panelViewBtn.href = '/u/' + encodeURIComponent(vendor.username);
+    panelInvBar.style.display = '';
+    panel.classList.add('open');
+    panelOverlay.classList.add('open');
+
+    // Re-attach close buttons (header is replaced)
+    document.getElementById('vd-panel-close').addEventListener('click', closePanel);
+    panelInvBtn.onclick = function () { openInviteModal(vendor); };
+  }
+
+  function closePanel() {
+    panel.classList.remove('open');
+    panelOverlay.classList.remove('open');
+    state.activeVendor = null;
+  }
+
+  // ── Invite modal ─────────────────────────────────────────────────────────
+  function openInviteModal(vendor) {
+    state.activeVendor = vendor;
+    state.selectedEventId = null;
+    invTitle.textContent = 'Invite ' + (vendor.business_name || vendor.name);
+    invEventList.innerHTML = state.events.length
+      ? state.events.map(function (ev) {
+          return '<label class="vd-invite-event-item" data-event-id="' + esc(String(ev.id)) + '">' +
+            '<input type="radio" name="inv-event" value="' + esc(String(ev.id)) + '">' +
+            '<div><strong>' + esc(ev.name) + '</strong><div style="font-size:.8rem;color:var(--muted);">' + esc([ev.city, ev.state].filter(Boolean).join(', ')) + (ev.date ? ' · ' + esc(ev.date) : '') + '</div></div>' +
+            '</label>';
+        }).join('')
+      : '<p style="color:var(--muted);font-size:.88rem;padding:12px 0;">You have no active events to invite vendors to. <a href="/market-dashboard" style="color:var(--brand);">Create one first.</a></p>';
+
+    invEventList.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        state.selectedEventId = radio.value;
+        invEventList.querySelectorAll('.vd-invite-event-item').forEach(function (item) {
+          item.classList.toggle('selected', item.getAttribute('data-event-id') === radio.value);
+        });
+      });
+    });
+
+    invOverlay.classList.add('open');
+  }
+
+  function closeInviteModal() {
+    invOverlay.classList.remove('open');
+    state.selectedEventId = null;
+  }
+
+  invCancel.addEventListener('click', closeInviteModal);
+  invOverlay.addEventListener('click', function (e) { if (e.target === invOverlay) closeInviteModal(); });
+
+  invSend.addEventListener('click', async function () {
+    if (!state.selectedEventId) {
+      alert('Please select an event first.');
+      return;
+    }
+    var vendor = state.activeVendor;
+    if (!vendor) return;
+    invSend.disabled = true;
+    invSend.textContent = 'Sending…';
+    // POST invite (future integration — fires a follow for now as placeholder)
+    try {
+      await fetch('/api/vendors/' + encodeURIComponent(vendor.id) + '/follow', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: state.selectedEventId }),
+      });
+    } catch (_) {}
+    closeInviteModal();
+    closePanel();
+    invSend.disabled = false;
+    invSend.textContent = 'Send Invite';
+    // Show success toast if available
+    if (typeof showToast === 'function') {
+      showToast('Invite sent to ' + (vendor.business_name || vendor.name), 'success');
+    }
+  });
+
+  // ── Filter & search events ────────────────────────────────────────────────
+  panelOverlay.addEventListener('click', closePanel);
+  panelClose.addEventListener('click', closePanel);
+
+  function readFilters() {
+    state.filters.q                  = searchInput.value.trim();
+    state.filters.category           = fCategory.value;
+    state.filters.experience_level   = fExp.value;
+    state.filters.verification_status = fVerified.value;
+    state.filters.location           = fLocation.value.trim();
+  }
+
+  searchBtn.addEventListener('click', function () { readFilters(); loadVendors(); });
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { readFilters(); loadVendors(); }
+  });
+
+  [fCategory, fExp, fVerified].forEach(function (sel) {
+    sel.addEventListener('change', function () { readFilters(); loadVendors(); });
+  });
+
+  var locationTimer;
+  fLocation.addEventListener('input', function () {
+    clearTimeout(locationTimer);
+    locationTimer = setTimeout(function () { readFilters(); loadVendors(); }, 500);
+  });
+
+  filterReset.addEventListener('click', function () {
+    searchInput.value = '';
+    fCategory.value = '';
+    fExp.value = '';
+    fVerified.value = '';
+    fLocation.value = '';
+    quickTags.querySelectorAll('.vd-tag-pill').forEach(function (p) { p.classList.remove('active'); });
+    quickTags.querySelector('[data-quick-tag=""]')?.classList.add('active');
+    state.filters = { q: '', category: '', experience_level: '', verification_status: '', location: '' };
+    loadVendors();
+  });
+
+  quickTags.querySelectorAll('.vd-tag-pill').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      quickTags.querySelectorAll('.vd-tag-pill').forEach(function (p) { p.classList.remove('active'); });
+      pill.classList.add('active');
+      var tag = pill.getAttribute('data-quick-tag');
+      searchInput.value = tag;
+      state.filters.q = tag;
+      loadVendors();
+    });
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  quickTags.querySelector('[data-quick-tag=""]').classList.add('active');
+  loadVendors();
+  loadOrganizerEvents();
+
+})();
+</script>
+</body>
+</html>

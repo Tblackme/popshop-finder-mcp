@@ -236,6 +236,25 @@ def init_users_db() -> None:
             )
             """
         )
+        # ── vendor_verification_requests ─────────────────────────────────
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS vendor_verification_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                vendor_user_id INTEGER NOT NULL,
+                business_name TEXT,
+                category TEXT,
+                description TEXT,
+                social_links TEXT,
+                product_images TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                admin_notes TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TEXT,
+                FOREIGN KEY (vendor_user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
         # Migrations: add columns added after initial schema
         for col, definition in [
             ("source", "TEXT DEFAULT 'manual'"),
@@ -243,6 +262,16 @@ def init_users_db() -> None:
         ]:
             try:
                 conn.execute(f"ALTER TABLE vendor_products ADD COLUMN {col} {definition}")
+            except Exception:
+                pass  # column already exists
+        # Migrations: vendor_profiles new columns
+        for col, definition in [
+            ("verification_status", "TEXT NOT NULL DEFAULT 'basic'"),
+            ("sell_where", "TEXT"),
+            ("etsy_url", "TEXT"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE vendor_profiles ADD COLUMN {col} {definition}")
             except Exception:
                 pass  # column already exists
         conn.commit()
@@ -980,7 +1009,10 @@ def get_vendor_profile(user_id: int) -> dict[str, Any]:
         "instagram_url": "",
         "tiktok_url": "",
         "website_url": "",
+        "etsy_url": "",
+        "sell_where": "",
         "banner_color": "#0f766e",
+        "verification_status": "basic",
         "updated_at": "",
     }
 
@@ -991,7 +1023,7 @@ def upsert_vendor_profile(user_id: int, fields: dict[str, Any]) -> dict[str, Any
         "business_name", "category", "subcategory", "location",
         "price_range", "main_goal", "preferred_env", "experience_level",
         "risk_tolerance", "max_booth_price", "instagram_url", "tiktok_url",
-        "website_url", "banner_color",
+        "website_url", "etsy_url", "sell_where", "banner_color",
     }
     clean = {k: v for k, v in fields.items() if k in allowed}
     if not clean:
@@ -1015,6 +1047,298 @@ def upsert_vendor_profile(user_id: int, fields: dict[str, Any]) -> dict[str, Any
     finally:
         conn.close()
     return get_vendor_profile(user_id)
+
+
+# ---------------------------------------------------------------------------
+# Vendor verification
+# ---------------------------------------------------------------------------
+
+def get_verification_status(vendor_user_id: int) -> str:
+    """Return verification_status for a vendor ('basic', 'pending', 'verified', 'trusted')."""
+    profile = get_vendor_profile(vendor_user_id)
+    return profile.get("verification_status", "basic")
+
+
+def search_vendors_for_organizers(
+    q: str = "",
+    category: str = "",
+    experience_level: str = "",
+    verification_status: str = "",
+    location: str = "",
+    limit: int = 48,
+) -> list[dict[str, Any]]:
+    """Return vendors with profile data for organizer discovery.
+
+    Joins users + vendor_profiles. Supports full-text search across
+    business_name, name, username, category, location, and interests (tags).
+    """
+    init_users_db()
+    safe_limit = max(1, min(int(limit or 48), 200))
+    q_clean = (q or "").strip().lower()
+
+    conditions: list[str] = ["u.role = 'vendor'"]
+    params: list[Any] = []
+
+    if q_clean:
+        like = f"%{q_clean}%"
+        conditions.append(
+            "(LOWER(COALESCE(vp.business_name,'')) LIKE ?"
+            " OR LOWER(u.name) LIKE ?"
+            " OR LOWER(u.username) LIKE ?"
+            " OR LOWER(COALESCE(vp.category,'')) LIKE ?"
+            " OR LOWER(COALESCE(vp.location,'')) LIKE ?"
+            " OR LOWER(COALESCE(u.interests,'')) LIKE ?"
+            " OR LOWER(COALESCE(u.bio,'')) LIKE ?)"
+        )
+        params.extend([like, like, like, like, like, like, like])
+
+    if category:
+        conditions.append("LOWER(COALESCE(vp.category,'')) LIKE ?")
+        params.append(f"%{category.strip().lower()}%")
+
+    if experience_level:
+        conditions.append("LOWER(COALESCE(vp.experience_level,'')) = ?")
+        params.append(experience_level.strip().lower())
+
+    if verification_status and verification_status != "all":
+        conditions.append("LOWER(COALESCE(vp.verification_status,'basic')) = ?")
+        params.append(verification_status.strip().lower())
+
+    if location:
+        conditions.append("LOWER(COALESCE(vp.location,'')) LIKE ?")
+        params.append(f"%{location.strip().lower()}%")
+
+    where = " AND ".join(conditions)
+    params.append(safe_limit)
+
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT
+                u.id,
+                u.name,
+                u.username,
+                u.interests,
+                u.bio,
+                u.created_at,
+                COALESCE(vp.business_name, u.name)    AS business_name,
+                COALESCE(vp.category, '')              AS category,
+                COALESCE(vp.subcategory, '')           AS subcategory,
+                COALESCE(vp.location, '')              AS location,
+                COALESCE(vp.experience_level, '')      AS experience_level,
+                COALESCE(vp.verification_status,'basic') AS verification_status,
+                COALESCE(vp.instagram_url, '')         AS instagram_url,
+                COALESCE(vp.website_url, '')           AS website_url,
+                COALESCE(vp.etsy_url, '')              AS etsy_url,
+                COALESCE(vp.banner_color, '#0f766e')   AS banner_color
+            FROM users u
+            LEFT JOIN vendor_profiles vp ON vp.user_id = u.id
+            WHERE {where}
+            ORDER BY
+                CASE WHEN COALESCE(vp.verification_status,'basic') = 'verified' THEN 0
+                     WHEN COALESCE(vp.verification_status,'basic') = 'trusted'  THEN 1
+                     ELSE 2 END,
+                u.id DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    finally:
+        conn.close()
+
+    return [
+        {
+            "id": row["id"],
+            "name": row["name"],
+            "username": row["username"],
+            "business_name": row["business_name"] or row["name"],
+            "category": row["category"],
+            "subcategory": row["subcategory"],
+            "location": row["location"],
+            "experience_level": row["experience_level"],
+            "verification_status": row["verification_status"],
+            "instagram_url": row["instagram_url"],
+            "website_url": row["website_url"],
+            "etsy_url": row["etsy_url"],
+            "banner_color": row["banner_color"] or "#0f766e",
+            "bio": row["bio"] or "",
+            "tags": [t.strip() for t in (row["interests"] or "").split(",") if t.strip()],
+        }
+        for row in rows
+    ]
+
+
+def set_verification_status(vendor_user_id: int, status: str) -> None:
+    """Set verification_status on vendor_profiles (creates row if missing)."""
+    allowed = {"basic", "pending", "verified", "trusted"}
+    if status not in allowed:
+        raise ValueError(f"Invalid status: {status}")
+    init_users_db()
+    conn = _connect()
+    try:
+        conn.execute(
+            """
+            INSERT INTO vendor_profiles (user_id, verification_status)
+            VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                verification_status = excluded.verification_status,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (vendor_user_id, status),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def submit_verification_request(
+    vendor_user_id: int,
+    business_name: str,
+    category: str,
+    description: str,
+    social_links: dict | None = None,
+    product_images: list | None = None,
+) -> dict[str, Any]:
+    """Create a new verification request (or re-open if previous was rejected)."""
+    init_users_db()
+    conn = _connect()
+    try:
+        # Only allow one active (pending) request at a time
+        existing = conn.execute(
+            "SELECT id, status FROM vendor_verification_requests WHERE vendor_user_id = ? ORDER BY created_at DESC LIMIT 1",
+            (vendor_user_id,),
+        ).fetchone()
+        if existing and existing["status"] == "pending":
+            raise ValueError("You already have a pending verification request.")
+
+        conn.execute(
+            """
+            INSERT INTO vendor_verification_requests
+                (vendor_user_id, business_name, category, description, social_links, product_images, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            """,
+            (
+                vendor_user_id,
+                (business_name or "").strip()[:200],
+                (category or "").strip()[:100],
+                (description or "").strip()[:2000],
+                json.dumps(social_links or {}),
+                json.dumps(product_images or []),
+            ),
+        )
+        conn.commit()
+        # Mark vendor profile as pending
+        set_verification_status(vendor_user_id, "pending")
+        row = conn.execute(
+            "SELECT * FROM vendor_verification_requests WHERE vendor_user_id = ? ORDER BY id DESC LIMIT 1",
+            (vendor_user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return _verification_request_from_row(row)
+
+
+def list_verification_requests(status: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    """List verification requests for admin review."""
+    init_users_db()
+    conn = _connect()
+    try:
+        if status:
+            rows = conn.execute(
+                """
+                SELECT vr.*, u.username, u.name AS vendor_name, u.email
+                FROM vendor_verification_requests vr
+                JOIN users u ON u.id = vr.vendor_user_id
+                WHERE vr.status = ?
+                ORDER BY vr.created_at DESC
+                LIMIT ?
+                """,
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT vr.*, u.username, u.name AS vendor_name, u.email
+                FROM vendor_verification_requests vr
+                JOIN users u ON u.id = vr.vendor_user_id
+                ORDER BY vr.created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    finally:
+        conn.close()
+    return [_verification_request_from_row(r) for r in rows]
+
+
+def review_verification_request(
+    request_id: int,
+    decision: str,
+    admin_notes: str = "",
+) -> dict[str, Any]:
+    """Approve or reject a verification request. decision must be 'approved' or 'rejected'."""
+    if decision not in {"approved", "rejected"}:
+        raise ValueError("decision must be 'approved' or 'rejected'")
+    init_users_db()
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM vendor_verification_requests WHERE id = ?",
+            (request_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("Verification request not found.")
+        conn.execute(
+            """
+            UPDATE vendor_verification_requests
+            SET status = ?, admin_notes = ?, reviewed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (decision, (admin_notes or "").strip(), request_id),
+        )
+        conn.commit()
+        vendor_user_id = row["vendor_user_id"]
+    finally:
+        conn.close()
+    # Update vendor profile verification_status
+    new_status = "verified" if decision == "approved" else "basic"
+    set_verification_status(vendor_user_id, new_status)
+    return {"ok": True, "request_id": request_id, "decision": decision}
+
+
+def get_latest_verification_request(vendor_user_id: int) -> dict[str, Any] | None:
+    """Return the most recent verification request for a vendor."""
+    init_users_db()
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM vendor_verification_requests WHERE vendor_user_id = ? ORDER BY created_at DESC LIMIT 1",
+            (vendor_user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return _verification_request_from_row(row) if row else None
+
+
+def _verification_request_from_row(row) -> dict[str, Any]:
+    keys = row.keys()
+    return {
+        "id": row["id"],
+        "vendor_user_id": row["vendor_user_id"],
+        "business_name": row["business_name"] or "",
+        "category": row["category"] or "",
+        "description": row["description"] or "",
+        "social_links": json.loads(row["social_links"] or "{}"),
+        "product_images": json.loads(row["product_images"] or "[]"),
+        "status": row["status"],
+        "admin_notes": row["admin_notes"] or "",
+        "created_at": row["created_at"] or "",
+        "reviewed_at": row["reviewed_at"] or "",
+        "username": row["username"] if "username" in keys else "",
+        "vendor_name": row["vendor_name"] if "vendor_name" in keys else "",
+        "email": row["email"] if "email" in keys else "",
+    }
 
 
 # ---------------------------------------------------------------------------

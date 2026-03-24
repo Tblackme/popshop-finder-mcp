@@ -236,6 +236,14 @@
           </div>
         </div>
 
+        <!-- Verification status card -->
+        <div class="dash-card" id="verify-status-card">
+          <span class="eyebrow">Verification</span>
+          <h3>Build shopper trust</h3>
+          <div id="verify-status-content" style="margin:.6rem 0 1rem;font-size:.88rem;color:var(--muted);">Loading…</div>
+          <div class="quick-links" id="verify-status-links"></div>
+        </div>
+
         <!-- AI Recommended Events (Feature 1) -->
         <div class="dash-card" id="ai-recs-card" style="display:none;">
           <span class="eyebrow">AI-powered</span>
@@ -327,6 +335,7 @@
     renderShopifyBanner(shopifyMe, shopifyProducts, me);
     renderSavedMarkets(dashboard);
     renderShopSummary(myProducts, me);
+    loadVerificationCard();
 
     // ── AI Features (non-blocking, degrade gracefully) ──────────────────
     if (typeof AI !== "undefined") {
@@ -349,6 +358,33 @@
       }
     }
   })();
+
+  async function loadVerificationCard() {
+    const contentEl = document.getElementById("verify-status-content");
+    const linksEl = document.getElementById("verify-status-links");
+    if (!contentEl) return;
+    try {
+      const res = await fetch("/api/vendor/verify/status", { credentials: "include" });
+      if (!res.ok) { contentEl.textContent = ""; return; }
+      const data = await res.json();
+      const status = data.verification_status || "basic";
+      const statusLabels = {
+        basic:    { icon: "🏷️", text: "Your account is not yet verified.", color: "var(--muted)" },
+        pending:  { icon: "⏳", text: "Your verification application is under review.", color: "#a16207" },
+        verified: { icon: "✓",  text: "You are a Verified Vendor!", color: "var(--success, #027a48)" },
+        trusted:  { icon: "⭐", text: "Trusted Vendor — highest trust level.", color: "#854d0e" },
+      };
+      const info = statusLabels[status] || statusLabels.basic;
+      contentEl.innerHTML = `<span style="font-weight:600;color:${info.color};">${info.icon} ${info.text}</span>`;
+      if (status === "basic") {
+        linksEl.innerHTML = `<a class="btn btn-primary" href="/vendor-verify">Get Verified →</a><a class="btn btn-secondary" href="/vendor-verify">Learn more</a>`;
+      } else if (status === "pending") {
+        linksEl.innerHTML = `<a class="btn btn-secondary" href="/vendor-verify">View application</a>`;
+      } else {
+        linksEl.innerHTML = `<a class="btn btn-secondary" href="/my-shop">View my shop →</a>`;
+      }
+    } catch (_) { contentEl.textContent = ""; }
+  }
 
   function renderShopifyBanner(shopify, products, me) {
     const slot = document.getElementById("shopify-banner-slot");

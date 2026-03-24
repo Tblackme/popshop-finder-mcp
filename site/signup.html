@@ -5,57 +5,587 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign Up | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    /* ── Multi-step onboarding styles ────────────────────────────────────── */
+    .onboard-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding-bottom: 3rem;
+    }
+    /* Progress bar */
+    .progress-bar-track {
+      height: 4px;
+      background: var(--line);
+      border-radius: 99px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--brand);
+      border-radius: 99px;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .step-counter {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    /* Step panels */
+    .onboard-step {
+      display: none;
+      animation: step-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .onboard-step.active { display: block; }
+    @keyframes step-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .step-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.35rem; }
+    .step-subtitle { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5rem; }
+
+    /* Role cards */
+    .role-card-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 520px) { .role-card-grid { grid-template-columns: 1fr; } }
+    .role-card {
+      border: 2px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      cursor: pointer;
+      display: block;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .role-card:has(input:checked) {
+      border-color: var(--brand);
+      background: rgba(15,118,110,.06);
+    }
+    .role-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .role-card strong { display: block; font-size: 0.92rem; margin-bottom: 0.2rem; }
+    .role-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+
+    /* Sell-where options */
+    .sell-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    @media (max-width: 420px) { .sell-grid { grid-template-columns: 1fr; } }
+    .sell-card {
+      border: 2px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .sell-card:has(input:checked) {
+      border-color: var(--brand);
+      background: rgba(15,118,110,.06);
+    }
+    .sell-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .sell-icon { font-size: 1.4rem; }
+
+    /* Image upload zone */
+    .upload-zone {
+      border: 2px dashed var(--line);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--brand);
+      background: rgba(15,118,110,.04);
+    }
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-zone-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .upload-zone p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+    .upload-previews {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .upload-preview-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+    }
+
+    /* Benefit chips */
+    .benefit-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .benefit-chip {
+      background: rgba(15,118,110,.09);
+      color: var(--brand);
+      border-radius: 99px;
+      padding: 0.28rem 0.8rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* Nav buttons */
+    .step-nav { display: flex; gap: 0.75rem; align-items: center; margin-top: 1.75rem; }
+    .btn-back {
+      background: none;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .btn-back:hover { border-color: var(--text); color: var(--text); }
+    .btn-skip {
+      background: none;
+      border: none;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      margin-left: auto;
+      text-decoration: underline;
+    }
+    .btn-skip:hover { color: var(--text); }
+  </style>
 </head>
 <body>
   <header class="topbar">
     <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links"><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a></nav>
+      <nav class="nav-links"><a href="/">Home</a><a href="/discover">Discover</a></nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a><div data-mobile-auth-nav></div></div>
+    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/discover">Discover</a><div data-mobile-auth-nav></div></div>
   </header>
+
   <main>
-    <section class="page-hero"><div class="container"><span class="eyebrow">Create your account</span><h1>Choose the experience that fits you.</h1><p>Set up one secure account, pick your role, and Vendor Atlas will send you to the right dashboard after sign-in.</p></div></section>
-    <section><div class="container" style="max-width: 720px;"><div class="form-card">
-      <form class="form-grid" data-signup-form>
-        <fieldset class="field role-picker">
-          <legend>I am joining as</legend>
-          <div class="role-card-grid">
-            <label class="role-card">
-              <input type="radio" name="role" value="vendor" checked>
-              <strong>I'm a Vendor</strong>
-              <span>Plan events, discover markets, and track business results.</span>
-            </label>
-            <label class="role-card">
-              <input type="radio" name="role" value="market">
-              <strong>I run events</strong>
-              <span>Create markets, manage vendor applications, and review analytics.</span>
-            </label>
-            <label class="role-card">
-              <input type="radio" name="role" value="shopper">
-              <strong>I'm a Shopper</strong>
-              <span>Discover events, save favorites, and follow vendors you love.</span>
-            </label>
-          </div>
-        </fieldset>
-        <div class="field"><label for="name">Name</label><input id="name" name="name" required></div>
-        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required></div>
-        <div class="field">
-          <label for="username">Username</label>
-          <input id="username" name="username" required aria-describedby="username_help username_status">
-          <small id="username_help" class="muted">Use 3-32 lowercase letters, numbers, or underscores. This appears on your public profile link.</small>
-          <div class="status" id="username_status" data-username-status></div>
-        </div>
-        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required></div>
-        <div class="field"><label for="interests">Interests or tags</label><input id="interests" name="interests" placeholder="jewelry, craft fairs, vintage"></div>
-        <div class="field"><label for="bio">Short bio</label><textarea id="bio" name="bio" placeholder="Tell us a little about your business."></textarea></div>
-        <button class="btn btn-primary btn-block" type="submit">Create Account</button>
-        <div class="status" data-signup-status></div>
-      </form>
-    </div></div></section>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Create your account</span>
+        <h1 id="onboard-hero-title">Choose the experience that fits you.</h1>
+        <p id="onboard-hero-sub">Set up one secure account, pick your role, and Vendor Atlas will send you to the right dashboard.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="onboard-wrap">
+          <div class="form-card">
+
+            <!-- Progress (hidden on step 1 for non-vendors) -->
+            <div id="progress-wrap" style="display:none;">
+              <div class="step-counter" id="step-counter">Step 2 of 5</div>
+              <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:20%"></div></div>
+            </div>
+
+            <!-- ── Step 1: Role + Basic Account ───────────────────────────── -->
+            <div class="onboard-step active" id="step-1">
+              <h2 class="step-title">Create your account</h2>
+              <p class="step-subtitle">Pick your role and set up your login details.</p>
+
+              <form class="form-grid" id="step1-form">
+                <fieldset class="field" style="border:none;padding:0;margin:0 0 1rem;">
+                  <legend style="font-weight:600;font-size:.85rem;margin-bottom:.6rem;">I am joining as</legend>
+                  <div class="role-card-grid">
+                    <label class="role-card">
+                      <input type="radio" name="role" value="vendor" checked>
+                      <strong>🛍️ Vendor</strong>
+                      <span>Plan events, manage your shop, and connect with markets.</span>
+                    </label>
+                    <label class="role-card">
+                      <input type="radio" name="role" value="market">
+                      <strong>🎪 Organizer</strong>
+                      <span>Create markets, manage vendor applications, and review analytics.</span>
+                    </label>
+                    <label class="role-card">
+                      <input type="radio" name="role" value="shopper">
+                      <strong>🛒 Shopper</strong>
+                      <span>Discover events, save favorites, and follow vendors you love.</span>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <div class="field">
+                  <label for="name">Full name</label>
+                  <input id="name" name="name" required placeholder="Jane Smith">
+                </div>
+                <div class="field">
+                  <label for="email">Email address</label>
+                  <input id="email" name="email" type="email" required placeholder="jane@example.com">
+                </div>
+                <div class="field">
+                  <label for="username">Username</label>
+                  <input id="username" name="username" required aria-describedby="username_help username_status" placeholder="janesmith">
+                  <small id="username_help" class="muted">3–32 lowercase letters, numbers, or underscores. Appears on your public profile link.</small>
+                  <div class="status" id="username_status" data-username-status></div>
+                </div>
+                <div class="field">
+                  <label for="password">Password</label>
+                  <input id="password" name="password" type="password" required placeholder="Min 8 characters">
+                </div>
+
+                <button class="btn btn-primary btn-block" type="submit" id="step1-next-btn">Continue →</button>
+                <div class="status" id="step1-error"></div>
+                <p style="font-size:.82rem;color:var(--muted);text-align:center;margin:.5rem 0 0;">Already have an account? <a href="/signin" style="color:var(--brand);font-weight:600;">Sign in</a></p>
+              </form>
+            </div>
+
+            <!-- ── Step 2: Business Info (vendor only) ───────────────────── -->
+            <div class="onboard-step" id="step-2">
+              <h2 class="step-title">Tell us about your business</h2>
+              <p class="step-subtitle">This helps shoppers and event organizers find you.</p>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="business_name">Business name</label>
+                  <input id="business_name" name="business_name" placeholder="Prairie Goods Co.">
+                </div>
+                <div class="field">
+                  <label for="category">Vendor category</label>
+                  <select id="category" name="category">
+                    <option value="">Select a category…</option>
+                    <option value="Food & Treats">Food &amp; Treats</option>
+                    <option value="Candles & Home">Candles &amp; Home</option>
+                    <option value="Jewelry">Jewelry</option>
+                    <option value="Clothing & Apparel">Clothing &amp; Apparel</option>
+                    <option value="Art & Prints">Art &amp; Prints</option>
+                    <option value="Ceramics & Pottery">Ceramics &amp; Pottery</option>
+                    <option value="Plants & Flowers">Plants &amp; Flowers</option>
+                    <option value="Skincare & Beauty">Skincare &amp; Beauty</option>
+                    <option value="Vintage & Antiques">Vintage &amp; Antiques</option>
+                    <option value="Handmade Crafts">Handmade Crafts</option>
+                    <option value="Woodworking">Woodworking</option>
+                    <option value="Textiles & Fiber Arts">Textiles &amp; Fiber Arts</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="bio">Short business description</label>
+                  <textarea id="bio" name="bio" rows="3" placeholder="What makes your business special? (shown on your public profile)"></textarea>
+                </div>
+              </div>
+
+              <div class="step-nav">
+                <button class="btn-back" onclick="goToStep(1)">← Back</button>
+                <button class="btn btn-primary" onclick="goToStep(3)">Continue →</button>
+                <button class="btn-skip" onclick="goToStep(3)">Skip for now</button>
+              </div>
+            </div>
+
+            <!-- ── Step 3: Where they sell (vendor only) ─────────────────── -->
+            <div class="onboard-step" id="step-3">
+              <h2 class="step-title">Where do you sell?</h2>
+              <p class="step-subtitle">This helps us surface the right events for you.</p>
+
+              <div class="sell-grid">
+                <label class="sell-card">
+                  <input type="radio" name="sell_where" value="pop_up_markets">
+                  <span class="sell-icon">🏪</span>
+                  Pop-up markets
+                </label>
+                <label class="sell-card">
+                  <input type="radio" name="sell_where" value="online">
+                  <span class="sell-icon">💻</span>
+                  Online shop
+                </label>
+                <label class="sell-card">
+                  <input type="radio" name="sell_where" value="both">
+                  <span class="sell-icon">🌐</span>
+                  Both
+                </label>
+                <label class="sell-card">
+                  <input type="radio" name="sell_where" value="retail">
+                  <span class="sell-icon">🏬</span>
+                  Retail store
+                </label>
+              </div>
+
+              <div class="step-nav">
+                <button class="btn-back" onclick="goToStep(2)">← Back</button>
+                <button class="btn btn-primary" onclick="goToStep(4)">Continue →</button>
+                <button class="btn-skip" onclick="goToStep(4)">Skip for now</button>
+              </div>
+            </div>
+
+            <!-- ── Step 4: Social / Shop links (vendor only) ──────────────── -->
+            <div class="onboard-step" id="step-4">
+              <h2 class="step-title">Add your social links</h2>
+              <p class="step-subtitle">Optional — these help us and event organizers verify you're a real vendor.</p>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="instagram_url">Instagram</label>
+                  <input id="instagram_url" name="instagram_url" type="url" placeholder="https://instagram.com/yourbusiness">
+                </div>
+                <div class="field">
+                  <label for="tiktok_url">TikTok</label>
+                  <input id="tiktok_url" name="tiktok_url" type="url" placeholder="https://tiktok.com/@yourbusiness">
+                </div>
+                <div class="field">
+                  <label for="website_url">Website</label>
+                  <input id="website_url" name="website_url" type="url" placeholder="https://yourbusiness.com">
+                </div>
+                <div class="field">
+                  <label for="etsy_url">Etsy shop</label>
+                  <input id="etsy_url" name="etsy_url" type="url" placeholder="https://etsy.com/shop/yourbusiness">
+                </div>
+              </div>
+
+              <div class="step-nav">
+                <button class="btn-back" onclick="goToStep(3)">← Back</button>
+                <button class="btn btn-primary" onclick="goToStep(5)">Continue →</button>
+                <button class="btn-skip" onclick="goToStep(5)">Skip for now</button>
+              </div>
+            </div>
+
+            <!-- ── Step 5: Product / booth photo (vendor only) ───────────── -->
+            <div class="onboard-step" id="step-5">
+              <h2 class="step-title">Show off your products</h2>
+              <p class="step-subtitle">Upload a product or booth photo. This is optional and helps build trust with shoppers.</p>
+
+              <div class="upload-zone" id="upload-zone">
+                <input type="file" id="product-photo-input" accept="image/*" multiple>
+                <div class="upload-zone-icon">📷</div>
+                <p><strong>Click to upload</strong> or drag and drop</p>
+                <p>JPG, PNG — max 5 MB each</p>
+              </div>
+              <div class="upload-previews" id="upload-previews"></div>
+
+              <div class="step-nav">
+                <button class="btn-back" onclick="goToStep(4)">← Back</button>
+                <button class="btn btn-primary" id="create-account-btn" onclick="submitSignup()">Create my account →</button>
+                <button class="btn-skip" onclick="submitSignup()">Skip &amp; create account</button>
+              </div>
+              <div class="status" id="signup-error" style="margin-top:1rem;"></div>
+            </div>
+
+            <!-- ── Step complete (non-vendor direct submit) ───────────────── -->
+            <div class="onboard-step" id="step-nonvendor">
+              <h2 class="step-title">Almost there!</h2>
+              <p class="step-subtitle">Review your details and create your account.</p>
+              <button class="btn btn-primary btn-block" id="nonvendor-create-btn" onclick="submitSignup()">Create Account →</button>
+              <div class="status" id="nonvendor-error" style="margin-top:1rem;"></div>
+            </div>
+
+          </div><!-- /form-card -->
+        </div><!-- /onboard-wrap -->
+      </div>
+    </section>
   </main>
+
   <script src="/assets/app.js"></script>
+  <script>
+  (function () {
+    // ── State ─────────────────────────────────────────────────────────────
+    var currentStep = 1;
+    var isVendor = true;
+    var VENDOR_TOTAL_STEPS = 5;
+    var uploadedImages = []; // base64 strings
+
+    // ── Step navigation ──────────────────────────────────────────────────
+    window.goToStep = function (n) {
+      document.getElementById('step-' + currentStep)?.classList.remove('active');
+      currentStep = n;
+      document.getElementById('step-' + currentStep)?.classList.add('active');
+      updateProgress();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function updateProgress() {
+      var wrap = document.getElementById('progress-wrap');
+      var fill = document.getElementById('progress-fill');
+      var counter = document.getElementById('step-counter');
+      if (currentStep === 1 || !isVendor) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'block';
+      var pct = Math.round((currentStep / VENDOR_TOTAL_STEPS) * 100);
+      fill.style.width = pct + '%';
+      counter.textContent = 'Step ' + currentStep + ' of ' + VENDOR_TOTAL_STEPS;
+    }
+
+    // ── Role change — show/hide vendor-specific steps ───────────────────
+    document.querySelectorAll('input[name="role"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        isVendor = (this.value === 'vendor');
+        var btn = document.getElementById('step1-next-btn');
+        btn.textContent = isVendor ? 'Continue →' : 'Continue →';
+      });
+    });
+
+    // ── Step 1 form submit ───────────────────────────────────────────────
+    document.getElementById('step1-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var role = document.querySelector('input[name="role"]:checked')?.value || 'vendor';
+      isVendor = (role === 'vendor');
+      var name = document.getElementById('name').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var username = document.getElementById('username').value.trim().toLowerCase();
+      var password = document.getElementById('password').value;
+      var errEl = document.getElementById('step1-error');
+      errEl.textContent = '';
+
+      if (!name || !email || !username || !password) {
+        errEl.textContent = 'Please fill in all required fields.';
+        errEl.className = 'status error';
+        return;
+      }
+      if (password.length < 8) {
+        errEl.textContent = 'Password must be at least 8 characters.';
+        errEl.className = 'status error';
+        return;
+      }
+
+      if (isVendor) {
+        goToStep(2);
+      } else {
+        // Non-vendors go straight to a simple confirm step
+        document.getElementById('step-nonvendor').classList.add('active');
+        document.getElementById('step-1').classList.remove('active');
+        currentStep = 'nonvendor';
+        updateProgress();
+      }
+    });
+
+    // ── Image upload ─────────────────────────────────────────────────────
+    var uploadInput = document.getElementById('product-photo-input');
+    var uploadZone = document.getElementById('upload-zone');
+    var previewsEl = document.getElementById('upload-previews');
+
+    uploadInput?.addEventListener('change', function () {
+      handleFiles(Array.from(this.files));
+    });
+
+    uploadZone?.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      this.classList.add('dragover');
+    });
+    uploadZone?.addEventListener('dragleave', function () {
+      this.classList.remove('dragover');
+    });
+    uploadZone?.addEventListener('drop', function (e) {
+      e.preventDefault();
+      this.classList.remove('dragover');
+      handleFiles(Array.from(e.dataTransfer.files));
+    });
+
+    function handleFiles(files) {
+      files.slice(0, 3).forEach(function (file) {
+        if (!file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          uploadedImages.push(ev.target.result);
+          var img = document.createElement('img');
+          img.src = ev.target.result;
+          img.className = 'upload-preview-thumb';
+          previewsEl.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ── Final submission ─────────────────────────────────────────────────
+    window.submitSignup = async function () {
+      var errId = isVendor ? 'signup-error' : 'nonvendor-error';
+      var errEl = document.getElementById(errId);
+      var btn = document.getElementById(isVendor ? 'create-account-btn' : 'nonvendor-create-btn');
+      errEl.textContent = '';
+
+      var role = document.querySelector('input[name="role"]:checked')?.value || 'vendor';
+      var name = document.getElementById('name').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var username = document.getElementById('username').value.trim().toLowerCase();
+      var password = document.getElementById('password').value;
+
+      if (!name || !email || !username || !password) {
+        errEl.textContent = 'Please go back and fill in your account details.';
+        errEl.className = 'status error';
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
+
+      // Build base payload
+      var payload = { name: name, email: email, username: username, password: password, role: role };
+
+      // Vendor extra fields for bio/interests
+      if (role === 'vendor') {
+        var bio = document.getElementById('bio')?.value.trim() || '';
+        if (bio) payload.bio = bio;
+        var interests = document.getElementById('category')?.value || '';
+        if (interests) payload.interests = interests;
+      }
+
+      try {
+        var res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include',
+        });
+        var data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Signup failed. Please try again.');
+        }
+
+        // If vendor, save extended profile fields in one extra call
+        if (role === 'vendor') {
+          var profileFields = {};
+          var businessName = document.getElementById('business_name')?.value.trim();
+          var category = document.getElementById('category')?.value;
+          var sellWhere = document.querySelector('input[name="sell_where"]:checked')?.value;
+          var instagramUrl = document.getElementById('instagram_url')?.value.trim();
+          var tiktokUrl = document.getElementById('tiktok_url')?.value.trim();
+          var websiteUrl = document.getElementById('website_url')?.value.trim();
+          var etsyUrl = document.getElementById('etsy_url')?.value.trim();
+
+          if (businessName) profileFields.business_name = businessName;
+          if (category) profileFields.category = category;
+          if (sellWhere) profileFields.sell_where = sellWhere;
+          if (instagramUrl) profileFields.instagram_url = instagramUrl;
+          if (tiktokUrl) profileFields.tiktok_url = tiktokUrl;
+          if (websiteUrl) profileFields.website_url = websiteUrl;
+          if (etsyUrl) profileFields.etsy_url = etsyUrl;
+
+          if (Object.keys(profileFields).length > 0) {
+            await fetch('/api/vendor/shop-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(profileFields),
+              credentials: 'include',
+            }).catch(function () {});
+          }
+        }
+
+        // Redirect to correct dashboard
+        var destination = dashboardPathForRole(role);
+        window.location.href = destination;
+      } catch (err) {
+        errEl.textContent = err.message || 'An error occurred. Please try again.';
+        errEl.className = 'status error';
+        if (btn) { btn.disabled = false; btn.textContent = isVendor ? 'Create my account →' : 'Create Account →'; }
+      }
+    };
+  })();
+  </script>
 </body>
 </html>

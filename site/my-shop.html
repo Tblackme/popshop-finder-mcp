@@ -387,7 +387,9 @@
     try {
       const r = await fetch("/api/auth/me", { credentials: "include" });
       if (!r.ok) { window.location.href = "/signin"; return; }
-      me = await r.json();
+      const res = await r.json();
+      if (!res.authenticated) { window.location.href = "/signin"; return; }
+      me = res.user || res;
       if (me.role && me.role !== "vendor") {
         window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
         return;

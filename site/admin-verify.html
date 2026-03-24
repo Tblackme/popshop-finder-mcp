@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify Vendors | Admin — Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    body { background: var(--bg); }
+    .admin-header {
+      background: var(--surface-dark);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .admin-header a { color: rgba(255,255,255,.7); text-decoration: none; font-size: .85rem; }
+    .admin-header a:hover { color: #fff; }
+    .admin-header .sep { color: rgba(255,255,255,.3); }
+    .admin-header strong { color: #fff; font-size: .9rem; }
+    .admin-shell { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
+    .admin-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 16px;
+      border-radius: 99px;
+      border: 1.5px solid var(--line);
+      background: var(--surface);
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    .filter-btn.active {
+      border-color: var(--brand);
+      color: var(--brand);
+      background: rgba(15,118,110,.07);
+    }
+    .count-badge {
+      display: inline-block;
+      background: var(--brand);
+      color: #fff;
+      border-radius: 99px;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin-left: 4px;
+    }
+    .request-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 12px rgba(12,31,29,.06);
+      border-left: 4px solid var(--line);
+    }
+    .request-card.pending  { border-left-color: #d97706; }
+    .request-card.approved { border-left-color: var(--success, #027a48); }
+    .request-card.rejected { border-left-color: var(--danger); }
+    .request-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: .75rem;
+    }
+    .request-vendor-info { min-width: 0; }
+    .request-vendor-name { font-weight: 700; font-size: 1rem; }
+    .request-vendor-meta { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: .22rem .75rem;
+      border-radius: 99px;
+      font-size: .72rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .chip-pending  { background: rgba(217,119,6,.12); color: #b45309; }
+    .chip-approved { background: rgba(2,122,72,.1); color: #027a48; }
+    .chip-rejected { background: rgba(180,35,24,.1); color: var(--danger); }
+    .request-body { font-size: .875rem; color: var(--text); margin: .75rem 0; line-height: 1.55; }
+    .request-field { margin-bottom: .5rem; }
+    .request-field .label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .15rem; }
+    .social-links { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .25rem; }
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .78rem;
+      padding: .2rem .65rem;
+      border-radius: 99px;
+      background: rgba(15,118,110,.08);
+      color: var(--brand);
+      text-decoration: none;
+    }
+    .social-link:hover { background: rgba(15,118,110,.15); }
+    .request-images { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+    .request-image-thumb {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .review-actions {
+      display: flex;
+      gap: .65rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      padding-top: .75rem;
+      border-top: 1px solid var(--line);
+      margin-top: .75rem;
+    }
+    .review-actions textarea {
+      flex: 1;
+      min-width: 200px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: .82rem;
+      background: var(--bg);
+      color: var(--text);
+      resize: vertical;
+      min-height: 56px;
+    }
+    .btn-approve {
+      background: var(--success, #027a48);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: .5rem 1.1rem;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-reject {
+      background: none;
+      color: var(--danger);
+      border: 1.5px solid var(--danger);
+      border-radius: 10px;
+      padding: .5rem 1rem;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-approve:hover { opacity: .88; }
+    .btn-reject:hover { background: rgba(180,35,24,.06); }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .stats-row { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .stat-box {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: .9rem 1.25rem;
+      min-width: 110px;
+      box-shadow: 0 1px 8px rgba(12,31,29,.06);
+    }
+    .stat-box .num { font-size: 1.6rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-box .lbl { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-top: .2rem; }
+  </style>
+</head>
+<body>
+
+<div class="admin-header">
+  <a href="/">Vendor Atlas</a>
+  <span class="sep">/</span>
+  <strong>Vendor Verification Admin</strong>
+</div>
+
+<div class="admin-shell">
+
+  <div style="margin-bottom:1.5rem;">
+    <h1 style="margin:0 0 .25rem;font-size:1.5rem;">Vendor Verification Requests</h1>
+    <p style="color:var(--muted);margin:0;font-size:.9rem;">Review, approve, or reject vendor verification applications.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-box"><div class="num" id="stat-pending">—</div><div class="lbl">Pending</div></div>
+    <div class="stat-box"><div class="num" id="stat-approved">—</div><div class="lbl">Approved</div></div>
+    <div class="stat-box"><div class="num" id="stat-rejected">—</div><div class="lbl">Rejected</div></div>
+    <div class="stat-box"><div class="num" id="stat-total">—</div><div class="lbl">Total</div></div>
+  </div>
+
+  <!-- Filter toolbar -->
+  <div class="admin-toolbar">
+    <button class="filter-btn active" data-filter="pending" onclick="setFilter('pending', this)">Pending <span class="count-badge" id="count-pending">0</span></button>
+    <button class="filter-btn" data-filter="approved" onclick="setFilter('approved', this)">Approved <span class="count-badge" id="count-approved" style="background:var(--success)">0</span></button>
+    <button class="filter-btn" data-filter="rejected" onclick="setFilter('rejected', this)">Rejected <span class="count-badge" id="count-rejected" style="background:var(--danger)">0</span></button>
+    <button class="filter-btn" data-filter="" onclick="setFilter('', this)">All</button>
+    <button class="btn btn-secondary" style="margin-left:auto;font-size:.82rem;" onclick="loadRequests()">↻ Refresh</button>
+  </div>
+
+  <!-- Request list -->
+  <div id="request-list">
+    <div class="empty-state"><strong>Loading requests…</strong></div>
+  </div>
+
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+(function () {
+  var currentFilter = 'pending';
+  var allRequests = [];
+
+  window.setFilter = function (filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderList();
+  };
+
+  async function loadRequests() {
+    try {
+      var res = await fetch('/api/admin/verify/requests', { credentials: 'include' });
+      var data = await res.json();
+      allRequests = data.requests || [];
+      updateStats();
+      renderList();
+    } catch (err) {
+      document.getElementById('request-list').innerHTML =
+        '<div class="empty-state"><strong>Failed to load requests.</strong><br><span>' + err.message + '</span></div>';
+    }
+  }
+
+  function updateStats() {
+    var counts = { pending: 0, approved: 0, rejected: 0 };
+    allRequests.forEach(function (r) { if (counts[r.status] !== undefined) counts[r.status]++; });
+    document.getElementById('stat-pending').textContent = counts.pending;
+    document.getElementById('stat-approved').textContent = counts.approved;
+    document.getElementById('stat-rejected').textContent = counts.rejected;
+    document.getElementById('stat-total').textContent = allRequests.length;
+    document.getElementById('count-pending').textContent = counts.pending;
+    document.getElementById('count-approved').textContent = counts.approved;
+    document.getElementById('count-rejected').textContent = counts.rejected;
+  }
+
+  function renderList() {
+    var list = document.getElementById('request-list');
+    var filtered = currentFilter
+      ? allRequests.filter(function (r) { return r.status === currentFilter; })
+      : allRequests;
+
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty-state"><strong>No ' + (currentFilter || '') + ' requests found.</strong></div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(function (r) {
+      var socialHtml = '';
+      var links = r.social_links || {};
+      if (links.instagram) socialHtml += '<a class="social-link" href="' + escLink(links.instagram) + '" target="_blank" rel="noopener">Instagram</a>';
+      if (links.tiktok) socialHtml += '<a class="social-link" href="' + escLink(links.tiktok) + '" target="_blank" rel="noopener">TikTok</a>';
+      if (links.website) socialHtml += '<a class="social-link" href="' + escLink(links.website) + '" target="_blank" rel="noopener">Website</a>';
+
+      var images = r.product_images || [];
+      var imagesHtml = images.slice(0, 5).map(function (src) {
+        return '<img class="request-image-thumb" src="' + src + '" alt="Product photo" onclick="window.open(\'' + src + '\',\'_blank\')">';
+      }).join('');
+
+      var actionHtml = '';
+      if (r.status === 'pending') {
+        actionHtml = '<div class="review-actions">' +
+          '<textarea id="notes-' + r.id + '" placeholder="Admin notes (optional)…" rows="2"></textarea>' +
+          '<button class="btn-approve" onclick="review(' + r.id + ', \'approved\')">✓ Approve</button>' +
+          '<button class="btn-reject" onclick="review(' + r.id + ', \'rejected\')">✗ Reject</button>' +
+          '</div>';
+      } else {
+        var noteText = r.admin_notes ? '<div class="request-field"><div class="label">Admin notes</div><div>' + esc(r.admin_notes) + '</div></div>' : '';
+        var reviewedText = r.reviewed_at ? ' · Reviewed ' + new Date(r.reviewed_at).toLocaleDateString() : '';
+        actionHtml = '<div style="padding-top:.5rem;border-top:1px solid var(--line);margin-top:.75rem;font-size:.78rem;color:var(--muted);">' + reviewedText + '</div>' + noteText;
+      }
+
+      var chipClass = { pending: 'chip-pending', approved: 'chip-approved', rejected: 'chip-rejected' }[r.status] || '';
+      var chipLabel = { pending: '⏳ Pending', approved: '✓ Approved', rejected: '✗ Rejected' }[r.status] || r.status;
+
+      return '<div class="request-card ' + r.status + '" id="card-' + r.id + '">' +
+        '<div class="request-header">' +
+          '<div class="request-vendor-info">' +
+            '<div class="request-vendor-name">' + esc(r.vendor_name || r.username || 'Unknown') + '</div>' +
+            '<div class="request-vendor-meta">@' + esc(r.username || '') + ' · ' + esc(r.email || '') + ' · Submitted ' + new Date(r.created_at).toLocaleDateString() + '</div>' +
+          '</div>' +
+          '<span class="status-chip ' + chipClass + '">' + chipLabel + '</span>' +
+        '</div>' +
+        '<div class="request-body">' +
+          '<div class="request-field"><div class="label">Business name</div><div>' + esc(r.business_name) + '</div></div>' +
+          '<div class="request-field"><div class="label">Category</div><div>' + esc(r.category) + '</div></div>' +
+          '<div class="request-field"><div class="label">Description</div><div>' + esc(r.description) + '</div></div>' +
+          (socialHtml ? '<div class="request-field"><div class="label">Social links</div><div class="social-links">' + socialHtml + '</div></div>' : '') +
+          (imagesHtml ? '<div class="request-field"><div class="label">Product photos</div><div class="request-images">' + imagesHtml + '</div></div>' : '') +
+        '</div>' +
+        actionHtml +
+        '</div>';
+    }).join('');
+  }
+
+  window.review = async function (requestId, decision) {
+    var notesEl = document.getElementById('notes-' + requestId);
+    var adminNotes = notesEl ? notesEl.value.trim() : '';
+    var card = document.getElementById('card-' + requestId);
+    if (card) card.style.opacity = '0.5';
+
+    try {
+      var res = await fetch('/api/admin/verify/requests/' + requestId + '/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision: decision, admin_notes: adminNotes }),
+        credentials: 'include',
+      });
+      var data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Review failed');
+      showToast(decision === 'approved' ? '✓ Vendor approved!' : 'Request rejected.', decision === 'approved' ? 'success' : 'error');
+      await loadRequests();
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (card) card.style.opacity = '1';
+    }
+  };
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escLink(url) {
+    return url.replace(/"/g, '%22');
+  }
+
+  loadRequests();
+})();
+</script>
+</body>
+</html>

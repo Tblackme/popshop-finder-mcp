@@ -36,6 +36,7 @@
         ]},
         { label: 'Vendor', items: [
           { icon: 'shop',      text: 'My Shop',     href: '/my-shop' },
+          { icon: 'events',    text: 'Events',      href: '/discover' },
           { icon: 'profit',    text: 'Profit',      href: '/profit' },
           { icon: 'messages',  text: 'Messages',    href: '/messages' },
         ]},
@@ -160,6 +161,8 @@
       if (role === 'organizer') role = 'market';
       if (!NAV_CONFIGS[role]) role = 'vendor';
       applyRoleNav(role);
+      // Apply unread badge after nav DOM is rebuilt
+      fetchUnread();
     } catch (_) {
       // Silently fail — keep the static nav already in HTML
     }
@@ -184,12 +187,16 @@
   }
 
   // ── Active nav highlighting ───────────────────────────────────────────────
+  // Aliases: /dashboard/shop is the same page as /my-shop
+  var PATH_ALIASES = { '/dashboard/shop': '/my-shop' };
+
   function highlightActive() {
     var currentPath = window.location.pathname;
+    var normPath = PATH_ALIASES[currentPath] || currentPath;
     document.querySelectorAll('.dash-nav-item, .bottom-nav-link, .mobile-drawer-nav .dash-nav-item').forEach(function (link) {
       var href = link.getAttribute('href');
       if (!href) return;
-      if (href === currentPath || (href !== '/' && currentPath.startsWith(href))) {
+      if (href === normPath || (href !== '/' && normPath.startsWith(href))) {
         link.classList.add('active');
       } else {
         link.classList.remove('active');
@@ -261,12 +268,51 @@
     if (e.key === 'Escape') closeDrawer();
   });
 
+  // ── Unread messages badge ─────────────────────────────────────────────────
+  function applyUnreadBadge(count) {
+    var n = parseInt(count) || 0;
+    var label = n > 99 ? '99+' : String(n);
+    // Update all Messages nav links in sidebar, drawer, and bottom nav
+    document.querySelectorAll('.dash-nav-item, .bottom-nav-link').forEach(function (link) {
+      var href = link.getAttribute('href');
+      if (href !== '/messages') return;
+      var existing = link.querySelector('.nav-unread-badge');
+      if (n === 0) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (!existing) {
+        existing = document.createElement('span');
+        existing.className = 'nav-unread-badge';
+        existing.style.cssText = 'background:var(--brand);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;padding:1px 5px;margin-left:auto;line-height:1.4;';
+        link.style.justifyContent = 'flex-start';
+        link.appendChild(existing);
+      }
+      existing.textContent = label;
+    });
+  }
+
+  async function fetchUnread() {
+    try {
+      var res = await fetch('/api/messages/unread', { credentials: 'include' });
+      if (!res.ok) return;
+      var data = await res.json();
+      applyUnreadBadge(data.unread || 0);
+    } catch (_) {}
+  }
+
+  function startUnreadPolling() {
+    fetchUnread();
+    setInterval(fetchUnread, 30000);
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   function init() {
     initSidebar();
     highlightActive();
     initMobileDrawer();
     loadRoleNav(); // async — replaces nav once role is known
+    startUnreadPolling();
   }
 
   if (document.readyState === 'loading') {

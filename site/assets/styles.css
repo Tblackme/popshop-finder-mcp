@@ -3344,6 +3344,65 @@ section {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   LANDING PAGE — role feature list
+   Used in index.html vendor / shopper / organizer sections
+═══════════════════════════════════════════════════════════════ */
+.role-feature-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.role-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: .93rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREVIEW MODE BANNER
+   Shown on Feed and Community pages for logged-out visitors
+═══════════════════════════════════════════════════════════════ */
+.preview-mode-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  background: rgba(232, 159, 71, 0.12);
+  border: 1px solid rgba(232, 159, 71, 0.3);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: .88rem;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+.preview-mode-banner a,
+.preview-mode-cta {
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: underline;
+}
+.preview-mode-banner-feed {
+  position: relative;
+  z-index: 10;
+  margin: 8px 12px 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  justify-content: center;
+}
+.preview-mode-banner-feed a {
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    TOUCH DEVICE IMPROVEMENTS
    Applied when device has no hover (touchscreen primary)
 ═══════════════════════════════════════════════════════════════ */
