@@ -5,167 +5,156 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Community | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="container nav nav-journey">
-      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links">
-        <!-- Default: logged-out public nav. app.js updates based on auth state. -->
-        <a href="/">Home</a>
-        <a href="/#vendors">Vendors</a>
-        <a href="/#shoppers">Shoppers</a>
-        <a href="/#organizers">Organizers</a>
-        <a href="/feed">Feed</a>
-        <a class="active" href="/community">Community</a>
-        <a href="/dashboard" style="display:none;">Plan</a>
-        <a href="/discover" style="display:none;">Discover</a>
-        <a href="/final-plan" style="display:none;">Profit</a>
-      </nav>
-      <div class="nav-actions" data-auth-nav></div>
-      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Community</div>
+      <a class="dash-nav-item" href="/"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span class="dash-nav-text">Home</span></a>
+      <a class="dash-nav-item" href="/feed"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="dash-nav-text">Feed</span></a>
+      <a class="dash-nav-item" href="/community"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="dash-nav-text">Community</span></a>
+      <a class="dash-nav-item" href="/discover"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span class="dash-nav-text">Discover</span></a>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/">Home</a>
-      <a href="/#vendors">Vendors</a>
-      <a href="/#shoppers">Shoppers</a>
-      <a href="/#organizers">Organizers</a>
-      <a href="/feed">Feed</a>
-      <a href="/community">Community</a>
-      <a href="/dashboard" style="display:none;">Plan</a>
-      <a href="/discover" style="display:none;">Discover</a>
-      <a href="/final-plan" style="display:none;">Profit</a>
-      <div data-mobile-auth-nav></div>
+  </div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
     </div>
-  </header>
+    <nav class="dash-nav">
+      <div class="dash-nav-section">
+        <div class="dash-nav-label">Community</div>
+        <a class="dash-nav-item" href="/"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span class="dash-nav-text">Home</span></a>
+        <a class="dash-nav-item" href="/feed"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="dash-nav-text">Feed</span></a>
+        <a class="dash-nav-item" href="/community"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="dash-nav-text">Community</span></a>
+        <a class="dash-nav-item" href="/discover"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span class="dash-nav-text">Discover</span></a>
+      </div>
+    </nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
 
-  <!-- Two-state UI: group discovery landing vs. open group (chat) -->
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Community</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
 
-  <!-- LANDING: group discovery -->
-  <div id="communityLanding">
-    <main style="padding: 40px 0 64px;">
-      <div class="container">
-        <div class="section-heading" style="text-align:left; margin-bottom: 28px;">
-          <h1 style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Community</h1>
-          <p class="muted">Groups, channels, and real conversation between vendors, organizers, and shoppers.</p>
+    <div class="dash-content">
+      <div id="communityLanding">
+        <div class="dash-page-hero">
+          <span class="eyebrow">Community</span>
+          <h1>Groups, channels, and real conversation.</h1>
+          <p>Vendors, organizers, and shoppers can meet in focused spaces built around events, niches, and local scenes.</p>
         </div>
-
-        <!-- Type filter -->
-        <div class="community-type-tabs" id="groupTypeTabs">
-          <button class="community-type-tab active" data-type="">All Groups</button>
-          <button class="community-type-tab" data-type="vendor_circle">Vendor Circles</button>
-          <button class="community-type-tab" data-type="event_room">Event Rooms</button>
-          <button class="community-type-tab" data-type="shopper_community">Shopper Communities</button>
-        </div>
-
-        <!-- Group grid -->
-        <div class="community-group-grid" id="groupGrid">
-          <div class="community-empty" style="grid-column:1/-1;">
-            <div class="community-empty-icon">🏘️</div>
-            <h3>Loading groups…</h3>
+        <main>
+          <div class="community-type-tabs" id="groupTypeTabs">
+            <button class="community-type-tab active" data-type="">All Groups</button>
+            <button class="community-type-tab" data-type="vendor_circle">Vendor Circles</button>
+            <button class="community-type-tab" data-type="event_room">Event Rooms</button>
+            <button class="community-type-tab" data-type="shopper_community">Shopper Communities</button>
           </div>
-        </div>
-
-        <!-- AI Assistant (Feature 6) -->
-        <div id="ai-assistant-slot" style="max-width:520px;margin:0 auto;"></div>
-
-        <!-- Create group CTA (shown when signed in) -->
-        <div id="createGroupCta" style="display:none; margin-top:36px; text-align:center;">
-          <button class="btn btn-secondary" id="openCreateGroup">+ Create a Group</button>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- CREATE GROUP modal -->
-  <div id="createGroupModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; display:none; align-items:center; justify-content:center;">
-    <div style="background:var(--surface-strong); border-radius:var(--radius-xl); padding:32px; width:100%; max-width:480px; margin:20px;">
-      <h2 style="margin:0 0 20px; font-size:1.2rem;">Create a Group</h2>
-      <div class="field" style="margin-bottom:14px;">
-        <label>Group name</label>
-        <input type="text" id="newGroupName" placeholder="e.g. Austin Jewelry Vendors">
-      </div>
-      <div class="field" style="margin-bottom:14px;">
-        <label>Type</label>
-        <select id="newGroupType">
-          <option value="vendor_circle">Vendor Circle</option>
-          <option value="event_room">Event Room</option>
-          <option value="shopper_community">Shopper Community</option>
-        </select>
-      </div>
-      <div class="field" style="margin-bottom:14px;">
-        <label>Description</label>
-        <textarea id="newGroupDesc" rows="3" placeholder="What's this group about?"></textarea>
-      </div>
-      <div class="stack-row" style="justify-content:flex-end; gap:10px;">
-        <button class="btn btn-secondary" id="cancelCreateGroup">Cancel</button>
-        <button class="btn btn-primary" id="submitCreateGroup">Create Group</button>
-      </div>
-      <p id="createGroupError" class="status error" style="display:none; margin-top:10px;"></p>
-    </div>
-  </div>
-
-  <!-- CHAT VIEW: group open -->
-  <div id="communityChat" style="display:none;">
-    <div class="community-shell">
-      <!-- Group rail -->
-      <nav class="community-group-rail" id="groupRail"></nav>
-
-      <!-- Channel list -->
-      <div class="community-channel-list">
-        <div class="community-channel-list-header">
-          <span id="activeGroupName">Group</span>
-          <button id="leaveGroupBtn" title="Leave group" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.8rem; padding:4px 8px; border-radius:6px; color:var(--muted);">Leave</button>
-        </div>
-        <div class="community-channel-scroll" id="channelList"></div>
+          <div class="community-group-grid" id="groupGrid">
+            <div class="community-empty" style="grid-column:1/-1;">
+              <div class="community-empty-icon">🏘️</div>
+              <h3>Loading groups…</h3>
+            </div>
+          </div>
+          <div id="ai-assistant-slot" style="max-width:520px;margin:36px auto 0;"></div>
+          <div id="createGroupCta" style="display:none; margin-top:36px; text-align:center;">
+            <button class="btn btn-secondary" id="openCreateGroup">+ Create a Group</button>
+          </div>
+        </main>
       </div>
 
-      <!-- Message pane -->
-      <div class="community-message-pane">
-        <div class="community-message-header">
-          <span class="community-channel-hash">#</span>
-          <h2 id="activeChannelName">general</h2>
-          <span class="community-message-topic" id="activeChannelTopic"></span>
-        </div>
-        <!-- Pinned banner -->
-        <div class="community-pinned-bar" id="pinnedBar" style="display:none;">
-          <strong>📌 Pinned:</strong> <span id="pinnedText"></span>
-        </div>
-        <!-- Messages -->
-        <div class="community-message-scroll" id="messageScroll"></div>
-        <!-- Composer -->
-        <div class="community-composer">
-          <div class="community-composer-inner">
-            <textarea class="community-composer-textarea" id="composerText" rows="1" placeholder="Message #general…"></textarea>
-            <button class="community-composer-send" id="composerSend" title="Send">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
+      <div id="communityChat" style="display:none;">
+        <div class="community-shell">
+          <nav class="community-group-rail" id="groupRail"></nav>
+          <div class="community-channel-list">
+            <div class="community-channel-list-header">
+              <span id="activeGroupName">Group</span>
+              <button id="leaveGroupBtn" title="Leave group" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:0.8rem; padding:4px 8px; border-radius:6px; color:var(--muted);">Leave</button>
+            </div>
+            <div class="community-channel-scroll" id="channelList"></div>
+          </div>
+          <div class="community-message-pane">
+            <div class="community-message-header">
+              <span class="community-channel-hash">#</span>
+              <h2 id="activeChannelName">general</h2>
+              <span class="community-message-topic" id="activeChannelTopic"></span>
+            </div>
+            <div class="community-pinned-bar" id="pinnedBar" style="display:none;">
+              <strong>📌 Pinned:</strong> <span id="pinnedText"></span>
+            </div>
+            <div class="community-message-scroll" id="messageScroll"></div>
+            <div class="community-composer">
+              <div class="community-composer-inner">
+                <textarea class="community-composer-textarea" id="composerText" rows="1" placeholder="Message #general…"></textarea>
+                <button class="community-composer-send" id="composerSend" title="Send">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <footer class="footer" id="communityFooter">
-    <div class="container footer-grid">
-      <div>Vendor Atlas</div>
-      <div>Connect between markets.</div>
-      <div class="stack-row" style="margin-top:0;">
-        <a href="/feed">Feed</a>
-        <a href="/discover">Discover</a>
-        <a href="/signin">Sign In</a>
-      </div>
+<div id="createGroupModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:var(--surface-strong); border-radius:var(--radius-xl); padding:32px; width:100%; max-width:480px; margin:20px;">
+    <h2 style="margin:0 0 20px; font-size:1.2rem;">Create a Group</h2>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Group name</label>
+      <input type="text" id="newGroupName" placeholder="e.g. Austin Jewelry Vendors">
     </div>
-  </footer>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Type</label>
+      <select id="newGroupType">
+        <option value="vendor_circle">Vendor Circle</option>
+        <option value="event_room">Event Room</option>
+        <option value="shopper_community">Shopper Community</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Description</label>
+      <textarea id="newGroupDesc" rows="3" placeholder="What's this group about?"></textarea>
+    </div>
+    <div class="stack-row" style="justify-content:flex-end; gap:10px;">
+      <button class="btn btn-secondary" id="cancelCreateGroup">Cancel</button>
+      <button class="btn btn-primary" id="submitCreateGroup">Create Group</button>
+    </div>
+    <p id="createGroupError" class="status error" style="display:none; margin-top:10px;"></p>
+  </div>
+</div>
 
-  <script src="/assets/app.js"></script>
-  <script src="/assets/ai-features.js"></script>
-  <script>
+<nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script src="/assets/ai-features.js"></script>
+<script>
   (function () {
-    // ── State ──────────────────────────────────────────────────────────────
     var state = {
       groups: [],
       activeGroup: null,
@@ -176,10 +165,8 @@
       currentFilter: '',
     };
 
-    // ── Elements ────────────────────────────────────────────────────────────
     var landing        = document.getElementById('communityLanding');
     var chatView       = document.getElementById('communityChat');
-    var footer         = document.getElementById('communityFooter');
     var groupGrid      = document.getElementById('groupGrid');
     var groupTypeTabs  = document.getElementById('groupTypeTabs');
     var groupRail      = document.getElementById('groupRail');
@@ -200,7 +187,6 @@
     var createGroupModal  = document.getElementById('createGroupModal');
     var createGroupError  = document.getElementById('createGroupError');
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
     function typeLabel(t) {
       return { vendor_circle: 'Vendor Circle', event_room: 'Event Room', shopper_community: 'Shopper Community' }[t] || t;
     }
@@ -221,7 +207,6 @@
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
-    // ── Group Grid ───────────────────────────────────────────────────────────
     function loadGroups(type) {
       state.currentFilter = type || '';
       var url = '/api/community/groups' + (type ? '?type=' + type : '');
@@ -265,11 +250,9 @@
     groupGrid.addEventListener('click', function(e) {
       var card = e.target.closest('.community-group-card');
       if (!card) return;
-      var id = card.dataset.groupId;
-      openGroup(id);
+      openGroup(card.dataset.groupId);
     });
 
-    // ── Open Group (chat view) ────────────────────────────────────────────────
     function openGroup(groupId) {
       fetch('/api/community/groups/' + groupId)
         .then(function(r){ return r.json(); })
@@ -277,12 +260,10 @@
           if (!data.ok) return;
           state.activeGroup = data.group;
           landing.style.display = 'none';
-          footer.style.display = 'none';
           chatView.style.display = 'block';
           renderGroupRail();
           renderChannelList(data.group.channels || []);
           activeGroupName.textContent = data.group.name;
-          // Open first channel
           var channels = data.group.channels || [];
           var defaultCh = channels.find(function(c){ return c.is_default; }) || channels[0];
           if (defaultCh) openChannel(defaultCh);
@@ -329,20 +310,14 @@
       if (state.pollTimer) clearInterval(state.pollTimer);
       state.activeChannel = channel;
       state.lastSince = null;
-
       activeChannelName.textContent = channel.name;
       activeChannelTopic.textContent = channel.description || '';
       composerText.placeholder = 'Message #' + channel.name + '…';
-
-      // Mark active in channel list
       channelList.querySelectorAll('.community-channel-item').forEach(function(item) {
         item.classList.toggle('active', item.dataset.channelId === channel.id);
       });
-
       messageScroll.innerHTML = '';
       loadMessages(channel.id, false);
-
-      // Poll for new messages every 4s
       state.pollTimer = setInterval(function() { pollMessages(); }, 4000);
     }
 
@@ -352,8 +327,6 @@
         .then(function(data) {
           if (!data.ok) return;
           state.messages = data.messages || [];
-
-          // Pinned
           var pinned = data.pinned || [];
           if (pinned.length) {
             pinnedBar.style.display = 'flex';
@@ -361,17 +334,9 @@
           } else {
             pinnedBar.style.display = 'none';
           }
-
           renderMessages(state.messages);
-
-          if (state.messages.length) {
-            state.lastSince = state.messages[state.messages.length - 1].created_at;
-          }
-
-          // Scroll to bottom on initial load
-          if (!append) {
-            messageScroll.scrollTop = messageScroll.scrollHeight;
-          }
+          if (state.messages.length) state.lastSince = state.messages[state.messages.length - 1].created_at;
+          if (!append) messageScroll.scrollTop = messageScroll.scrollHeight;
         });
     }
 
@@ -393,14 +358,11 @@
 
     function renderMessages(msgs) {
       messageScroll.innerHTML = '';
-      msgs.forEach(function(msg, i) {
-        appendMessage(msg, msgs[i - 1]);
-      });
+      msgs.forEach(function(msg, i) { appendMessage(msg, msgs[i - 1]); });
     }
 
     function appendMessage(msg, prev) {
-      var sameAuthor = prev && prev.user_id === msg.user_id
-        && (new Date(msg.created_at) - new Date(prev.created_at)) < 300000;
+      var sameAuthor = prev && prev.user_id === msg.user_id && (new Date(msg.created_at) - new Date(prev.created_at)) < 300000;
       var initials = avatarInitials(msg.display_name || msg.username);
       var el = document.createElement('div');
       el.className = 'community-msg' + (sameAuthor ? ' same-author' : '');
@@ -423,7 +385,6 @@
       return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // ── Send message ─────────────────────────────────────────────────────────
     function sendMessage() {
       var content = composerText.value.trim();
       if (!content || !state.activeChannel) return;
@@ -459,14 +420,12 @@
       this.style.height = Math.min(this.scrollHeight, 160) + 'px';
     });
 
-    // ── Leave group ───────────────────────────────────────────────────────────
     leaveGroupBtn.addEventListener('click', function() {
       if (!state.activeGroup) return;
       fetch('/api/community/groups/' + state.activeGroup.id + '/leave', { method: 'POST' })
         .then(function(){ showLanding(); loadGroups(state.currentFilter); });
     });
 
-    // ── Create group ──────────────────────────────────────────────────────────
     openCreateGroup && openCreateGroup.addEventListener('click', function() {
       createGroupModal.style.display = 'flex';
     });
@@ -479,7 +438,6 @@
       var desc = document.getElementById('newGroupDesc').value.trim();
       if (!name) { createGroupError.textContent = 'Name is required.'; createGroupError.style.display = 'block'; return; }
       createGroupError.style.display = 'none';
-
       fetch('/api/community/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -499,7 +457,6 @@
         });
     });
 
-    // ── Type filter tabs ──────────────────────────────────────────────────────
     groupTypeTabs.addEventListener('click', function(e) {
       var tab = e.target.closest('.community-type-tab');
       if (!tab) return;
@@ -508,34 +465,29 @@
       loadGroups(tab.dataset.type || '');
     });
 
-    // ── Show/hide landing vs chat ─────────────────────────────────────────────
     function showLanding() {
       if (state.pollTimer) clearInterval(state.pollTimer);
       state.activeGroup = null;
       state.activeChannel = null;
       chatView.style.display = 'none';
-      footer.style.display = '';
       landing.style.display = '';
     }
 
-    // ── Auth check: show create CTA if signed in ──────────────────────────────
     fetch('/api/auth/me')
       .then(function(r){ return r.json(); })
       .then(function(data) {
-        if (data && data.id) {
+        if ((data && data.id) || (data && data.user && data.user.id)) {
           createGroupCta.style.display = 'block';
         }
       })
       .catch(function(){});
 
-    // ── AI Assistant ──────────────────────────────────────────────────────────
     if (typeof AI !== 'undefined') {
       AI.injectCommunityAssistant('#ai-assistant-slot');
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
     loadGroups('');
   })();
-  </script>
+</script>
 </body>
 </html>

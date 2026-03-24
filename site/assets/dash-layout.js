@@ -14,6 +14,7 @@
     feed:      '<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
     community: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
     discover:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+    search:    '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     shop:      '<svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
     profit:    '<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
     messages:  '<svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
@@ -21,6 +22,8 @@
     analytics: '<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
     settings:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     saved:     '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+    users:     '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    shield:    '<svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-4"/></svg>',
     more:      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
   };
 
@@ -36,8 +39,11 @@
         ]},
         { label: 'Vendor', items: [
           { icon: 'shop',      text: 'My Shop',     href: '/my-shop' },
-          { icon: 'events',    text: 'Events',      href: '/discover' },
-          { icon: 'profit',    text: 'Profit',      href: '/profit' },
+          { icon: 'analytics', text: 'Business',    href: '/business' },
+          { icon: 'events',    text: 'History',     href: '/history' },
+          { icon: 'saved',     text: 'Profiles',    href: '/profile' },
+          { icon: 'profit',    text: 'Profit',      href: '/final-plan' },
+          { icon: 'settings',  text: 'Integrations', href: '/integrations' },
           { icon: 'messages',  text: 'Messages',    href: '/messages' },
         ]},
         { label: 'Account', items: [
@@ -57,10 +63,10 @@
           { icon: 'dashboard', text: 'Dashboard',   href: '/market-dashboard' },
           { icon: 'feed',      text: 'Feed',         href: '/feed' },
           { icon: 'community', text: 'Community',    href: '/community' },
-          { icon: 'discover',  text: 'Discover',     href: '/discover' },
+          { icon: 'search',    text: 'Find Vendors', href: '/vendor-discovery' },
         ]},
         { label: 'Organizer', items: [
-          { icon: 'events',    text: 'My Events',    href: '/market-applications' },
+          { icon: 'events',    text: 'Applications', href: '/market-applications' },
           { icon: 'analytics', text: 'Analytics',    href: '/market-analytics' },
           { icon: 'messages',  text: 'Messages',     href: '/messages' },
         ]},
@@ -71,7 +77,7 @@
       bottomNav: [
         { icon: 'dashboard', text: 'Home',      href: '/market-dashboard' },
         { icon: 'feed',      text: 'Feed',      href: '/feed' },
-        { icon: 'discover',  text: 'Discover',  href: '/discover' },
+        { icon: 'search',    text: 'Vendors',   href: '/vendor-discovery' },
         { icon: 'community', text: 'Community', href: '/community' },
       ],
     },
@@ -86,6 +92,7 @@
           { icon: 'messages',  text: 'Messages',    href: '/messages' },
         ]},
         { label: 'Account', items: [
+          { icon: 'saved',     text: 'Profile',     href: '/profile' },
           { icon: 'settings',  text: 'Settings',    href: '/settings' },
         ]},
       ],
@@ -93,6 +100,29 @@
         { icon: 'home',      text: 'Home',      href: '/shopper-dashboard' },
         { icon: 'feed',      text: 'Feed',      href: '/feed' },
         { icon: 'discover',  text: 'Discover',  href: '/discover' },
+        { icon: 'community', text: 'Community', href: '/community' },
+      ],
+    },
+    admin: {
+      sections: [
+        { label: 'Admin', items: [
+          { icon: 'dashboard', text: 'Dashboard',    href: '/admin' },
+          { icon: 'users',     text: 'Users',        href: '/admin/users' },
+          { icon: 'shield',    text: 'Verification', href: '/admin/verify' },
+        ]},
+        { label: 'Platform', items: [
+          { icon: 'discover',  text: 'Discover',     href: '/discover' },
+          { icon: 'community', text: 'Community',    href: '/community' },
+          { icon: 'messages',  text: 'Messages',     href: '/messages' },
+        ]},
+        { label: 'Account', items: [
+          { icon: 'settings',  text: 'Settings',     href: '/settings' },
+        ]},
+      ],
+      bottomNav: [
+        { icon: 'dashboard', text: 'Admin',     href: '/admin' },
+        { icon: 'users',     text: 'Users',     href: '/admin/users' },
+        { icon: 'shield',    text: 'Verify',    href: '/admin/verify' },
         { icon: 'community', text: 'Community', href: '/community' },
       ],
     },
@@ -188,7 +218,11 @@
 
   // ── Active nav highlighting ───────────────────────────────────────────────
   // Aliases: /dashboard/shop is the same page as /my-shop
-  var PATH_ALIASES = { '/dashboard/shop': '/my-shop' };
+  var PATH_ALIASES = {
+    '/dashboard/shop': '/my-shop',
+    '/admin-users': '/admin/users',
+    '/admin-verify': '/admin/verify'
+  };
 
   function highlightActive() {
     var currentPath = window.location.pathname;

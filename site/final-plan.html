@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Profit Planner | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
   <style>
     /* ── PAGE LAYOUT ── */
     .profit-hero { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--line); }
@@ -157,38 +158,49 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="container nav nav-journey">
-      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/my-shop">My Shop</a>
-        <a href="/discover">Discover</a>
-        <a class="active" href="/final-plan">Profit</a>
-      </nav>
-      <div class="nav-actions" data-auth-nav></div>
-      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
+  <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+  <nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+    <div class="mobile-drawer-header">
+      <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/my-shop">My Shop</a>
-      <a href="/discover">Discover</a>
-      <a href="/final-plan">Profit</a>
-      <div data-mobile-auth-nav></div>
-    </div>
-  </header>
+    <div class="mobile-drawer-nav dash-nav"></div>
+  </nav>
 
-  <main>
-    <section class="profit-hero">
-      <div class="container">
-        <span class="eyebrow">Profit planner</span>
-        <h1>Plan your events.</h1>
-        <p>Track revenue, expenses, and profit for every market you do.</p>
+  <div class="dash-shell">
+    <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+      <div class="dash-sidebar-header">
+        <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+        <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       </div>
-    </section>
+      <nav class="dash-nav"></nav>
+      <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+    </aside>
 
-    <section>
-      <div class="container">
+    <div class="dash-body">
+      <header class="dash-topbar">
+        <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span class="dash-topbar-title" id="dash-page-title">Profit</span>
+        <div class="dash-topbar-actions" data-auth-nav></div>
+      </header>
+
+      <div class="dash-content">
+        <section class="profit-hero">
+          <div class="container">
+            <span class="eyebrow">Profit planner</span>
+            <h1>Plan your events.</h1>
+            <p>Track revenue, expenses, and profit for every market you do.</p>
+          </div>
+        </section>
+
+        <section>
+          <div class="container">
 
         <!-- Past performance stats -->
         <div id="stats-section" style="display:none;margin-top:1.5rem;">
@@ -303,11 +315,16 @@
           </div>
 
         </div>
+          </div>
+        </section>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
 
   <script src="/assets/app.js"></script>
+  <script src="/assets/dash-layout.js"></script>
   <script>
   (async function () {
     const STORAGE_KEY = "vendorAtlasProfitPlan_v2";

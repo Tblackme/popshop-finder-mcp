@@ -5,30 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizer Applications | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
 </head>
 <body class="organizer-page organizer-detail-page">
-  <header class="topbar">
-    <div class="container nav nav-journey">
-      <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
-      <nav class="nav-links">
-        <a href="/">Home</a>
-        <a href="/market-dashboard">Organizer</a>
-        <a class="active" href="/market-applications">Applications</a>
-      </nav>
-      <div class="nav-actions" data-auth-nav></div>
-      <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
-    </div>
-    <div class="container mobile-drawer" data-mobile-drawer>
-      <a href="/">Home</a>
-      <a href="/market-dashboard">Organizer</a>
-      <a href="/market-applications">Applications</a>
-      <div data-mobile-auth-nav></div>
-    </div>
-  </header>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
 
-  <main>
-    <section class="page-hero">
-      <div class="container organizer-hero">
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Applications</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+      <div class="dash-page-hero">
         <span class="eyebrow">Organizer applications</span>
         <h1>Review vendors in a full-width applications workspace.</h1>
         <p>Accept, reject, and message vendors with more room for notes, threads, and queue management.</p>
@@ -37,14 +50,16 @@
           <a class="btn btn-primary" href="/market-analytics">Open analytics</a>
         </div>
       </div>
-    </section>
-    <section>
-      <div class="container" data-market-dashboard-app data-organizer-view="applications">
+      <div data-market-dashboard-app data-organizer-view="applications">
         <div class="empty-state"><strong>Loading applications…</strong></div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
+</div>
 
-  <script src="/assets/app.js"></script>
+<nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
 </body>
 </html>
