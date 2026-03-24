@@ -39,6 +39,8 @@
         ]},
         { label: 'Vendor', items: [
           { icon: 'shop',      text: 'My Shop',     href: '/my-shop' },
+          { icon: 'saved',     text: 'Inventory',   href: '/inventory' },
+          { icon: 'events',    text: 'Calendar',    href: '/calendar' },
           { icon: 'analytics', text: 'Business',    href: '/business' },
           { icon: 'events',    text: 'History',     href: '/history' },
           { icon: 'saved',     text: 'Profiles',    href: '/profile' },

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventory | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    :root { --planner-ink:#152033; --planner-accent:#bf5a2a; --planner-accent-soft:#fff1e9; --planner-sky:#f7fbff; --planner-line:rgba(21,32,51,.1); }
+    body { background:radial-gradient(circle at top left, rgba(191,90,42,.12), transparent 28rem), linear-gradient(180deg, #fffdf9 0%, var(--planner-sky) 100%); }
+    .planner-grid { display:grid; gap:1.25rem; grid-template-columns:minmax(0,1.1fr) minmax(320px,420px); }
+    .inventory-metrics { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); margin-bottom:1.25rem; }
+    .metric-card { border:1px solid var(--planner-line); border-radius:20px; padding:1rem 1.05rem; background:rgba(255,255,255,.84); box-shadow:0 16px 34px rgba(21,32,51,.06); }
+    .metric-card span { display:block; font-size:.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .metric-card strong { display:block; margin-top:.35rem; font-size:1.9rem; color:var(--planner-ink); }
+    .planner-panel { border:1px solid var(--planner-line); border-radius:24px; background:rgba(255,255,255,.9); box-shadow:0 22px 48px rgba(21,32,51,.08); overflow:hidden; }
+    .panel-head { padding:1.1rem 1.25rem; border-bottom:1px solid var(--planner-line); display:flex; justify-content:space-between; align-items:center; gap:.8rem; }
+    .panel-head h2, .panel-head h3 { margin:0; color:var(--planner-ink); }
+    .panel-body { padding:1.15rem 1.25rem 1.25rem; }
+    .stack { display:grid; gap:.85rem; }
+    .form-grid { display:grid; gap:.8rem; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .field { display:grid; gap:.35rem; }
+    .field.full { grid-column:1 / -1; }
+    .field label { font-size:.8rem; color:var(--muted); font-weight:700; }
+    .field input { border:1px solid var(--planner-line); border-radius:14px; padding:.82rem .9rem; background:#fff; font:inherit; }
+    .cta-row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }
+    .btn-accent { background:linear-gradient(135deg, #bf5a2a, #df7a49); color:#fff; border:none; }
+    .inventory-table { width:100%; border-collapse:collapse; }
+    .inventory-table th, .inventory-table td { text-align:left; padding:.85rem .65rem; border-bottom:1px solid var(--planner-line); vertical-align:middle; }
+    .inventory-table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .qty-input { width:90px; border:1px solid var(--planner-line); border-radius:10px; padding:.55rem .65rem; font:inherit; }
+    .chip { display:inline-flex; align-items:center; gap:.35rem; padding:.28rem .65rem; border-radius:999px; background:var(--planner-accent-soft); color:var(--planner-accent); font-size:.76rem; font-weight:700; }
+    .inline-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .mini-note { margin:0; color:var(--muted); font-size:.92rem; }
+    .empty-box { border:1px dashed var(--planner-line); border-radius:18px; padding:1.1rem; text-align:center; color:var(--muted); background:rgba(247,251,255,.65); }
+    @media (max-width:980px) { .planner-grid { grid-template-columns:1fr; } }
+    @media (max-width:680px) {
+      .form-grid { grid-template-columns:1fr; }
+      .inventory-table thead { display:none; }
+      .inventory-table, .inventory-table tbody, .inventory-table tr, .inventory-table td { display:block; width:100%; }
+      .inventory-table tr { padding:.85rem 0; border-bottom:1px solid var(--planner-line); }
+      .inventory-table td { border-bottom:none; padding:.35rem 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Inventory</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+      <div class="dash-page-hero">
+        <span class="eyebrow">Smart planner foundation</span>
+        <h1>Track what you can actually bring to the booth.</h1>
+        <p>Keep a clean count of products, materials, and stock gaps so event planning starts with real inventory instead of guesswork.</p>
+      </div>
+
+      <div class="inventory-metrics">
+        <div class="metric-card"><span>Tracked items</span><strong id="metric-items">0</strong></div>
+        <div class="metric-card"><span>Total units</span><strong id="metric-units">0</strong></div>
+        <div class="metric-card"><span>Low stock items</span><strong id="metric-low">0</strong></div>
+      </div>
+
+      <div class="planner-grid">
+        <section class="planner-panel">
+          <div class="panel-head">
+            <div><span class="eyebrow">Inventory list</span><h2>Planner stock</h2></div>
+            <span class="chip" id="inventory-count-chip">0 items</span>
+          </div>
+          <div class="panel-body">
+            <div id="inventory-table-slot" class="empty-box">Loading inventory…</div>
+          </div>
+        </section>
+
+        <aside class="planner-panel">
+          <div class="panel-head">
+            <div><span class="eyebrow">Add inventory</span><h3>New product</h3></div>
+          </div>
+          <div class="panel-body">
+            <form id="inventory-form" class="stack">
+              <div class="form-grid">
+                <div class="field full">
+                  <label for="product-name">Product name</label>
+                  <input id="product-name" name="product_name" required maxlength="120" placeholder="Cherry blossom candle">
+                </div>
+                <div class="field">
+                  <label for="product-sku">SKU</label>
+                  <input id="product-sku" name="sku" maxlength="80" placeholder="CND-042">
+                </div>
+                <div class="field">
+                  <label for="product-quantity">Quantity</label>
+                  <input id="product-quantity" name="quantity" type="number" min="0" value="0" required>
+                </div>
+                <div class="field full">
+                  <label for="product-material">Material type</label>
+                  <input id="product-material" name="material_type" maxlength="120" placeholder="Soy wax, ceramic, acrylic, cotton">
+                </div>
+              </div>
+              <div class="cta-row">
+                <button class="btn btn-accent" type="submit">Add item</button>
+                <p class="mini-note">Quantities update inline in the list once an item exists.</p>
+              </div>
+            </form>
+            <div id="inventory-status" class="inline-status" style="display:none;"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+  const inventoryState = { items: [] };
+
+  async function inventoryApi(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: "include",
+      headers: { "Accept": "application/json", "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  function setInventoryStatus(message, tone) {
+    const el = document.getElementById("inventory-status");
+    if (!message) {
+      el.style.display = "none";
+      el.textContent = "";
+      el.className = "inline-status";
+      return;
+    }
+    el.style.display = "block";
+    el.textContent = message;
+    el.className = `inline-status ${tone || ""}`.trim();
+  }
+
+  function computeMetrics(items) {
+    const totalUnits = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const lowStock = items.filter((item) => Number(item.quantity || 0) <= 5).length;
+    document.getElementById("metric-items").textContent = String(items.length);
+    document.getElementById("metric-units").textContent = String(totalUnits);
+    document.getElementById("metric-low").textContent = String(lowStock);
+    document.getElementById("inventory-count-chip").textContent = `${items.length} item${items.length === 1 ? "" : "s"}`;
+  }
+
+  function renderInventoryTable(items) {
+    const slot = document.getElementById("inventory-table-slot");
+    computeMetrics(items);
+    if (!items.length) {
+      slot.className = "empty-box";
+      slot.innerHTML = "<strong>No inventory yet.</strong><div style='margin-top:.4rem;'>Add your first product to start tracking event-ready stock.</div>";
+      return;
+    }
+    slot.className = "";
+    slot.innerHTML = `
+      <table class="inventory-table">
+        <thead><tr><th>Product</th><th>SKU</th><th>Material</th><th>Quantity</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          ${items.map((item) => `
+            <tr>
+              <td><strong>${escapeHtml(item.product_name || "")}</strong></td>
+              <td>${escapeHtml(item.sku || "—")}</td>
+              <td>${escapeHtml(item.material_type || "—")}</td>
+              <td><input class="qty-input" type="number" min="0" value="${Number(item.quantity || 0)}" data-qty-input="${item.id}"></td>
+              <td>${escapeHtml(item.last_updated ? new Date(item.last_updated).toLocaleString() : "—")}</td>
+              <td><div class="inline-actions"><button class="btn btn-secondary" type="button" data-save-item="${item.id}">Save</button><button class="btn btn-ghost" type="button" data-delete-item="${item.id}">Delete</button></div></td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+
+    slot.querySelectorAll("[data-save-item]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const id = Number(button.getAttribute("data-save-item"));
+        const input = document.querySelector(`[data-qty-input="${id}"]`);
+        try {
+          setInventoryStatus("Saving quantity…", "");
+          await inventoryApi("/inventory/update", { method: "POST", body: JSON.stringify({ id, quantity: Number(input.value || 0) }) });
+          await loadInventory();
+          setInventoryStatus("Quantity updated.", "success");
+        } catch (error) {
+          setInventoryStatus(error.message || "Could not update quantity.", "error");
+        }
+      });
+    });
+
+    slot.querySelectorAll("[data-delete-item]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const id = Number(button.getAttribute("data-delete-item"));
+        try {
+          setInventoryStatus("Removing item…", "");
+          await inventoryApi("/inventory/delete", { method: "DELETE", body: JSON.stringify({ id }) });
+          await loadInventory();
+          setInventoryStatus("Item removed.", "success");
+        } catch (error) {
+          setInventoryStatus(error.message || "Could not remove item.", "error");
+        }
+      });
+    });
+  }
+
+  async function loadInventory() {
+    const data = await inventoryApi("/inventory", { method: "GET" });
+    inventoryState.items = Array.isArray(data.inventory) ? data.inventory : [];
+    renderInventoryTable(inventoryState.items);
+  }
+
+  document.getElementById("inventory-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      setInventoryStatus("Adding item…", "");
+      await inventoryApi("/inventory/create", {
+        method: "POST",
+        body: JSON.stringify({
+          product_name: form.get("product_name"),
+          sku: form.get("sku"),
+          quantity: Number(form.get("quantity") || 0),
+          material_type: form.get("material_type"),
+        }),
+      });
+      event.currentTarget.reset();
+      document.getElementById("product-quantity").value = "0";
+      await loadInventory();
+      setInventoryStatus("Inventory item added.", "success");
+    } catch (error) {
+      setInventoryStatus(error.message || "Could not add item.", "error");
+    }
+  });
+
+  loadInventory().catch((error) => {
+    setInventoryStatus(error.message || "Could not load inventory.", "error");
+    renderInventoryTable([]);
+  });
+</script>
+</body>
+</html>

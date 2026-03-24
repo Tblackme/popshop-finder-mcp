@@ -94,6 +94,19 @@ from storage_messages import (
     list_messages_in_conversation,
     list_new_messages_since,
 )
+from storage_inventory import (
+    create_inventory_item,
+    delete_inventory_item,
+    get_vendor_inventory,
+    init_inventory_db,
+    update_inventory_item,
+)
+from storage_calendar import (
+    create_calendar_event,
+    delete_calendar_event,
+    get_vendor_calendar,
+    init_calendar_db,
+)
 from storage_community import (
     init_community_db,
     list_groups,
@@ -172,13 +185,29 @@ from storage_users import (
     list_verification_requests,
     review_verification_request,
     get_latest_verification_request,
+    admin_list_users,
+    admin_set_user_role,
+    admin_set_user_suspended,
+    admin_platform_stats,
     list_vendor_products,
     list_vendor_products_by_username,
     create_vendor_product,
     update_vendor_product,
     delete_vendor_product,
     bulk_replace_csv_products,
+    mark_notification_read,
     search_vendors_for_organizers,
+)
+from calendar_integrations import export_events_to_ics
+from planner_engine import suggest_work_times, generate_production_plan, create_inventory_alerts, recommend_events
+from storage_production import (
+    init_production_db,
+    create_production_task,
+    list_production_tasks,
+    get_production_task,
+    update_production_task,
+    delete_production_task,
+    bulk_create_production_tasks,
 )
 from shopify_oauth import (
     build_authorize_url,
@@ -220,6 +249,7 @@ PUBLIC_PAGE_ROUTES = {
     "/profile": "profile.html",
     "/my-shop": "my-shop.html",
     "/final-plan": "final-plan.html",
+    "/planner": "planner.html",
     "/shopper-plan": "shopper-plan.html",
     "/history": "history.html",
     "/integrations": "integrations.html",
@@ -235,6 +265,7 @@ PUBLIC_PAGE_ROUTES = {
     "/settings": "settings.html",
     "/vendor-verify": "vendor-verify.html",
     "/admin/verify": "admin-verify.html",
+    "/admin/users": "admin-users.html",
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -428,18 +459,37 @@ def _normalized_role(user: dict[str, Any] | None) -> str:
     if not user:
         return "vendor"
     role = str(user.get("role") or "vendor").strip().lower()
-    if role not in {"vendor", "market", "shopper"}:
+    if role not in {"vendor", "market", "shopper", "admin"}:
         return "vendor"
     return role
 
 
+def _is_admin(user: dict[str, Any] | None) -> bool:
+    return bool(user) and str(user.get("role") or "").strip().lower() == "admin"  # type: ignore[union-attr]
+
+
+def _require_admin(user: dict[str, Any] | None) -> bool:
+    """Return True if the user has admin role. Use to guard admin endpoints."""
+    return _is_admin(user)
+
+
 def _dashboard_path_for_role(role: str) -> str:
     normalized = str(role or "vendor").strip().lower()
+    if normalized == "admin":
+        return "/admin"
     if normalized == "market":
         return "/market-dashboard"
     if normalized == "shopper":
         return "/shopper-dashboard"
     return "/dashboard"
+
+
+VIEW_AS_COOKIE = "va_view_as"
+
+
+def _get_view_as(request: Request) -> str | None:
+    """Return the admin's current 'view as' role if set, else None."""
+    return request.cookies.get(VIEW_AS_COOKIE) or None
 
 
 def _role_entry_path(role: str) -> str:
@@ -1353,6 +1403,8 @@ def create_app() -> FastAPI:
     if backfilled:
         logger.info("Backfilled geo coordinates for %d seed events.", backfilled)
     init_users_db()
+    init_inventory_db()
+    init_calendar_db()
     init_marketplace_db()
     init_feedback_db()
     from storage_shopify import init_shopify_db
@@ -1360,6 +1412,7 @@ def create_app() -> FastAPI:
     init_community_db()
     init_feed_db()
     init_messages_db()
+    init_production_db()
 
     # AI infrastructure — init tables and register routes if enabled
     cfg = get_config()
@@ -1493,6 +1546,10 @@ def create_app() -> FastAPI:
             status_code=404,
         )
 
+    def _prefers_html(request: Request) -> bool:
+        accept = str(request.headers.get("accept") or "").lower()
+        return "text/html" in accept and "application/json" not in accept
+
     for route_path, filename in PUBLIC_PAGE_ROUTES.items():
         async def _page_handler(filename: str = filename) -> Response:
             return serve_page(filename)
@@ -1500,12 +1557,24 @@ def create_app() -> FastAPI:
         app.add_api_route(route_path, _page_handler, methods=["GET"], response_class=FileResponse)
 
     @app.get("/dashboard", response_class=FileResponse)
+    @app.get("/admin", response_class=FileResponse)
+    async def handle_admin_page(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            return RedirectResponse(url="/signin", status_code=302)
+        if not _is_admin(user):
+            return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+        return serve_page("admin.html")
+
     async def handle_dashboard_page(request: Request) -> Response:
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
-        if _normalized_role(user) != "vendor":
+        # Admins can access any dashboard for view-as purposes
+        if not _is_admin(user) and _normalized_role(user) != "vendor":
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+        if _is_admin(user) and not _get_view_as(request):
+            return RedirectResponse(url="/admin", status_code=302)
         return serve_page("dashboard.html")
 
     @app.get("/market-dashboard", response_class=FileResponse)
@@ -1513,8 +1582,10 @@ def create_app() -> FastAPI:
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
-        if _normalized_role(user) != "market":
+        if not _is_admin(user) and _normalized_role(user) != "market":
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+        if _is_admin(user) and not _get_view_as(request):
+            return RedirectResponse(url="/admin", status_code=302)
         return serve_page("market-dashboard.html")
 
     @app.get("/shopper-dashboard", response_class=FileResponse)
@@ -1522,8 +1593,10 @@ def create_app() -> FastAPI:
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
-        if _normalized_role(user) != "shopper":
+        if not _is_admin(user) and _normalized_role(user) != "shopper":
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+        if _is_admin(user) and not _get_view_as(request):
+            return RedirectResponse(url="/admin", status_code=302)
         return serve_page("shopper-dashboard.html")
 
     @app.get("/dashboard/shop")
@@ -1531,9 +1604,65 @@ def create_app() -> FastAPI:
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
-        if _normalized_role(user) != "vendor":
+        if not _is_admin(user) and _normalized_role(user) != "vendor":
             return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
         return serve_page("my-shop.html")
+
+    @app.get("/inventory", response_class=FileResponse)
+    async def handle_inventory(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            if _prefers_html(request):
+                return RedirectResponse(url="/signin", status_code=302)
+            return _validation_error("Authentication required.", status_code=401)
+        if not _is_admin(user) and _normalized_role(user) != "vendor":
+            if _prefers_html(request):
+                return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+            return _validation_error("Vendor access required.", status_code=403)
+        if _prefers_html(request):
+            return serve_page("inventory.html")
+        inventory = get_vendor_inventory(int(user["id"]))
+        return JSONResponse({"ok": True, "inventory": inventory})
+
+    @app.get("/calendar", response_class=FileResponse)
+    async def handle_calendar(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            if _prefers_html(request):
+                return RedirectResponse(url="/signin", status_code=302)
+            return _validation_error("Authentication required.", status_code=401)
+        if not _is_admin(user) and _normalized_role(user) != "vendor":
+            if _prefers_html(request):
+                return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+            return _validation_error("Vendor access required.", status_code=403)
+        if _prefers_html(request):
+            return serve_page("calendar.html")
+
+        entries = get_vendor_calendar(int(user["id"]))
+        available_events: list[dict[str, Any]] = []
+        seen_event_ids: set[str] = set()
+        for source_event in get_saved_markets_for_user(int(user["id"])) + stored_search_events(
+            {"start_date": datetime.now(timezone.utc).date().isoformat()}
+        ):
+            event_id = str(source_event.get("id") or "").strip()
+            if not event_id or event_id in seen_event_ids:
+                continue
+            seen_event_ids.add(event_id)
+            available_events.append(
+                {
+                    "id": event_id,
+                    "name": source_event.get("name") or "",
+                    "date": source_event.get("date") or "",
+                    "city": source_event.get("city") or "",
+                    "state": source_event.get("state") or "",
+                    "booth_price": source_event.get("booth_price"),
+                    "location_name": source_event.get("location_name") or "",
+                    "event_type": source_event.get("event_type") or "",
+                }
+            )
+            if len(available_events) >= 40:
+                break
+        return JSONResponse({"ok": True, "entries": entries, "events": available_events})
 
     @app.get("/shop/{username}")
     async def handle_vendor_shop_page(username: str) -> Response:
@@ -1657,7 +1786,12 @@ def create_app() -> FastAPI:
     @app.get("/api/auth/me")
     async def handle_auth_me(request: Request) -> JSONResponse:
         user = _current_user(request)
-        return JSONResponse({"ok": True, "authenticated": bool(user), "user": user})
+        payload: dict[str, Any] = {"ok": True, "authenticated": bool(user), "user": user}
+        if user and _is_admin(user):
+            view_as = _get_view_as(request)
+            if payload["user"] is not None:
+                payload["user"] = {**payload["user"], "view_as": view_as}
+        return JSONResponse(payload)
 
     @app.post("/api/auth/signup")
     async def handle_auth_signup(request: Request) -> JSONResponse:
@@ -2948,6 +3082,93 @@ def create_app() -> FastAPI:
 
     # ── END MESSAGING ─────────────────────────────────────────────────────────
 
+    # ── ADMIN ─────────────────────────────────────────────────────────────────
+
+    @app.get("/api/admin/stats")
+    async def handle_admin_stats(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _require_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        stats = admin_platform_stats()
+        return JSONResponse({"ok": True, **stats})
+
+    @app.get("/api/admin/users")
+    async def handle_admin_list_users(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _require_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        search = request.query_params.get("search", "").strip()
+        role_filter = request.query_params.get("role", "").strip()
+        limit = min(int(request.query_params.get("limit") or 100), 200)
+        offset = int(request.query_params.get("offset") or 0)
+        result = admin_list_users(search=search, role_filter=role_filter, limit=limit, offset=offset)
+        return JSONResponse({"ok": True, **result})
+
+    @app.patch("/api/admin/users/{user_id}")
+    async def handle_admin_update_user(request: Request, user_id: int) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _require_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        updated = None
+        if "role" in body:
+            try:
+                updated = admin_set_user_role(user_id, str(body["role"]).strip().lower())
+            except ValueError as e:
+                return _validation_error(str(e))
+        if "suspended" in body:
+            try:
+                updated = admin_set_user_suspended(user_id, bool(body["suspended"]))
+            except ValueError as e:
+                return _validation_error(str(e))
+        if updated is None:
+            updated = get_user_by_id(user_id)
+        return JSONResponse({"ok": True, "user": updated})
+
+    @app.post("/api/admin/view-as")
+    async def handle_admin_view_as_set(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _require_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        role = str(body.get("role") or "").strip().lower()
+        valid = {"vendor", "market", "shopper", ""}
+        if role not in valid:
+            return _validation_error("role must be vendor, market, shopper, or empty to clear")
+        response = JSONResponse({"ok": True, "view_as": role or None})
+        config = get_config()
+        is_https = config.app_base_url.startswith("https://")
+        if role:
+            response.set_cookie(
+                VIEW_AS_COOKIE,
+                role,
+                httponly=False,
+                samesite="lax",
+                secure=is_https,
+                path="/",
+                max_age=86400,
+            )
+        else:
+            response.delete_cookie(VIEW_AS_COOKIE, path="/")
+        return response
+
+    @app.delete("/api/admin/view-as")
+    async def handle_admin_view_as_clear(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _require_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        response = JSONResponse({"ok": True, "view_as": None})
+        response.delete_cookie(VIEW_AS_COOKIE, path="/")
+        return response
+
+    # ── END ADMIN ──────────────────────────────────────────────────────────────
+
     @app.get("/api/vendor/products")
     async def handle_my_products(request: Request) -> JSONResponse:
         user = _require_user(request)
@@ -3070,6 +3291,148 @@ def create_app() -> FastAPI:
 
         count = bulk_replace_csv_products(int(user["id"]), products)
         return JSONResponse({"ok": True, "imported": count, "message": f"Imported {count} products from CSV."})
+
+    @app.post("/inventory/create")
+    async def handle_inventory_create(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        try:
+            item = create_inventory_item(
+                int(user["id"]),
+                str(body.get("product_name") or "").strip(),
+                str(body.get("sku") or "").strip(),
+                int(body.get("quantity") or 0),
+                str(body.get("material_type") or "").strip(),
+            )
+        except (TypeError, ValueError) as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "item": item}, status_code=201)
+
+    @app.post("/inventory/update")
+    async def handle_inventory_update(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        try:
+            item_id = int(body.get("id"))
+            quantity = int(body.get("quantity"))
+        except (TypeError, ValueError):
+            return _validation_error("id and quantity are required integers")
+        owned_item = next((item for item in get_vendor_inventory(int(user["id"])) if int(item["id"]) == item_id), None)
+        if not owned_item:
+            return _validation_error("Inventory item not found.", status_code=404)
+        item = update_inventory_item(item_id, quantity)
+        if not item:
+            return _validation_error("Inventory item not found.", status_code=404)
+        return JSONResponse({"ok": True, "item": item})
+
+    @app.delete("/inventory/delete")
+    async def handle_inventory_delete(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        try:
+            item_id = int(body.get("id"))
+        except (TypeError, ValueError):
+            return _validation_error("id is required")
+        owned_item = next((item for item in get_vendor_inventory(int(user["id"])) if int(item["id"]) == item_id), None)
+        if not owned_item:
+            return _validation_error("Inventory item not found.", status_code=404)
+        delete_inventory_item(item_id)
+        return JSONResponse({"ok": True})
+
+    @app.post("/calendar/create")
+    async def handle_calendar_create(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+
+        event_id = str(body.get("event_id") or "").strip() or None
+        source_event = get_event_by_id(event_id) if event_id else None
+        if event_id and not source_event:
+            return _validation_error("Event not found.", status_code=404)
+
+        title = str(body.get("title") or "").strip()
+        start_time = str(body.get("start_time") or "").strip()
+        end_time = str(body.get("end_time") or "").strip()
+        entry_type = str(body.get("type") or "").strip().lower() or ("event" if source_event else "reminder")
+        notes = str(body.get("notes") or "").strip()
+
+        if source_event:
+            title = title or str(source_event.get("name") or "").strip()
+            event_date = str(source_event.get("date") or "").strip()
+            start_time = start_time or (f"{event_date}T09:00" if event_date else "")
+            end_time = end_time or (f"{event_date}T17:00" if event_date else start_time)
+            if not notes:
+                location_bits = [
+                    str(source_event.get("location_name") or "").strip(),
+                    str(source_event.get("address") or "").strip(),
+                    ", ".join(
+                        part for part in [str(source_event.get("city") or "").strip(), str(source_event.get("state") or "").strip()] if part
+                    ),
+                ]
+                notes = " | ".join(bit for bit in location_bits if bit)
+            entry_type = "event"
+
+        try:
+            entry = create_calendar_event(
+                int(user["id"]),
+                title=title,
+                start_time=start_time,
+                end_time=end_time,
+                type=entry_type,
+                notes=notes,
+                event_id=event_id,
+            )
+        except ValueError as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "entry": entry}, status_code=201)
+
+    @app.delete("/calendar/delete")
+    async def handle_calendar_delete(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) != "vendor":
+            return _validation_error("Vendor access required.", status_code=403)
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return _validation_error("Invalid JSON body")
+        try:
+            entry_id = int(body.get("id"))
+        except (TypeError, ValueError):
+            return _validation_error("id is required")
+        owned_entry = next((entry for entry in get_vendor_calendar(int(user["id"])) if int(entry["id"]) == entry_id), None)
+        if not owned_entry:
+            return _validation_error("Calendar entry not found.", status_code=404)
+        delete_calendar_event(entry_id)
+        return JSONResponse({"ok": True})
 
     @app.get("/api/saved-markets")
     async def handle_saved_markets(request: Request) -> JSONResponse:
@@ -3753,6 +4116,54 @@ def create_app() -> FastAPI:
             return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
         return JSONResponse({"ok": True, "groups": list_user_groups(uid)})
 
+    # ── Notifications ─────────────────────────────────────────────────────
+
+    @app.get("/api/notifications")
+    async def handle_get_notifications(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        notifications = get_notifications_for_user(int(user["id"]))
+        unread = sum(1 for n in notifications if not n.get("read_at"))
+        return JSONResponse({"ok": True, "notifications": notifications, "unread": unread})
+
+    @app.post("/api/notifications/read")
+    async def handle_mark_notifications_read(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        notification_id = body.get("id")
+        mark_notification_read(int(user["id"]), int(notification_id) if notification_id else None)
+        return JSONResponse({"ok": True})
+
+    # ── Planner ───────────────────────────────────────────────────────────
+
+    @app.get("/api/planner/work-times")
+    async def handle_planner_work_times(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        availability = get_availability_for_user(int(user["id"]))
+        suggestions = suggest_work_times(availability)
+        return JSONResponse({"ok": True, "availability": availability, "suggestions": suggestions})
+
+    @app.get("/api/planner/events.ics")
+    async def handle_planner_events_ics(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            return Response("Authentication required", status_code=401)
+        saved = get_saved_markets_for_user(int(user["id"]))
+        ics_content = export_events_to_ics(saved, calendar_name="My Vendor Atlas Events")
+        return Response(
+            content=ics_content,
+            media_type="text/calendar; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="vendor-atlas-events.ics"'},
+        )
+
     @app.post("/consumer/run")
     async def handle_consumer_run(request: Request) -> JSONResponse:
         try:
@@ -3861,6 +4272,132 @@ def create_app() -> FastAPI:
             await sse_transport.send(session_id, result)
 
         return JSONResponse(result)
+
+    # ── SMART PLANNER ─────────────────────────────────────────────────────────
+
+    @app.get("/api/planner/recommendations")
+    async def handle_planner_recommendations(request: Request) -> JSONResponse:
+        """
+        Return a combined planner dashboard for the authenticated vendor:
+          - recommended upcoming events
+          - inventory alerts
+          - a lightweight production suggestion (based on next recommended event)
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        vendor_id = int(user["id"])
+
+        events = recommend_events(vendor_id)
+        alerts = create_inventory_alerts(vendor_id)
+
+        # Quick production suggestion for the single best-fit event (if any)
+        production_hint: dict | None = None
+        if events:
+            first_event = events[0]
+            plan = generate_production_plan(vendor_id, first_event["id"])
+            if "error" not in plan:
+                production_hint = {
+                    "event": plan["event"],
+                    "event_date": plan["event_date"],
+                    "recommended_production": plan["recommended_production"],
+                }
+
+        return JSONResponse({
+            "ok": True,
+            "recommended_events": events,
+            "inventory_alerts": alerts,
+            "production_hint": production_hint,
+        })
+
+    @app.post("/api/planner/generate-production")
+    async def handle_planner_generate_production(request: Request) -> JSONResponse:
+        """
+        Generate a production plan for a specific event and persist tasks.
+
+        Body: { "event_id": str }
+
+        Returns the plan and the created production task records.
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        vendor_id = int(user["id"])
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+
+        event_id = (body.get("event_id") or "").strip()
+        if not event_id:
+            return _validation_error("event_id is required.")
+
+        plan = generate_production_plan(vendor_id, event_id)
+        if "error" in plan:
+            return _validation_error(plan["error"], status_code=404)
+
+        # Persist each recommended item as a production task
+        tasks_to_create = [
+            {
+                "product_name": item["product"],
+                "quantity_to_make": item["quantity"],
+                "event_id": event_id,
+                "event_name": plan["event"],
+                "due_date": plan.get("event_date"),
+            }
+            for item in plan["recommended_production"]
+        ]
+        created = bulk_create_production_tasks(vendor_id, tasks_to_create) if tasks_to_create else []
+
+        return JSONResponse({
+            "ok": True,
+            "plan": plan,
+            "tasks_created": len(created),
+            "tasks": created,
+        })
+
+    @app.get("/api/planner/tasks")
+    async def handle_planner_list_tasks(
+        request: Request,
+        status: str = "",
+        event_id: str = "",
+    ) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        tasks = list_production_tasks(
+            int(user["id"]),
+            status=status or None,
+            event_id=event_id or None,
+        )
+        return JSONResponse({"ok": True, "tasks": tasks, "count": len(tasks)})
+
+    @app.patch("/api/planner/tasks/{task_id}")
+    async def handle_planner_update_task(request: Request, task_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        updated = update_production_task(task_id, int(user["id"]), body)
+        if not updated:
+            return _validation_error("Task not found.", status_code=404)
+        return JSONResponse({"ok": True, "task": updated})
+
+    @app.delete("/api/planner/tasks/{task_id}")
+    async def handle_planner_delete_task(request: Request, task_id: str) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        deleted = delete_production_task(task_id, int(user["id"]))
+        if not deleted:
+            return _validation_error("Task not found.", status_code=404)
+        return JSONResponse({"ok": True, "deleted": task_id})
+
+    # ── END SMART PLANNER ─────────────────────────────────────────────────────
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def catch_all_not_found(request: Request, full_path: str) -> JSONResponse:

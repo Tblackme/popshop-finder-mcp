@@ -58,15 +58,17 @@ def _verify_password(password: str, password_hash: str) -> bool:
 
 
 def _user_from_row(row) -> dict[str, Any]:
+    keys = row.keys()
     return {
         "id": row["id"],
         "name": row["name"],
         "email": row["email"],
         "username": row["username"],
-        "role": row["role"] if "role" in row.keys() else "vendor",
+        "role": row["role"] if "role" in keys else "vendor",
         "interests": row["interests"] or "",
         "bio": row["bio"] or "",
         "created_at": row["created_at"] or "",
+        "suspended": bool(row["suspended"]) if "suspended" in keys else False,
     }
 
 
@@ -274,6 +276,18 @@ def init_users_db() -> None:
                 conn.execute(f"ALTER TABLE vendor_profiles ADD COLUMN {col} {definition}")
             except Exception:
                 pass  # column already exists
+        # Migrations: users new columns
+        for col, definition in [
+            ("suspended", "INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {col} {definition}")
+            except Exception:
+                pass
+        # Bootstrap: ensure @admintest has admin role
+        conn.execute(
+            "UPDATE users SET role = 'admin' WHERE username = 'admintest' AND role != 'admin'"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -977,6 +991,34 @@ def get_notifications_for_user(user_id: int, limit: int = 20) -> list[dict[str, 
     ]
 
 
+def mark_notification_read(user_id: int, notification_id: int | None = None) -> None:
+    """Mark one notification (by id) or all notifications for the user as read."""
+    init_users_db()
+    conn = _connect()
+    try:
+        if notification_id is not None:
+            conn.execute(
+                """
+                UPDATE user_notifications
+                SET read_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND user_id = ? AND read_at IS NULL
+                """,
+                (notification_id, user_id),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE user_notifications
+                SET read_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND read_at IS NULL
+                """,
+                (user_id,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Vendor extended profile
 # ---------------------------------------------------------------------------
@@ -1510,3 +1552,124 @@ def bulk_replace_csv_products(user_id: int, products: list[dict[str, Any]]) -> i
         return len(products)
     finally:
         conn.close()
+
+
+# ── ADMIN ─────────────────────────────────────────────────────────────────────
+
+def admin_list_users(
+    search: str = "",
+    role_filter: str = "",
+    limit: int = 100,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """Return all users with email included — for admin use only."""
+    init_users_db()
+    conn = _connect()
+    try:
+        params: list[Any] = []
+        where_clauses: list[str] = []
+        if search:
+            like = f"%{search}%"
+            where_clauses.append(
+                "(LOWER(name) LIKE LOWER(?) OR LOWER(username) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?))"
+            )
+            params += [like, like, like]
+        if role_filter:
+            where_clauses.append("role = ?")
+            params.append(role_filter)
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+        params += [limit, offset]
+        rows = conn.execute(
+            f"""
+            SELECT id, name, email, username, role, bio, created_at, suspended
+            FROM users
+            {where_sql}
+            ORDER BY created_at DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            params,
+        ).fetchall()
+        total_row = conn.execute(
+            f"SELECT COUNT(*) as cnt FROM users {where_sql}",
+            params[:-2],
+        ).fetchone()
+        total = total_row["cnt"] if total_row else 0
+    finally:
+        conn.close()
+    users = []
+    for row in rows:
+        keys = row.keys()
+        users.append({
+            "id": row["id"],
+            "name": row["name"],
+            "email": row["email"],
+            "username": row["username"],
+            "role": row["role"] if "role" in keys else "vendor",
+            "bio": row["bio"] or "",
+            "created_at": row["created_at"] or "",
+            "suspended": bool(row["suspended"]) if "suspended" in keys else False,
+        })
+    return {"users": users, "total": total}
+
+
+def admin_set_user_role(user_id: int, new_role: str) -> dict[str, Any]:
+    """Change a user's role. Valid roles: vendor, market, shopper, admin."""
+    allowed = {"vendor", "market", "shopper", "admin"}
+    if new_role not in allowed:
+        raise ValueError(f"role must be one of {allowed}")
+    init_users_db()
+    conn = _connect()
+    try:
+        conn.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError("User not found.")
+    return user
+
+
+def admin_set_user_suspended(user_id: int, suspended: bool) -> dict[str, Any]:
+    """Suspend or reinstate a user account."""
+    init_users_db()
+    conn = _connect()
+    try:
+        conn.execute(
+            "UPDATE users SET suspended = ? WHERE id = ?",
+            (1 if suspended else 0, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError("User not found.")
+    return user
+
+
+def admin_platform_stats() -> dict[str, Any]:
+    """Quick platform stats for the admin dashboard."""
+    init_users_db()
+    conn = _connect()
+    try:
+        totals = {
+            r["role"]: r["cnt"]
+            for r in conn.execute(
+                "SELECT role, COUNT(*) as cnt FROM users GROUP BY role"
+            ).fetchall()
+        }
+        total_users = conn.execute("SELECT COUNT(*) as cnt FROM users").fetchone()["cnt"]
+        pending_verify = conn.execute(
+            "SELECT COUNT(*) as cnt FROM vendor_verification_requests WHERE status = 'pending'"
+        ).fetchone()["cnt"]
+    finally:
+        conn.close()
+    return {
+        "total_users": total_users,
+        "vendors": totals.get("vendor", 0),
+        "shoppers": totals.get("shopper", 0),
+        "organizers": totals.get("market", 0),
+        "admins": totals.get("admin", 0),
+        "pending_verifications": pending_verify,
+    }

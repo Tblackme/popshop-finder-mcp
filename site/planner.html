@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .planner-hero { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--line); }
+    .planner-hero .eyebrow { font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600; }
+    .planner-hero h1 { margin:.25rem 0 .4rem; font-size:2rem; }
+    .planner-hero p { color:var(--muted); margin:0; }
+
+    .planner-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      padding: 2rem 0 4rem;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .planner-grid { grid-template-columns: 1fr; } }
+
+    /* ── Section headers ─────────────────────────────────────────────────── */
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .section-header h2 { font-size:1.1rem; margin:0; }
+    .section-header a { font-size:.82rem; color:var(--brand); text-decoration:none; }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .planner-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 8px rgba(12,31,29,.06);
+    }
+    .planner-card + .planner-card { margin-top: 0; }
+
+    /* ── Work-time suggestions ───────────────────────────────────────────── */
+    .time-block-list { display:flex; flex-direction:column; gap:.55rem; margin-top:.5rem; }
+    .time-block {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(15,118,110,.06);
+      border-radius: var(--radius-md);
+      padding: .75rem 1rem;
+    }
+    .time-block-icon { font-size:1.3rem; flex-shrink:0; }
+    .time-block-label { font-weight:700; font-size:.95rem; }
+    .time-block-note { font-size:.78rem; color:var(--muted); margin-top:.1rem; }
+
+    /* ── Event cards ─────────────────────────────────────────────────────── */
+    .event-planner-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: .75rem;
+      box-shadow: 0 1px 6px rgba(12,31,29,.05);
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .event-planner-card:last-child { margin-bottom:0; }
+    .event-date-badge {
+      background: var(--brand);
+      color: #fff;
+      border-radius: var(--radius-sm);
+      padding: .35rem .6rem;
+      text-align: center;
+      min-width: 44px;
+      flex-shrink: 0;
+    }
+    .event-date-badge .badge-month { font-size:.6rem; letter-spacing:.08em; text-transform:uppercase; opacity:.85; }
+    .event-date-badge .badge-day { font-size:1.15rem; font-weight:800; line-height:1.1; }
+    .event-planner-info { flex:1; min-width:0; }
+    .event-planner-info strong { display:block; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .event-planner-meta { font-size:.78rem; color:var(--muted); margin-top:.15rem; }
+    .event-planner-actions { display:flex; gap:.4rem; margin-top:.5rem; flex-wrap:wrap; }
+
+    /* ── Notification items ──────────────────────────────────────────────── */
+    .notif-list { display:flex; flex-direction:column; gap:.4rem; }
+    .notif-item {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      padding: .7rem .85rem;
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      border: 1px solid var(--line);
+    }
+    .notif-item.unread { background: rgba(15,118,110,.05); border-color: rgba(15,118,110,.2); }
+    .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--brand); flex-shrink:0; margin-top:5px; }
+    .notif-dot.read { background:var(--line); }
+    .notif-body { flex:1; min-width:0; }
+    .notif-title { font-size:.88rem; font-weight:600; }
+    .notif-text { font-size:.8rem; color:var(--muted); margin-top:.1rem; }
+    .notif-time { font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .summary-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: 0 2px 16px rgba(12,31,29,.07);
+      position: sticky;
+      top: 80px;
+    }
+    .summary-card h3 { margin:0 0 1rem; font-size:1rem; }
+    .stat-row { display:flex; justify-content:space-between; padding:.45rem 0; border-bottom:1px solid var(--line); font-size:.88rem; }
+    .stat-row:last-of-type { border-bottom:none; }
+    .stat-row .label { color:var(--muted); }
+    .stat-row .value { font-weight:700; color:var(--heading); }
+    .capacity-bar { margin-top:1rem; }
+    .capacity-bar-label { display:flex; justify-content:space-between; font-size:.75rem; color:var(--muted); margin-bottom:.35rem; }
+    .capacity-bar-track { background:var(--line); border-radius:99px; height:6px; overflow:hidden; }
+    .capacity-bar-fill { height:100%; border-radius:99px; background:var(--brand); transition:width .4s; }
+
+    .ics-export-block { margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--line); }
+    .ics-export-block p { font-size:.8rem; color:var(--muted); margin:0 0 .65rem; }
+
+    /* ── Empty state ──────────────────────────────────────────────────────── */
+    .planner-empty { text-align:center; padding:2.5rem 1rem; color:var(--muted); }
+    .planner-empty .icon { font-size:2rem; margin-bottom:.5rem; }
+
+    /* ── Alert badges ─────────────────────────────────────────────────────── */
+    .alert-item {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      padding: .8rem 1rem;
+      border-radius: var(--radius-md);
+      margin-bottom: .55rem;
+    }
+    .alert-item.warning { background:rgba(234,179,8,.08); border-left:3px solid #ca8a04; }
+    .alert-item.info    { background:rgba(15,118,110,.07); border-left:3px solid var(--brand); }
+    .alert-item .alert-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+    .alert-item .alert-body strong { display:block; font-size:.88rem; font-weight:700; }
+    .alert-item .alert-body span { font-size:.8rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Planner</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+
+      <section class="planner-hero">
+        <div class="container">
+          <span class="eyebrow">Smart vendor planner</span>
+          <h1>Your week, planned.</h1>
+          <p>Recommended events, production reminders, and schedule suggestions — all in one place.</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="container">
+          <div class="planner-grid">
+
+            <!-- ── Left: main planning area ──────────────────────────────── -->
+            <div>
+
+              <!-- Notifications & alerts -->
+              <div class="section-header" style="margin-top:1.5rem;">
+                <h2>Alerts &amp; reminders</h2>
+                <a href="#" id="mark-all-read-btn">Mark all read</a>
+              </div>
+              <div id="alerts-section">
+                <div id="alerts-list"></div>
+                <div id="notif-list" class="notif-list"></div>
+                <div id="notif-empty" class="planner-empty" style="display:none;">
+                  <div class="icon">🔔</div>
+                  <strong>No new alerts</strong>
+                  <p style="margin:.25rem 0 0;font-size:.88rem;">You're all caught up.</p>
+                </div>
+              </div>
+
+              <!-- Recommended events -->
+              <div class="section-header" style="margin-top:2rem;">
+                <h2>Recommended events</h2>
+                <a href="/discover">Browse all</a>
+              </div>
+              <div id="recommended-events">
+                <div class="planner-empty">
+                  <div class="icon">📅</div>
+                  <strong>Loading recommendations…</strong>
+                </div>
+              </div>
+
+              <!-- Production schedule -->
+              <div class="section-header" style="margin-top:2rem;">
+                <h2>Suggested work times</h2>
+                <a href="/settings" id="edit-availability-link">Edit availability</a>
+              </div>
+              <div id="work-times-section">
+                <div class="planner-empty">
+                  <div class="icon">⏰</div>
+                  <strong>Loading schedule…</strong>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- ── Right: sidebar summary ─────────────────────────────────── -->
+            <div>
+              <div class="summary-card">
+                <h3>This week</h3>
+                <div class="stat-row"><span class="label">Saved events</span><span class="value" id="stat-saved">—</span></div>
+                <div class="stat-row"><span class="label">Unread alerts</span><span class="value" id="stat-unread">—</span></div>
+                <div class="stat-row"><span class="label">Weekly capacity</span><span class="value" id="stat-capacity">—</span></div>
+                <div class="stat-row"><span class="label">Monthly goal</span><span class="value" id="stat-goal">—</span></div>
+
+                <div class="capacity-bar">
+                  <div class="capacity-bar-label">
+                    <span>Capacity used</span>
+                    <span id="capacity-pct">0%</span>
+                  </div>
+                  <div class="capacity-bar-track">
+                    <div class="capacity-bar-fill" id="capacity-fill" style="width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="ics-export-block">
+                  <p>Export your saved events to Google Calendar or Apple Calendar.</p>
+                  <a class="btn btn-secondary" href="/api/planner/events.ics" style="width:100%;text-align:center;display:block;">
+                    Download .ics file
+                  </a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.dash-body -->
+  </div>
+</div>
+
+<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items">
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Home</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/feed"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Feed</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/discover"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>Discover</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link active" href="/planner"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Planner</a></li>
+    <li class="bottom-nav-item"><a class="bottom-nav-link" href="/messages"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Messages</a></li>
+  </ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(async function () {
+  'use strict';
+
+  // Auth guard
+  let me = null;
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!r.ok) { window.location.href = '/signin'; return; }
+    me = await r.json();
+  } catch (_) { window.location.href = '/signin'; return; }
+
+  // Load all data in parallel
+  const [notifRes, plannerRes, dashRes] = await Promise.all([
+    fetch('/api/notifications',      { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/planner/work-times', { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/dashboard',          { credentials: 'include' }).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+
+  const notifications  = notifRes?.notifications  || [];
+  const unreadCount    = notifRes?.unread          || 0;
+  const suggestions    = plannerRes?.suggestions   || [];
+  const availability   = plannerRes?.availability  || {};
+  const savedEvents    = dashRes?.saved_markets    || [];
+
+  // ── Sidebar stats ──────────────────────────────────────────────────────
+  document.getElementById('stat-saved').textContent    = savedEvents.length;
+  document.getElementById('stat-unread').textContent   = unreadCount;
+  document.getElementById('stat-capacity').textContent = (availability.weekly_capacity || 2) + ' sessions/wk';
+  document.getElementById('stat-goal').textContent     = (availability.monthly_goal    || 6) + ' events/mo';
+
+  const usedPct = Math.min(100, Math.round((savedEvents.length / Math.max(availability.monthly_goal || 6, 1)) * 100));
+  document.getElementById('capacity-pct').textContent  = usedPct + '%';
+  document.getElementById('capacity-fill').style.width = usedPct + '%';
+
+  // ── Alerts & notifications ─────────────────────────────────────────────
+  renderAlerts(savedEvents);
+  renderNotifications(notifications);
+
+  // ── Recommended events ────────────────────────────────────────────────
+  renderRecommendedEvents(savedEvents);
+
+  // ── Work-time suggestions ─────────────────────────────────────────────
+  renderWorkTimes(suggestions, availability);
+
+  // ── Mark all read ─────────────────────────────────────────────────────
+  document.getElementById('mark-all-read-btn').addEventListener('click', async function (e) {
+    e.preventDefault();
+    await fetch('/api/notifications/read', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    document.querySelectorAll('.notif-item').forEach(el => {
+      el.classList.remove('unread');
+      el.querySelector('.notif-dot')?.classList.add('read');
+      el.querySelector('.notif-dot')?.classList.remove('notif-dot');
+    });
+    document.getElementById('stat-unread').textContent = '0';
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  function renderAlerts(events) {
+    const list = document.getElementById('alerts-list');
+    const alerts = [];
+
+    // Upcoming event within 7 days
+    const today = new Date();
+    events.forEach(function (ev) {
+      const d = ev.date ? new Date(ev.date) : null;
+      if (!d) return;
+      const daysAway = Math.round((d - today) / 86400000);
+      if (daysAway >= 0 && daysAway <= 7) {
+        alerts.push({
+          kind: 'warning',
+          icon: '📅',
+          title: 'Event coming up in ' + daysAway + ' day' + (daysAway === 1 ? '' : 's'),
+          body: escapeHtml(ev.name || ev.title || 'Saved event') + (ev.location ? ' — ' + escapeHtml(ev.location) : ''),
+        });
+      }
+    });
+
+    if (alerts.length === 0) { list.innerHTML = ''; return; }
+    list.innerHTML = alerts.map(function (a) {
+      return '<div class="alert-item ' + a.kind + '">' +
+        '<div class="alert-icon">' + a.icon + '</div>' +
+        '<div class="alert-body"><strong>' + escapeHtml(a.title) + '</strong><span>' + a.body + '</span></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderNotifications(notifs) {
+    const list  = document.getElementById('notif-list');
+    const empty = document.getElementById('notif-empty');
+    if (!notifs.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+
+    empty.style.display = 'none';
+    list.innerHTML = notifs.slice(0, 15).map(function (n) {
+      const isUnread = !n.read_at;
+      const ts = n.created_at ? n.created_at.slice(0, 10) : '';
+      return '<div class="notif-item' + (isUnread ? ' unread' : '') + '" data-id="' + n.id + '">' +
+        '<div class="' + (isUnread ? 'notif-dot' : 'notif-dot read') + '"></div>' +
+        '<div class="notif-body">' +
+          '<div class="notif-title">' + escapeHtml(n.title) + '</div>' +
+          '<div class="notif-text">'  + escapeHtml(n.body)  + '</div>' +
+          (ts ? '<div class="notif-time">' + ts + '</div>' : '') +
+        '</div>' +
+        '</div>';
+    }).join('');
+
+    // Mark single notification read on click
+    list.addEventListener('click', async function (e) {
+      const item = e.target.closest('.notif-item');
+      if (!item) return;
+      const id = parseInt(item.dataset.id);
+      if (!id) return;
+      await fetch('/api/notifications/read', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      item.classList.remove('unread');
+      const dot = item.querySelector('.notif-dot');
+      if (dot) { dot.classList.remove('notif-dot'); dot.className = 'notif-dot read'; }
+    });
+  }
+
+  function renderRecommendedEvents(events) {
+    const el = document.getElementById('recommended-events');
+    if (!events.length) {
+      el.innerHTML = '<div class="planner-empty"><div class="icon">📋</div>' +
+        '<strong>No saved events yet</strong>' +
+        '<p style="margin:.25rem 0 .75rem;font-size:.88rem;">Save events from Discover to see them here.</p>' +
+        '<a class="btn btn-primary" href="/discover">Browse events</a></div>';
+      return;
+    }
+
+    // Sort by date ascending
+    const sorted = events.slice().sort(function (a, b) {
+      return (a.date || '').localeCompare(b.date || '');
+    });
+
+    el.innerHTML = sorted.slice(0, 6).map(function (ev) {
+      const d = ev.date ? new Date(ev.date) : null;
+      const month = d ? d.toLocaleString('default', { month: 'short' }).toUpperCase() : '—';
+      const day   = d ? d.getDate() : '—';
+      const name  = ev.name || ev.title || 'Saved event';
+      const loc   = ev.location || ev.city || '';
+      const fee   = ev.booth_fee ? '$' + ev.booth_fee + ' booth' : '';
+      const meta  = [loc, fee].filter(Boolean).join(' · ');
+
+      return '<div class="event-planner-card">' +
+        '<div class="event-date-badge"><div class="badge-month">' + month + '</div><div class="badge-day">' + day + '</div></div>' +
+        '<div class="event-planner-info">' +
+          '<strong>' + escapeHtml(name) + '</strong>' +
+          (meta ? '<div class="event-planner-meta">' + escapeHtml(meta) + '</div>' : '') +
+          '<div class="event-planner-actions">' +
+            '<a class="btn btn-primary" style="font-size:.78rem;padding:.3rem .75rem;" href="/final-plan">Add to profit plan</a>' +
+            (ev.apply_url ? '<a class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .75rem;" href="' + escapeHtml(ev.apply_url) + '" target="_blank" rel="noopener">Apply</a>' : '') +
+          '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderWorkTimes(suggestions, avail) {
+    const el = document.getElementById('work-times-section');
+    if (!suggestions.length) {
+      el.innerHTML = '<div class="planner-empty"><div class="icon">⏰</div>' +
+        '<strong>No availability set</strong>' +
+        '<p style="margin:.25rem 0 .75rem;font-size:.88rem;">Set your available days in Settings to get schedule suggestions.</p>' +
+        '<a class="btn btn-secondary" href="/settings">Update availability</a></div>';
+      return;
+    }
+
+    el.innerHTML = '<div class="time-block-list">' +
+      suggestions.map(function (s) {
+        return '<div class="time-block">' +
+          '<div class="time-block-icon">🕐</div>' +
+          '<div>' +
+            '<div class="time-block-label">' + escapeHtml(s.label) + '</div>' +
+            (s.note ? '<div class="time-block-note">' + escapeHtml(s.note) + '</div>' : '') +
+          '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>' +
+      '<p style="font-size:.8rem;color:var(--muted);margin-top:.85rem;">' +
+        'Based on your availability preferences. ' +
+        '<a href="/settings" style="color:var(--brand);">Update in Settings</a>.' +
+      '</p>';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+</body>
+</html>

@@ -236,6 +236,19 @@
           </div>
         </div>
 
+        <!-- Notifications panel -->
+        <div class="dash-card" id="notifications-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+            <span class="eyebrow">Alerts</span>
+            <a href="/planner" style="font-size:.78rem;color:var(--brand);text-decoration:none;">Open planner →</a>
+          </div>
+          <h3 style="margin:0 0 .85rem;">
+            Notifications
+            <span id="dash-notif-badge" style="display:none;margin-left:.4rem;background:var(--brand);color:#fff;font-size:.65rem;font-weight:700;border-radius:99px;padding:.15rem .45rem;vertical-align:middle;"></span>
+          </h3>
+          <div id="dash-notif-list" style="font-size:.88rem;color:var(--muted);">Loading…</div>
+        </div>
+
         <!-- Verification status card -->
         <div class="dash-card" id="verify-status-card">
           <span class="eyebrow">Verification</span>
@@ -336,6 +349,7 @@
     renderSavedMarkets(dashboard);
     renderShopSummary(myProducts, me);
     loadVerificationCard();
+    loadNotifications();
 
     // ── AI Features (non-blocking, degrade gracefully) ──────────────────
     if (typeof AI !== "undefined") {
@@ -358,6 +372,43 @@
       }
     }
   })();
+
+  async function loadNotifications() {
+    const listEl  = document.getElementById("dash-notif-list");
+    const badgeEl = document.getElementById("dash-notif-badge");
+    if (!listEl) return;
+    try {
+      const res = await fetch("/api/notifications", { credentials: "include" });
+      if (!res.ok) { listEl.textContent = ""; return; }
+      const data = await res.json();
+      const notifs = data.notifications || [];
+      const unread = data.unread || 0;
+
+      if (unread > 0 && badgeEl) { badgeEl.textContent = unread; badgeEl.style.display = ""; }
+
+      if (!notifs.length) {
+        listEl.innerHTML = '<span style="color:var(--muted);font-size:.85rem;">No notifications yet.</span>';
+        return;
+      }
+
+      listEl.innerHTML = notifs.slice(0, 5).map(function (n) {
+        const isUnread = !n.read_at;
+        const dot = isUnread
+          ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--brand);margin-right:.45rem;vertical-align:middle;flex-shrink:0;"></span>'
+          : '';
+        return '<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--line);">' +
+          dot +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:' + (isUnread ? '700' : '400') + ';font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+              escapeHtml(n.title) +
+            '</div>' +
+            '<div style="font-size:.77rem;color:var(--muted);">' + escapeHtml(n.body) + '</div>' +
+          '</div>' +
+          '</div>';
+      }).join('') +
+      '<div style="margin-top:.65rem;"><a href="/planner" style="font-size:.82rem;color:var(--brand);">View all in Planner →</a></div>';
+    } catch (_) { if (listEl) listEl.textContent = ""; }
+  }
 
   async function loadVerificationCard() {
     const contentEl = document.getElementById("verify-status-content");

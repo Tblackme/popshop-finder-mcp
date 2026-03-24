@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Management | Admin — Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    .um-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .um-search {
+      flex: 1;
+      min-width: 200px;
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: .875rem;
+      background: var(--surface);
+      color: var(--text);
+    }
+    .um-search:focus { outline: none; border-color: var(--brand); }
+    .filter-chip {
+      padding: 5px 14px;
+      border-radius: 99px;
+      border: 1.5px solid var(--line);
+      background: var(--surface);
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .12s;
+    }
+    .filter-chip.active { border-color: var(--brand); color: var(--brand); background: rgba(15,118,110,.07); }
+
+    /* Table */
+    .um-table-wrap { overflow-x: auto; }
+    table.um-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem;
+    }
+    .um-table th {
+      text-align: left;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--line);
+    }
+    .um-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    .um-table tr:hover td { background: rgba(15,118,110,.03); }
+    .um-user-cell { display: flex; align-items: center; gap: 9px; }
+    .user-av {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .user-name { font-weight: 600; }
+    .user-email { font-size: .75rem; color: var(--muted); }
+
+    .role-chip {
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .chip-vendor   { background: rgba(15,118,110,.1);  color: var(--brand); }
+    .chip-shopper  { background: rgba(124,58,237,.1);  color: #7c3aed; }
+    .chip-market   { background: rgba(3,105,161,.1);   color: #0369a1; }
+    .chip-admin    { background: rgba(217,119,6,.12);  color: #b45309; }
+    .chip-suspended{ background: rgba(180,35,24,.1);   color: var(--danger); }
+
+    /* Inline role selector */
+    .role-select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: .8rem;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .role-select:focus { outline: none; border-color: var(--brand); }
+
+    .action-btn {
+      background: none;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all .12s;
+    }
+    .action-btn:hover { border-color: var(--brand); color: var(--brand); }
+    .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+    .action-btn.success-btn { border-color: var(--success, #027a48); color: var(--success, #027a48); }
+
+    /* Pagination */
+    .um-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1.25rem;
+      font-size: .875rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    .page-btns { display: flex; gap: .5rem; }
+    .page-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+    .page-btn:disabled { opacity: .4; cursor: default; }
+    .page-btn:not(:disabled):hover { border-color: var(--brand); }
+
+    /* Edit modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(12,31,29,.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-backdrop.hidden { display: none; }
+    .modal-box { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(12,31,29,.18); }
+    .modal-box h3 { margin: 0 0 1rem; font-size: 1.05rem; }
+    .modal-field { margin-bottom: .85rem; }
+    .modal-field label { display: block; font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
+    .modal-field select, .modal-field input { width: 100%; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: .875rem; background: var(--bg); color: var(--text); box-sizing: border-box; }
+    .modal-field select:focus, .modal-field input:focus { outline: none; border-color: var(--brand); }
+    .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: .5rem; }
+    .btn-cancel { background: none; border: 1.5px solid var(--line); border-radius: 10px; padding: .45rem 1rem; font-size: .85rem; cursor: pointer; }
+    .btn-save { background: var(--brand); color: #fff; border: none; border-radius: 10px; padding: .45rem 1.1rem; font-size: .85rem; font-weight: 700; cursor: pointer; }
+    .btn-save:hover { opacity: .87; }
+    .btn-danger { background: var(--danger); color: #fff; border: none; border-radius: 10px; padding: .45rem 1rem; font-size: .85rem; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar">
+    <div class="dash-sidebar-top">
+      <div class="dash-brand">
+        <a href="/" class="dash-brand-link">
+          <span class="dash-brand-icon">🏪</span>
+          <span class="dash-brand-name">Vendor Atlas</span>
+        </a>
+        <button class="dash-collapse-btn" id="dash-collapse-btn">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+      <nav class="dash-nav" id="dash-nav"></nav>
+    </div>
+    <div class="dash-sidebar-bottom">
+      <a href="/settings" class="dash-nav-link">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+        <span class="dash-nav-label">Settings</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <a href="/admin" style="color:var(--muted);font-size:.8rem;text-decoration:none;">← Admin</a>
+      <span class="dash-topbar-title" style="margin-left:.5rem;">User Management</span>
+    </header>
+
+    <main class="dash-content">
+      <div style="margin-bottom:1.25rem;">
+        <h1 style="margin:0 0 .2rem;font-size:1.3rem;">User Management</h1>
+        <p style="margin:0;color:var(--muted);font-size:.875rem;">Search, filter, edit roles, and manage accounts.</p>
+      </div>
+
+      <div class="um-toolbar">
+        <input class="um-search" type="search" id="um-search" placeholder="Search by name, username, or email…" oninput="debounceSearch()">
+        <button class="filter-chip active" data-role="" onclick="setRoleFilter('', this)">All</button>
+        <button class="filter-chip" data-role="vendor" onclick="setRoleFilter('vendor', this)">Vendors</button>
+        <button class="filter-chip" data-role="shopper" onclick="setRoleFilter('shopper', this)">Shoppers</button>
+        <button class="filter-chip" data-role="market" onclick="setRoleFilter('market', this)">Organizers</button>
+        <button class="filter-chip" data-role="admin" onclick="setRoleFilter('admin', this)">Admins</button>
+      </div>
+
+      <div class="um-table-wrap">
+        <table class="um-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="um-tbody">
+            <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="um-pagination">
+        <span id="pagination-label">—</span>
+        <div class="page-btns">
+          <button class="page-btn" id="btn-prev" onclick="prevPage()" disabled>← Prev</button>
+          <button class="page-btn" id="btn-next" onclick="nextPage()" disabled>Next →</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="mobile-drawer-overlay hidden" id="mobile-drawer-overlay" onclick="closeMobileDrawer()"></div>
+  <div class="mobile-slide-drawer" id="mobile-slide-drawer">
+    <div class="mobile-drawer-header">
+      <span style="font-weight:800;">Vendor Atlas</span>
+      <button onclick="closeMobileDrawer()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;">✕</button>
+    </div>
+    <nav class="dash-nav" id="mobile-drawer-nav"></nav>
+  </div>
+  <nav class="bottom-nav"><div class="bottom-nav-items" id="bottom-nav-items"></div></nav>
+</div>
+
+<!-- Edit user modal -->
+<div class="modal-backdrop hidden" id="edit-modal">
+  <div class="modal-box">
+    <h3>Edit User</h3>
+    <div id="edit-user-name" style="font-size:.875rem;color:var(--muted);margin-bottom:1rem;"></div>
+    <div class="modal-field">
+      <label>Role</label>
+      <select id="edit-role">
+        <option value="vendor">Vendor</option>
+        <option value="shopper">Shopper</option>
+        <option value="market">Organizer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Account Status</label>
+      <select id="edit-suspended">
+        <option value="0">Active</option>
+        <option value="1">Suspended</option>
+      </select>
+    </div>
+    <div id="edit-error" style="font-size:.8rem;color:var(--danger);margin-bottom:.5rem;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  var PAGE_SIZE = 25;
+  var currentOffset = 0;
+  var currentSearch = '';
+  var currentRole = '';
+  var totalUsers = 0;
+  var editingUserId = null;
+  var searchTimer = null;
+
+  async function init() {
+    var res = await fetch('/api/auth/me', { credentials: 'include' });
+    var data = await res.json();
+    if (!data.ok || !data.user || data.user.role !== 'admin') {
+      window.location.href = '/';
+      return;
+    }
+    loadUsers();
+  }
+
+  async function loadUsers() {
+    var params = new URLSearchParams({
+      search: currentSearch,
+      role: currentRole,
+      limit: PAGE_SIZE,
+      offset: currentOffset,
+    });
+    var res = await fetch('/api/admin/users?' + params.toString(), { credentials: 'include' });
+    var d = await res.json();
+    if (!d.ok) { showToast('Failed to load users', 'error'); return; }
+    totalUsers = d.total || 0;
+    renderTable(d.users || []);
+    updatePagination();
+  }
+
+  function renderTable(users) {
+    var tbody = document.getElementById('um-tbody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:2rem;">No users found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(function (u) {
+      var initials = (u.name || u.username || 'U').slice(0, 2).toUpperCase();
+      var chipCls = { vendor: 'chip-vendor', shopper: 'chip-shopper', market: 'chip-market', admin: 'chip-admin' }[u.role] || 'chip-vendor';
+      var roleLabel = { vendor: 'Vendor', shopper: 'Shopper', market: 'Organizer', admin: 'Admin' }[u.role] || u.role;
+      var statusBadge = u.suspended
+        ? '<span class="role-chip chip-suspended">Suspended</span>'
+        : '<span style="font-size:.75rem;color:var(--success,#027a48);">Active</span>';
+      return '<tr>' +
+        '<td><div class="um-user-cell">' +
+          '<div class="user-av" style="background:' + avatarColor(u.name) + '">' + esc(initials) + '</div>' +
+          '<div><div class="user-name">' + esc(u.name || u.username) + '</div><div class="user-email">@' + esc(u.username) + ' · ' + esc(u.email || '') + '</div></div>' +
+        '</div></td>' +
+        '<td><span class="role-chip ' + chipCls + '">' + roleLabel + '</span></td>' +
+        '<td style="font-size:.78rem;color:var(--muted);">' + (u.created_at ? new Date(u.created_at).toLocaleDateString() : '—') + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td><div style="display:flex;gap:5px;">' +
+          '<button class="action-btn" onclick="openEditModal(' + u.id + ', \'' + esc(u.name || u.username) + '\', \'' + u.role + '\', ' + (u.suspended ? 1 : 0) + ')">Edit</button>' +
+          (u.suspended
+            ? '<button class="action-btn success-btn" onclick="quickUnsuspend(' + u.id + ')">Reinstate</button>'
+            : '<button class="action-btn danger" onclick="quickSuspend(' + u.id + ')">Suspend</button>') +
+        '</div></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function updatePagination() {
+    var showing = Math.min(currentOffset + PAGE_SIZE, totalUsers);
+    document.getElementById('pagination-label').textContent =
+      'Showing ' + (currentOffset + 1) + '–' + showing + ' of ' + totalUsers;
+    document.getElementById('btn-prev').disabled = currentOffset === 0;
+    document.getElementById('btn-next').disabled = showing >= totalUsers;
+  }
+
+  window.prevPage = function () { currentOffset = Math.max(0, currentOffset - PAGE_SIZE); loadUsers(); };
+  window.nextPage = function () { currentOffset += PAGE_SIZE; loadUsers(); };
+
+  window.setRoleFilter = function (role, btn) {
+    currentRole = role;
+    currentOffset = 0;
+    document.querySelectorAll('.filter-chip').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    loadUsers();
+  };
+
+  window.debounceSearch = function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      currentSearch = document.getElementById('um-search').value.trim();
+      currentOffset = 0;
+      loadUsers();
+    }, 300);
+  };
+
+  /* ── Edit modal ── */
+  window.openEditModal = function (userId, name, role, suspended) {
+    editingUserId = userId;
+    document.getElementById('edit-user-name').textContent = name;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('edit-suspended').value = suspended ? '1' : '0';
+    document.getElementById('edit-error').style.display = 'none';
+    document.getElementById('edit-modal').classList.remove('hidden');
+  };
+
+  window.closeEditModal = function () {
+    document.getElementById('edit-modal').classList.add('hidden');
+    editingUserId = null;
+  };
+
+  window.saveEdit = async function () {
+    var errEl = document.getElementById('edit-error');
+    errEl.style.display = 'none';
+    var newRole = document.getElementById('edit-role').value;
+    var suspended = document.getElementById('edit-suspended').value === '1';
+    var res = await fetch('/api/admin/users/' + editingUserId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ role: newRole, suspended: suspended }),
+    });
+    var d = await res.json();
+    if (d.ok) {
+      showToast('User updated.', 'success');
+      closeEditModal();
+      loadUsers();
+    } else {
+      errEl.textContent = d.error || 'Failed to update';
+      errEl.style.display = 'block';
+    }
+  };
+
+  window.quickSuspend = async function (userId) {
+    var res = await fetch('/api/admin/users/' + userId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ suspended: true }),
+    });
+    var d = await res.json();
+    if (d.ok) { showToast('User suspended.', 'error'); loadUsers(); }
+    else showToast(d.error || 'Failed', 'error');
+  };
+  window.quickUnsuspend = async function (userId) {
+    var res = await fetch('/api/admin/users/' + userId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ suspended: false }),
+    });
+    var d = await res.json();
+    if (d.ok) { showToast('User reinstated.', 'success'); loadUsers(); }
+    else showToast(d.error || 'Failed', 'error');
+  };
+
+  document.getElementById('edit-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  var AVATAR_COLORS = ['#0f766e','#0369a1','#7c3aed','#b45309','#be185d','#059669'];
+  function avatarColor(name) {
+    var h = 0;
+    for (var i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  }
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendar | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    :root { --planner-deep:#11243d; --planner-green:#0b7a67; --planner-gold:#c97e1d; --planner-red:#c94d39; --planner-mist:#eef6fb; --planner-line:rgba(17,36,61,.1); }
+    body { background:radial-gradient(circle at top right, rgba(11,122,103,.12), transparent 24rem), linear-gradient(180deg, #fcfffd 0%, #f4f8fc 100%); }
+    .calendar-shell { display:grid; gap:1.25rem; grid-template-columns:minmax(0,1.3fr) minmax(320px,420px); }
+    .planner-panel { border:1px solid var(--planner-line); border-radius:24px; background:rgba(255,255,255,.92); box-shadow:0 20px 46px rgba(17,36,61,.08); overflow:hidden; }
+    .panel-head { padding:1.1rem 1.2rem; border-bottom:1px solid var(--planner-line); display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
+    .panel-head h2, .panel-head h3 { margin:0; color:var(--planner-deep); }
+    .panel-body { padding:1.15rem 1.2rem 1.2rem; }
+    .calendar-toolbar { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.9rem; }
+    .calendar-grid { display:grid; gap:.55rem; grid-template-columns:repeat(7, minmax(0,1fr)); }
+    .weekday { font-size:.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; padding:0 .2rem; }
+    .day-cell { min-height:130px; border:1px solid var(--planner-line); border-radius:18px; padding:.65rem; background:linear-gradient(180deg, #fff 0%, #f7fbff 100%); display:flex; flex-direction:column; gap:.4rem; }
+    .day-cell.outside { opacity:.48; }
+    .day-number { font-weight:800; color:var(--planner-deep); font-size:.95rem; }
+    .entry-pill { display:block; border-radius:12px; padding:.42rem .5rem; font-size:.74rem; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .entry-pill[data-type="event"] { background:linear-gradient(135deg, var(--planner-green), #20a188); }
+    .entry-pill[data-type="production"] { background:linear-gradient(135deg, var(--planner-gold), #e2a348); }
+    .entry-pill[data-type="reminder"] { background:linear-gradient(135deg, var(--planner-red), #e07261); }
+    .stack { display:grid; gap:.8rem; }
+    .form-grid { display:grid; gap:.8rem; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .field { display:grid; gap:.35rem; }
+    .field.full { grid-column:1 / -1; }
+    .field label { font-size:.8rem; color:var(--muted); font-weight:700; }
+    .field input, .field select, .field textarea { border:1px solid var(--planner-line); border-radius:14px; padding:.8rem .9rem; background:#fff; font:inherit; }
+    .field textarea { min-height:96px; resize:vertical; }
+    .entry-list { display:grid; gap:.8rem; }
+    .entry-card { border:1px solid var(--planner-line); border-radius:18px; padding:.9rem 1rem; background:var(--planner-mist); }
+    .entry-card-header { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
+    .entry-meta { margin-top:.35rem; color:var(--muted); font-size:.9rem; }
+    .empty-box { border:1px dashed var(--planner-line); border-radius:18px; padding:1rem; text-align:center; color:var(--muted); background:rgba(238,246,251,.55); }
+    @media (max-width:1080px) { .calendar-shell { grid-template-columns:1fr; } }
+    @media (max-width:700px) { .calendar-grid { gap:.4rem; } .day-cell { min-height:92px; padding:.45rem; } .form-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Calendar</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+      <div class="dash-page-hero">
+        <span class="eyebrow">Smart planner foundation</span>
+        <h1>Lay out production, reminders, and market dates in one planner.</h1>
+        <p>Use the calendar as the operating layer between saved event research and the prep work required to show up ready.</p>
+      </div>
+
+      <div class="calendar-shell">
+        <section class="planner-panel">
+          <div class="panel-head">
+            <div><span class="eyebrow">Monthly view</span><h2 id="calendar-month-label">Calendar</h2></div>
+            <div class="calendar-toolbar">
+              <button class="btn btn-secondary" type="button" id="month-prev">Previous</button>
+              <button class="btn btn-secondary" type="button" id="month-next">Next</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="calendar-grid" id="calendar-weekdays"></div>
+            <div class="calendar-grid" id="calendar-days"></div>
+          </div>
+        </section>
+
+        <aside class="stack">
+          <section class="planner-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">Manual entry</span><h3>Create planner item</h3></div>
+            </div>
+            <div class="panel-body">
+              <form id="calendar-form" class="stack">
+                <div class="form-grid">
+                  <div class="field full"><label for="calendar-title">Title</label><input id="calendar-title" name="title" required placeholder="Batch holiday candles"></div>
+                  <div class="field"><label for="calendar-type">Type</label><select id="calendar-type" name="type"><option value="reminder">Reminder</option><option value="production">Production</option><option value="event">Event</option></select></div>
+                  <div class="field"><label for="calendar-date">Date</label><input id="calendar-date" name="date" type="date" required></div>
+                  <div class="field"><label for="calendar-start">Start time</label><input id="calendar-start" name="start" type="time" value="09:00" required></div>
+                  <div class="field"><label for="calendar-end">End time</label><input id="calendar-end" name="end" type="time" value="11:00" required></div>
+                  <div class="field full"><label for="calendar-notes">Notes</label><textarea id="calendar-notes" name="notes" placeholder="Packing list, booth prep notes, follow-up tasks"></textarea></div>
+                </div>
+                <button class="btn btn-primary" type="submit">Add to calendar</button>
+              </form>
+              <div id="calendar-status" class="inline-status" style="display:none;"></div>
+            </div>
+          </section>
+
+          <section class="planner-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">Event integration</span><h3>Add a market event</h3></div>
+            </div>
+            <div class="panel-body stack">
+              <div class="field"><label for="calendar-event-select">Existing events</label><select id="calendar-event-select"></select></div>
+              <button class="btn btn-secondary" type="button" id="calendar-add-event">Add selected event</button>
+            </div>
+          </section>
+
+          <section class="planner-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">Upcoming entries</span><h3>Your planner feed</h3></div>
+            </div>
+            <div class="panel-body">
+              <div id="calendar-entry-list" class="empty-box">Loading planner…</div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+  const plannerState = { entries: [], events: [], monthCursor: null };
+
+  function startOfMonth(date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
+  function isoDateFromLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  function combineDateTime(dateValue, timeValue) { return `${dateValue}T${timeValue}`; }
+
+  async function plannerApi(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: "include",
+      headers: { "Accept": "application/json", "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  function setPlannerStatus(message, tone) {
+    const el = document.getElementById("calendar-status");
+    if (!message) {
+      el.style.display = "none";
+      el.textContent = "";
+      el.className = "inline-status";
+      return;
+    }
+    el.style.display = "block";
+    el.textContent = message;
+    el.className = `inline-status ${tone || ""}`.trim();
+  }
+
+  function renderEventOptions(events) {
+    const select = document.getElementById("calendar-event-select");
+    if (!events.length) {
+      select.innerHTML = "<option value=''>No upcoming market events available</option>";
+      select.disabled = true;
+      return;
+    }
+    select.disabled = false;
+    select.innerHTML = events.map((event, index) => `<option value="${escapeHtml(event.id)}" ${index === 0 ? "selected" : ""}>${escapeHtml(event.name || "Untitled event")} · ${escapeHtml(event.date || "No date")}</option>`).join("");
+  }
+
+  function entryDateKey(entry) { return String(entry.start_time || "").slice(0, 10); }
+
+  function renderCalendarGrid() {
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    document.getElementById("calendar-weekdays").innerHTML = weekdays.map((day) => `<div class="weekday">${day}</div>`).join("");
+
+    const monthStart = plannerState.monthCursor || startOfMonth(new Date());
+    const firstCell = new Date(monthStart);
+    firstCell.setDate(monthStart.getDate() - monthStart.getDay());
+    document.getElementById("calendar-month-label").textContent = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    const entryMap = new Map();
+    plannerState.entries.forEach((entry) => {
+      const key = entryDateKey(entry);
+      if (!entryMap.has(key)) entryMap.set(key, []);
+      entryMap.get(key).push(entry);
+    });
+
+    const cells = [];
+    for (let index = 0; index < 42; index += 1) {
+      const cellDate = new Date(firstCell);
+      cellDate.setDate(firstCell.getDate() + index);
+      const key = isoDateFromLocal(cellDate);
+      const items = entryMap.get(key) || [];
+      cells.push(`
+        <div class="day-cell ${cellDate.getMonth() !== monthStart.getMonth() ? "outside" : ""}">
+          <div class="day-number">${cellDate.getDate()}</div>
+          ${items.slice(0, 3).map((entry) => `<span class="entry-pill" data-type="${escapeHtml(entry.type || "reminder")}" title="${escapeHtml(entry.title || "")}">${escapeHtml(entry.title || "Untitled")}</span>`).join("")}
+          ${items.length > 3 ? `<span class="entry-meta">+${items.length - 3} more</span>` : ""}
+        </div>`);
+    }
+    document.getElementById("calendar-days").innerHTML = cells.join("");
+  }
+
+  function renderEntryList(entries) {
+    const slot = document.getElementById("calendar-entry-list");
+    if (!entries.length) {
+      slot.className = "empty-box";
+      slot.innerHTML = "<strong>No planner entries yet.</strong><div style='margin-top:.4rem;'>Create a reminder or import an existing event to populate the month view.</div>";
+      return;
+    }
+    slot.className = "entry-list";
+    slot.innerHTML = entries.map((entry) => `
+      <article class="entry-card">
+        <div class="entry-card-header">
+          <div>
+            <strong>${escapeHtml(entry.title || "Untitled")}</strong>
+            <div class="entry-meta">${escapeHtml((entry.type || "reminder").toUpperCase())} · ${escapeHtml(new Date(entry.start_time).toLocaleString())}</div>
+          </div>
+          <button class="btn btn-ghost" type="button" data-delete-entry="${entry.id}">Delete</button>
+        </div>
+        ${entry.notes ? `<div class="entry-meta">${escapeHtml(entry.notes)}</div>` : ""}
+      </article>`).join("");
+
+    slot.querySelectorAll("[data-delete-entry]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const id = Number(button.getAttribute("data-delete-entry"));
+        try {
+          setPlannerStatus("Removing planner entry…", "");
+          await plannerApi("/calendar/delete", { method: "DELETE", body: JSON.stringify({ id }) });
+          await loadCalendar();
+          setPlannerStatus("Planner entry removed.", "success");
+        } catch (error) {
+          setPlannerStatus(error.message || "Could not remove entry.", "error");
+        }
+      });
+    });
+  }
+
+  async function loadCalendar() {
+    const data = await plannerApi("/calendar", { method: "GET" });
+    plannerState.entries = Array.isArray(data.entries) ? data.entries : [];
+    plannerState.events = Array.isArray(data.events) ? data.events : [];
+    renderEventOptions(plannerState.events);
+    renderEntryList(plannerState.entries);
+    renderCalendarGrid();
+  }
+
+  document.getElementById("month-prev").addEventListener("click", () => {
+    const next = new Date(plannerState.monthCursor);
+    next.setMonth(next.getMonth() - 1);
+    plannerState.monthCursor = startOfMonth(next);
+    renderCalendarGrid();
+  });
+
+  document.getElementById("month-next").addEventListener("click", () => {
+    const next = new Date(plannerState.monthCursor);
+    next.setMonth(next.getMonth() + 1);
+    plannerState.monthCursor = startOfMonth(next);
+    renderCalendarGrid();
+  });
+
+  document.getElementById("calendar-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const dateValue = String(form.get("date") || "");
+    try {
+      setPlannerStatus("Adding planner entry…", "");
+      await plannerApi("/calendar/create", {
+        method: "POST",
+        body: JSON.stringify({
+          title: form.get("title"),
+          type: form.get("type"),
+          start_time: combineDateTime(dateValue, String(form.get("start") || "09:00")),
+          end_time: combineDateTime(dateValue, String(form.get("end") || "10:00")),
+          notes: form.get("notes"),
+        }),
+      });
+      event.currentTarget.reset();
+      document.getElementById("calendar-type").value = "reminder";
+      document.getElementById("calendar-start").value = "09:00";
+      document.getElementById("calendar-end").value = "11:00";
+      document.getElementById("calendar-date").value = isoDateFromLocal(new Date());
+      await loadCalendar();
+      setPlannerStatus("Planner entry added.", "success");
+    } catch (error) {
+      setPlannerStatus(error.message || "Could not add planner entry.", "error");
+    }
+  });
+
+  document.getElementById("calendar-add-event").addEventListener("click", async () => {
+    const select = document.getElementById("calendar-event-select");
+    const eventId = select.value;
+    if (!eventId) return;
+    try {
+      setPlannerStatus("Adding market event…", "");
+      await plannerApi("/calendar/create", { method: "POST", body: JSON.stringify({ event_id: eventId }) });
+      await loadCalendar();
+      setPlannerStatus("Market event added to your planner.", "success");
+    } catch (error) {
+      setPlannerStatus(error.message || "Could not add event.", "error");
+    }
+  });
+
+  document.getElementById("calendar-date").value = isoDateFromLocal(new Date());
+  plannerState.monthCursor = startOfMonth(new Date());
+  loadCalendar().catch((error) => {
+    setPlannerStatus(error.message || "Could not load planner.", "error");
+    renderEntryList([]);
+    renderEventOptions([]);
+    renderCalendarGrid();
+  });
+</script>
+</body>
+</html>
