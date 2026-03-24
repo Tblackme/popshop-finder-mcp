@@ -173,16 +173,22 @@ def update_production_task(
 
 def delete_production_task(task_id: str, vendor_id: int) -> bool:
     init_production_db()
+    # Check existence before deleting so we can return a meaningful bool
+    # without relying on SQLite-only changes().
     conn = _connect()
     try:
+        exists = conn.execute(
+            "SELECT id FROM production_tasks WHERE id = ? AND vendor_id = ?",
+            (task_id, vendor_id),
+        ).fetchone()
+        if not exists:
+            return False
         conn.execute(
             "DELETE FROM production_tasks WHERE id = ? AND vendor_id = ?",
             (task_id, vendor_id),
         )
         conn.commit()
-        # Use changes() to detect whether a row was actually deleted.
-        row = conn.execute("SELECT changes() AS n").fetchone()
-        return bool(row and row["n"] > 0) if row else False
+        return True
     finally:
         conn.close()
 
