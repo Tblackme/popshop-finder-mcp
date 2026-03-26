@@ -3,8 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vendor Atlas | The Market Platform for Everyone</title>
+  <title>Vendor Atlas | Find Your Market. Grow Your Business.</title>
+  <meta name="description" content="Vendor Atlas connects local vendors with the markets they love, helps shoppers discover pop-ups near them, and gives organizers the tools to run great events.">
   <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    /* ── How It Works ────────────────────────────────────────────────────── */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      margin-top: 2.5rem;
+    }
+    .step-card {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+    }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .step-card h3 { font-size: 1.05rem; margin: 0 0 .5rem; }
+    .step-card p  { font-size: .88rem; color: var(--muted); margin: 0; }
+
+    /* ── Why People Love It ──────────────────────────────────────────────── */
+    .love-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+    .love-card {
+      padding: 1.75rem 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+    }
+    .love-icon { font-size: 2rem; margin-bottom: .75rem; display: block; }
+    .love-card h3 { font-size: 1rem; margin: 0 0 .4rem; }
+    .love-card p  { font-size: .86rem; color: var(--muted); margin: 0; line-height: 1.55; }
+
+    /* ── Community Section ───────────────────────────────────────────────── */
+    .community-wrap {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .community-wrap p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.7;
+      margin: 1rem auto 2rem;
+    }
+    .community-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    .community-pill {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: .5rem 1.1rem;
+      font-size: .85rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+  </style>
 </head>
 <body>
   <div class="site-shell">
@@ -12,13 +92,11 @@
       <div class="container nav nav-journey">
         <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
         <nav class="nav-links">
-          <!-- Default: logged-out public nav. app.js updates this based on auth state. -->
           <a class="active" href="/">Home</a>
           <a href="/#vendors">Vendors</a>
           <a href="/#shoppers">Shoppers</a>
           <a href="/#organizers">Organizers</a>
-          <a href="/feed">Feed</a>
-          <a href="/community">Community</a>
+          <a href="/discover">Discover</a>
         </nav>
         <div class="nav-actions" data-auth-nav></div>
         <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
@@ -28,61 +106,63 @@
         <a href="/#vendors">Vendors</a>
         <a href="/#shoppers">Shoppers</a>
         <a href="/#organizers">Organizers</a>
-        <a href="/feed">Feed</a>
-        <a href="/community">Community</a>
+        <a href="/discover">Discover</a>
         <div data-mobile-auth-nav></div>
       </div>
     </header>
 
     <main>
 
-      <!-- ── HERO ─────────────────────────────────────────────────────────── -->
+      <!-- ── 1. HERO ─────────────────────────────────────────────────────── -->
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <span class="eyebrow">One connected platform for vendors, shoppers &amp; organizers</span>
-            <h1>The market platform built for the whole community.</h1>
-            <p class="lede">Vendor Atlas connects local vendors with the markets they love, helps shoppers discover new favorites, and gives organizers the tools to run great events — all in one place.</p>
+            <span class="eyebrow">For vendors, shoppers &amp; market organizers</span>
+            <h1>Your local market scene — all in one place.</h1>
+            <p class="lede">Vendor Atlas is the easiest way to find markets to sell at, discover pop-ups near you, and run better events. One platform. Your whole community.</p>
             <div class="hero-actions">
-              <a class="btn btn-primary" href="/discover">Explore Events</a>
-              <a class="btn btn-secondary" href="/#vendors">For Vendors</a>
-              <a class="btn btn-secondary" href="/signup">Join Vendor Atlas</a>
+              <a class="btn btn-primary" href="/signup">Join Free</a>
+              <a class="btn btn-secondary" href="/discover">Browse Events</a>
+              <a class="btn btn-secondary" href="/#how-it-works">See How It Works</a>
             </div>
           </div>
           <aside class="hero-panel">
-            <h3>Who is Vendor Atlas for?</h3>
-            <p class="muted">Pick the path that matches your role. Your workspace and tools follow automatically.</p>
+            <h3>Who are you?</h3>
+            <p class="muted">Pick your role — Vendor Atlas builds your workspace around it.</p>
             <div class="hero-stats">
               <div class="stat">
-                <strong>🛍 Vendors</strong>
-                <span>Create your shop, discover markets that fit, and track every event's profit.</span>
+                <strong>🛍 Vendor</strong>
+                <span>Find markets, manage your shop, and grow your revenue event by event.</span>
               </div>
               <div class="stat">
-                <strong>🛒 Shoppers</strong>
-                <span>Find local pop-ups, follow your favorite vendors, and RSVP to events.</span>
+                <strong>🛒 Shopper</strong>
+                <span>Discover pop-ups, follow your favorite sellers, and never miss a local market.</span>
               </div>
               <div class="stat">
-                <strong>🎪 Organizers</strong>
-                <span>Host markets, manage vendor applications, and grow your attendance.</span>
+                <strong>🎪 Organizer</strong>
+                <span>Publish events, handle vendor applications, and fill your market every time.</span>
               </div>
             </div>
           </aside>
         </div>
       </section>
 
-      <!-- ── VENDORS ────────────────────────────────────────────────────────── -->
+      <!-- ── 2. WHO IT'S FOR ─────────────────────────────────────────────── -->
+
+      <!-- Vendors -->
       <section id="vendors" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
         <div class="container">
           <div class="split-grid" style="align-items: center; gap: 48px;">
             <div>
               <span class="eyebrow" style="color: var(--brand);">For Vendors</span>
-              <h2>Your shop. Your events. One place.</h2>
-              <p class="muted" style="max-width: 52ch;">Whether you sell handmade jewelry, vintage clothing, or artisan food, Vendor Atlas gives you the tools to find the right markets, showcase your products, and build a loyal shopper following.</p>
+              <h2>Stop guessing. Start selling at the right markets.</h2>
+              <p class="muted" style="max-width: 52ch;">Whether you sell handmade candles, vintage finds, or fresh baked goods — Vendor Atlas helps you find markets that fit, plan your events, and grow a following that shows up.</p>
               <ul class="role-feature-list">
-                <li>🏪 Create a free vendor shop with products, bio, and social links</li>
-                <li>🗺️ Discover local and regional markets that fit your brand</li>
-                <li>📊 Track booth revenue, costs, and profit per event</li>
-                <li>📣 Connect with shoppers who follow your shop</li>
+                <li>🏪 Set up a free vendor shop in minutes</li>
+                <li>🗺️ Discover local and regional markets that match your style</li>
+                <li>📦 Track inventory and plan production before every event</li>
+                <li>💰 See your profit per event — and know what's worth your time</li>
+                <li>🔗 Sync your Shopify store to bring your products along</li>
               </ul>
               <div class="stack-row" style="margin-top: 28px;">
                 <a class="btn btn-primary" href="/signup?role=vendor">Start Selling</a>
@@ -92,14 +172,14 @@
             <div class="bubble-panel">
               <div style="display: grid; gap: 16px;">
                 <div class="feature-card" style="padding: 22px;">
-                  <span class="eyebrow">Free — no subscriptions</span>
-                  <h3 style="font-size: 1rem; margin: 8px 0 6px;">Vendor shop + profit planner</h3>
-                  <p class="muted" style="font-size: .88rem;">Set up your shop, list products, and plan events with revenue tracking — no Shopify required. Everything works out of the box.</p>
+                  <span class="eyebrow">100% free to start</span>
+                  <h3 style="font-size: 1rem; margin: 8px 0 6px;">Shop + profit planner included</h3>
+                  <p class="muted" style="font-size: .88rem;">Build your shop, list your products, and track booth revenue from day one. No subscription required.</p>
                 </div>
                 <div class="feature-card" style="padding: 22px;">
-                  <span class="eyebrow">AI-powered (optional)</span>
-                  <h3 style="font-size: 1rem; margin: 8px 0 6px;">Sales insights + event predictions</h3>
-                  <p class="muted" style="font-size: .88rem;">Get AI forecasts for event revenue, traffic estimates, and personalized market recommendations — all optional add-ons.</p>
+                  <span class="eyebrow">Smart planning tools</span>
+                  <h3 style="font-size: 1rem; margin: 8px 0 6px;">Calendar, inventory &amp; event alerts</h3>
+                  <p class="muted" style="font-size: .88rem;">Know exactly what to make, when to make it, and which events are worth applying to — before the season even starts.</p>
                 </div>
               </div>
             </div>
@@ -107,7 +187,7 @@
         </div>
       </section>
 
-      <!-- ── SHOPPERS ───────────────────────────────────────────────────────── -->
+      <!-- Shoppers -->
       <section id="shoppers">
         <div class="container">
           <div class="split-grid" style="align-items: center; gap: 48px;">
@@ -115,81 +195,81 @@
               <div style="background: var(--surface); border-radius: var(--radius-xl); padding: 28px; border: 1px solid var(--line);">
                 <div class="hero-stats">
                   <div class="stat" style="padding: 14px 0; border-bottom: 1px solid var(--line);">
-                    <strong>🗓 Save events</strong>
-                    <span>Build your personal calendar of markets you want to attend</span>
+                    <strong>🗓 Save markets</strong>
+                    <span>Build your own calendar of events you actually want to go to</span>
                   </div>
                   <div class="stat" style="padding: 14px 0; border-bottom: 1px solid var(--line);">
                     <strong>❤️ Follow vendors</strong>
-                    <span>Get updates when your favorite sellers attend new events</span>
+                    <span>Get notified when your favorites are at a market near you</span>
                   </div>
                   <div class="stat" style="padding: 14px 0;">
                     <strong>🔔 RSVP to events</strong>
-                    <span>Let vendors know you're coming and see who else is attending</span>
+                    <span>Show up with a plan — and let vendors know you're coming</span>
                   </div>
                 </div>
               </div>
             </div>
             <div>
               <span class="eyebrow" style="color: var(--accent);">For Shoppers</span>
-              <h2>Discover the markets and vendors you'll love.</h2>
-              <p class="muted" style="max-width: 52ch;">Stop scrolling Instagram hoping to find out where your favorite vendors are. Vendor Atlas puts every local pop-up, craft fair, and market in one searchable place.</p>
+              <h2>Find the good stuff. Skip the searching.</h2>
+              <p class="muted" style="max-width: 52ch;">No more scrolling Instagram to find where your favorite vendor is this weekend. Vendor Atlas puts every local pop-up, craft fair, and market in one searchable place — for free.</p>
               <ul class="role-feature-list">
-                <li>🔍 Discover local markets, pop-ups, and craft fairs near you</li>
-                <li>🛍 Browse unique vendors by category and location</li>
-                <li>💾 Save events and follow your favorite shops</li>
-                <li>📅 RSVP so vendors know you're coming</li>
+                <li>🔍 Search markets by city, category, and date</li>
+                <li>🛍 Browse vendors before you even show up</li>
+                <li>💾 Save events and build your weekend plans</li>
+                <li>📍 See what's happening on the map near you</li>
               </ul>
               <div class="stack-row" style="margin-top: 28px;">
-                <a class="btn btn-primary" href="/signup?role=shopper">Discover Markets</a>
-                <a class="btn btn-secondary" href="/feed">Browse the Feed</a>
+                <a class="btn btn-primary" href="/signup?role=shopper">Start Discovering</a>
+                <a class="btn btn-secondary" href="/discover">Browse Near You</a>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ── ORGANIZERS ─────────────────────────────────────────────────────── -->
+      <!-- Organizers -->
       <section id="organizers" style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
         <div class="container">
           <div class="split-grid" style="align-items: center; gap: 48px;">
             <div>
-              <span class="eyebrow" style="color: var(--brand);">For Organizers</span>
-              <h2>Run better events. Grow your attendance.</h2>
-              <p class="muted" style="max-width: 52ch;">From small neighborhood pop-ups to large annual festivals, Vendor Atlas gives market organizers everything they need to publish events, manage vendors, and promote to shoppers in their community.</p>
+              <span class="eyebrow" style="color: var(--brand);">For Market Organizers</span>
+              <h2>Run a smoother market. Fill every booth.</h2>
+              <p class="muted" style="max-width: 52ch;">From neighborhood pop-ups to full-scale festivals — Vendor Atlas gives you everything you need to publish events, manage vendors, and attract a crowd that keeps coming back.</p>
               <ul class="role-feature-list">
-                <li>📋 Publish markets and festivals with full event details</li>
+                <li>📋 Publish your market with full event details in minutes</li>
                 <li>📝 Manage vendor applications and approvals in one place</li>
-                <li>📣 Promote your event to shoppers in your community</li>
-                <li>📊 Track attendance, fill rates, and vendor analytics</li>
+                <li>📣 Promote directly to shoppers in your city</li>
+                <li>📊 Track attendance, applications, and vendor analytics</li>
               </ul>
               <div class="stack-row" style="margin-top: 28px;">
-                <a class="btn btn-primary" href="/signup?role=market">Create an Event</a>
+                <a class="btn btn-primary" href="/signup?role=market">List Your Market</a>
                 <a class="btn btn-secondary" href="/enter/market" data-role-entry="market">Open Dashboard</a>
               </div>
             </div>
             <div class="bubble-panel">
               <div style="background: var(--surface-dark); border-radius: var(--radius-xl); padding: 28px; color: #fff;">
-                <h3 style="color: #fff; margin: 0 0 20px; font-size: 1.05rem;">Everything organizers need</h3>
+                <h3 style="color: #fff; margin: 0 0 20px; font-size: 1.05rem;">Built for real organizers</h3>
                 <div style="display: grid; gap: 16px;">
                   <div style="display: flex; gap: 14px; align-items: flex-start;">
                     <span style="font-size: 1.5rem; flex-shrink: 0;">🗺️</span>
                     <div>
-                      <strong style="color: #fff; font-size: .95rem;">Interactive event map</strong>
-                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">Set your event location on the map and let shoppers find you nearby.</p>
+                      <strong style="color: #fff; font-size: .95rem;">Interactive market map</strong>
+                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">Pin your event location and let shoppers find you — wherever you are.</p>
                     </div>
                   </div>
                   <div style="display: flex; gap: 14px; align-items: flex-start;">
                     <span style="font-size: 1.5rem; flex-shrink: 0;">✅</span>
                     <div>
                       <strong style="color: #fff; font-size: .95rem;">Vendor management</strong>
-                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">Review applications, approve vendors, and track booth assignments.</p>
+                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">Review applications, approve vendors, and track booth assignments in one dashboard.</p>
                     </div>
                   </div>
                   <div style="display: flex; gap: 14px; align-items: flex-start;">
                     <span style="font-size: 1.5rem; flex-shrink: 0;">📊</span>
                     <div>
-                      <strong style="color: #fff; font-size: .95rem;">Demand insights</strong>
-                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">AI-powered analytics showing which vendor types attract the most shoppers.</p>
+                      <strong style="color: #fff; font-size: .95rem;">Event analytics</strong>
+                      <p style="color: rgba(255,255,255,0.6); margin: 4px 0 0; font-size: .84rem;">See which vendor types drive the most shopper interest — and plan your next event smarter.</p>
                     </div>
                   </div>
                 </div>
@@ -199,68 +279,97 @@
         </div>
       </section>
 
-      <!-- ── FEED + COMMUNITY ───────────────────────────────────────────────── -->
-      <section style="background: var(--surface-dark); color: #fff;">
+      <!-- ── 3. HOW IT WORKS ─────────────────────────────────────────────── -->
+      <section id="how-it-works">
         <div class="container">
-          <div class="section-heading" style="color: #fff;">
-            <span class="eyebrow" style="color: rgba(255,255,255,0.55);">Live &amp; Social</span>
-            <h2 style="color: #fff;">Follow the market, live.</h2>
-            <p style="color: rgba(255,255,255,0.6); max-width: 58ch; margin: 0 auto;">A live feed of events and vendor moments, plus community groups where vendors, organizers, and shoppers connect between markets.</p>
+          <div class="section-heading">
+            <span class="eyebrow">Simple by design</span>
+            <h2>Up and running in three steps.</h2>
+            <p class="muted" style="max-width: 54ch; margin: 0 auto;">No long setup. No confusing dashboards. You're live in minutes.</p>
           </div>
-          <div class="cards-2" style="margin-top: 32px;">
-            <article class="feature-card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1);">
-              <span class="eyebrow" style="color: var(--accent);">Feed</span>
-              <h3 style="color: #fff;">Events as a scrollable feed</h3>
-              <p class="muted" style="color: rgba(255,255,255,0.55);">Browse upcoming markets as video-style cards. Filter by tag, location, or vendor type. Save anything that looks right with one tap.</p>
-              <div class="stack-row">
-                <a class="btn btn-primary" href="/feed">Open Feed</a>
-              </div>
-            </article>
-            <article class="feature-card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1);">
-              <span class="eyebrow" style="color: var(--accent);">Community</span>
-              <h3 style="color: #fff;">Groups, channels, and real chat</h3>
-              <p class="muted" style="color: rgba(255,255,255,0.55);">Join vendor circles, event rooms, and shopper communities. Ask questions, share booth tips, and stay connected between markets.</p>
-              <div class="stack-row">
-                <a class="btn btn-primary" href="/community">Browse Groups</a>
-              </div>
-            </article>
-          </div>
-          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; justify-content: center;">
-            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.4rem;">💍</span>
-              <div>
-                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Vendor Circles</div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Tips, events, sourcing</div>
-              </div>
+          <div class="steps-grid">
+            <div class="step-card">
+              <div class="step-number">1</div>
+              <h3>Create your account</h3>
+              <p>Sign up as a vendor, shopper, or organizer. Your role shapes everything — your tools, your dashboard, your community.</p>
             </div>
-            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.4rem;">🌙</span>
-              <div>
-                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Event Rooms</div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Live chat per event</div>
-              </div>
+            <div class="step-card">
+              <div class="step-number">2</div>
+              <h3>Set up your space</h3>
+              <p>Vendors build a shop profile. Shoppers start discovering. Organizers publish their first event. It takes less than five minutes.</p>
             </div>
-            <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.4rem;">🛍️</span>
-              <div>
-                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Shopper Communities</div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.5);">Finds and recommendations</div>
-              </div>
+            <div class="step-card">
+              <div class="step-number">3</div>
+              <h3>Connect &amp; grow</h3>
+              <p>Apply to markets, follow your favorite vendors, manage your next event — Vendor Atlas works in the background so you don't have to.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ── FINAL CTA ──────────────────────────────────────────────────────── -->
+      <!-- ── 4. WHY PEOPLE LOVE IT ──────────────────────────────────────── -->
+      <section style="background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+        <div class="container">
+          <div class="section-heading">
+            <span class="eyebrow">Built for the market community</span>
+            <h2>Everything you need. Nothing you don't.</h2>
+          </div>
+          <div class="love-grid">
+            <div class="love-card">
+              <span class="love-icon">🗺️</span>
+              <h3>Discover markets that fit</h3>
+              <p>Search by city, category, and date. See booth prices, vendor counts, and traffic estimates upfront — so you only apply to markets worth your time.</p>
+            </div>
+            <div class="love-card">
+              <span class="love-icon">🛍️</span>
+              <h3>Find local vendors you'll love</h3>
+              <p>Browse vendor shops before the market even opens. Follow the ones you love. Know exactly who'll be there before you show up.</p>
+            </div>
+            <div class="love-card">
+              <span class="love-icon">📈</span>
+              <h3>Grow your small business</h3>
+              <p>Plan inventory, track event profits, and get smart recommendations on which markets to attend next. Built for makers who mean business.</p>
+            </div>
+            <div class="love-card">
+              <span class="love-icon">🤝</span>
+              <h3>Build real community</h3>
+              <p>Local markets thrive on relationships. Vendor Atlas keeps vendors, shoppers, and organizers connected — between events, not just at them.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 5. COMMUNITY ────────────────────────────────────────────────── -->
+      <section style="background: var(--surface-dark); color: #fff;">
+        <div class="container">
+          <div class="community-wrap">
+            <span class="eyebrow" style="color: rgba(255,255,255,0.55);">More than a marketplace</span>
+            <h2 style="color: #fff; font-size: clamp(1.5rem, 3.5vw, 2.4rem); margin: .75rem 0 0;">Local markets deserve a real home.</h2>
+            <p>The best markets aren't just transactions — they're communities. Vendor Atlas was built to keep that community alive all week long, not just on market day. Vendors share tips. Shoppers exchange finds. Organizers build events people actually look forward to. This is your local market scene — online.</p>
+            <div class="community-pills">
+              <div class="community-pill">💍 Vendor circles &amp; tips</div>
+              <div class="community-pill">🎪 Live event rooms</div>
+              <div class="community-pill">🛒 Shopper communities</div>
+              <div class="community-pill">📍 City-based groups</div>
+              <div class="community-pill">📣 Direct vendor updates</div>
+            </div>
+            <div class="stack-row" style="justify-content: center; margin-top: 2rem;">
+              <a class="btn btn-primary" href="/discover">Explore Your Scene</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 6. FINAL CTA ────────────────────────────────────────────────── -->
       <section>
         <div class="container" style="text-align: center; padding: 72px 0 64px;">
-          <span class="eyebrow">Get started for free</span>
-          <h2 style="font-size: clamp(1.6rem, 4vw, 2.8rem); margin: 14px 0 18px;">Join Vendor Atlas today.</h2>
-          <p class="muted" style="max-width: 50ch; margin: 0 auto 36px;">Whether you're selling, shopping, or running the show — there's a place for you.</p>
+          <span class="eyebrow">Free to join. Free forever for the basics.</span>
+          <h2 style="font-size: clamp(1.6rem, 4vw, 2.8rem); margin: 14px 0 18px;">Ready to find your market?</h2>
+          <p class="muted" style="max-width: 48ch; margin: 0 auto 36px;">Whether you're selling, shopping, or running the show — Vendor Atlas has a spot for you.</p>
           <div class="hero-actions" style="justify-content: center;">
-            <a class="btn btn-primary" href="/signup?role=vendor">Create Your Shop</a>
-            <a class="btn btn-secondary" href="/signup?role=shopper">Discover Markets Near You</a>
-            <a class="btn btn-secondary" href="/signup?role=market">Host an Event</a>
+            <a class="btn btn-primary" href="/signup?role=vendor">I'm a Vendor</a>
+            <a class="btn btn-secondary" href="/signup?role=shopper">I'm a Shopper</a>
+            <a class="btn btn-secondary" href="/signup?role=market">I Run Markets</a>
           </div>
         </div>
       </section>
@@ -269,14 +378,15 @@
 
     <footer class="footer">
       <div class="container footer-grid">
-        <div>Vendor Atlas</div>
-        <div>The market platform built for the whole community.</div>
-        <div class="stack-row" style="margin-top:0;">
-          <a href="/#vendors">Vendors</a>
-          <a href="/#shoppers">Shoppers</a>
-          <a href="/#organizers">Organizers</a>
+        <div><strong>Vendor Atlas</strong></div>
+        <div>Your local market scene — all in one place.</div>
+        <div class="stack-row" style="margin-top:0; flex-wrap: wrap; gap: .75rem;">
+          <a href="/#vendors">For Vendors</a>
+          <a href="/#shoppers">For Shoppers</a>
+          <a href="/#organizers">For Organizers</a>
+          <a href="/discover">Discover Events</a>
           <a href="/signin">Sign In</a>
-          <a href="/signup">Create Account</a>
+          <a href="/signup">Join Free</a>
         </div>
       </div>
     </footer>
