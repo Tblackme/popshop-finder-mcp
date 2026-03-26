@@ -22,7 +22,7 @@ import re
 import secrets
 import sys
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -103,10 +103,42 @@ from storage_inventory import (
     init_inventory_db,
     update_inventory_item,
 )
+from storage_materials import (
+    init_materials_db,
+    create_material,
+    get_material,
+    list_materials,
+    update_material,
+    delete_material,
+    get_low_stock_materials,
+    upsert_product_material,
+    get_product_recipe,
+    get_recipes_for_vendor,
+    delete_product_material,
+)
+from production_ai import (
+    calculate_material_requirements,
+    check_material_inventory,
+    calculate_shipping_time,
+    generate_production_schedule,
+    generate_material_alerts,
+)
+from material_search_engine import (
+    search_material_suppliers,
+    compare_supplier_prices,
+    rank_suppliers,
+    get_supplier_deal_suggestions,
+)
 from storage_calendar import (
     create_calendar_event,
     delete_calendar_event,
     get_vendor_calendar,
+    get_calendar_integration,
+    upsert_calendar_integration,
+    delete_calendar_integration,
+    get_or_create_feed_token,
+    get_vendor_id_by_feed_token,
+    rotate_feed_token,
     init_calendar_db,
 )
 from storage_community import (
@@ -269,6 +301,8 @@ PUBLIC_PAGE_ROUTES = {
     "/admin/verify": "admin-verify.html",
     "/admin/users": "admin-users.html",
     "/coming-soon": "coming-soon.html",
+    "/calendar-settings": "calendar-settings.html",
+    "/materials": "materials.html",
 }
 
 # Feature flag required for each page route (None = always accessible)
@@ -1434,6 +1468,7 @@ def create_app() -> FastAPI:
     init_feed_db()
     init_messages_db()
     init_production_db()
+    init_materials_db()
 
     # AI infrastructure — init tables and register routes if enabled
     cfg = get_config()
@@ -1665,6 +1700,19 @@ def create_app() -> FastAPI:
             return serve_page("inventory.html")
         inventory = get_vendor_inventory(int(user["id"]))
         return JSONResponse({"ok": True, "inventory": inventory})
+
+    @app.get("/materials", response_class=FileResponse)
+    async def handle_materials_page(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            if _prefers_html(request):
+                return RedirectResponse(url="/signin", status_code=302)
+            return _validation_error("Authentication required.", status_code=401)
+        if not _is_admin(user) and _normalized_role(user) != "vendor":
+            if _prefers_html(request):
+                return RedirectResponse(url=_dashboard_path_for_role(_normalized_role(user)), status_code=302)
+            return _validation_error("Vendor access required.", status_code=403)
+        return serve_page("materials.html")
 
     @app.get("/calendar", response_class=FileResponse)
     async def handle_calendar(request: Request) -> Response:
@@ -3524,6 +3572,160 @@ def create_app() -> FastAPI:
         delete_calendar_event(entry_id)
         return JSONResponse({"ok": True})
 
+    # ── CALENDAR INTEGRATIONS ──────────────────────────────────────────────────
+
+    @app.get("/api/calendar/integrations")
+    async def handle_cal_integrations_get(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "admin"}:
+            return _validation_error("Vendor access required.", status_code=403)
+        from google_calendar_sync import is_configured as gcal_configured
+        google = get_calendar_integration(int(user["id"]), "google")
+        feed_token = get_or_create_feed_token(int(user["id"]))
+        base_url = str(request.base_url).rstrip("/")
+        return JSONResponse({
+            "ok": True,
+            "google": {"connected": bool(google), "calendar_id": google["calendar_id"] if google else "primary"},
+            "ics_feed_url": f"{base_url}/calendar-feed/{feed_token}.ics",
+            "google_configured": gcal_configured(),
+        })
+
+    @app.get("/api/calendar/google/connect")
+    async def handle_gcal_connect(request: Request) -> Response:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        from google_calendar_sync import is_configured as gcal_configured, get_auth_url
+        import hmac as _hmac, hashlib as _hashlib
+        if not gcal_configured():
+            return _validation_error("Google Calendar is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.", status_code=503)
+        secret = str(user["id"]).encode()
+        state = _hmac.new(secret, b"gcal-oauth", _hashlib.sha256).hexdigest()[:16] + str(user["id"])
+        return RedirectResponse(url=get_auth_url(state=state), status_code=302)
+
+    @app.get("/api/calendar/google/callback")
+    async def handle_gcal_callback(request: Request) -> Response:
+        code  = request.query_params.get("code", "").strip()
+        error = request.query_params.get("error", "").strip()
+        state = request.query_params.get("state", "").strip()
+        if error:
+            return RedirectResponse(url=f"/calendar-settings?gcal=error&reason={error}", status_code=302)
+        if not code:
+            return RedirectResponse(url="/calendar-settings?gcal=error&reason=no_code", status_code=302)
+        from google_calendar_sync import exchange_code_for_tokens
+        try:
+            tokens = exchange_code_for_tokens(code)
+        except Exception as exc:
+            logger.warning("Google Calendar OAuth error: %s", exc)
+            return RedirectResponse(url="/calendar-settings?gcal=error&reason=token_exchange", status_code=302)
+        access_token  = tokens.get("access_token", "")
+        refresh_token = tokens.get("refresh_token", "")
+        expires_at    = (datetime.now(timezone.utc) + timedelta(seconds=int(tokens.get("expires_in", 3600)))).isoformat()
+        vendor_id: int | None = None
+        if state and len(state) > 16:
+            try:
+                vendor_id = int(state[16:])
+            except (ValueError, IndexError):
+                pass
+        if not vendor_id:
+            cur_user = _current_user(request)
+            if not cur_user:
+                return RedirectResponse(url="/signin", status_code=302)
+            vendor_id = int(cur_user["id"])
+        upsert_calendar_integration(vendor_id, "google", access_token, refresh_token, expires_at)
+        return RedirectResponse(url="/calendar-settings?gcal=connected", status_code=302)
+
+    @app.delete("/api/calendar/google/disconnect")
+    async def handle_gcal_disconnect(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        integration = get_calendar_integration(int(user["id"]), "google")
+        if integration:
+            from google_calendar_sync import revoke_token
+            revoke_token(integration.get("refresh_token") or integration.get("access_token") or "")
+        delete_calendar_integration(int(user["id"]), "google")
+        return JSONResponse({"ok": True})
+
+    @app.post("/api/calendar/google/sync")
+    async def handle_gcal_sync(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if _normalized_role(user) not in {"vendor", "admin"}:
+            return _validation_error("Vendor access required.", status_code=403)
+        integration = get_calendar_integration(int(user["id"]), "google")
+        if not integration:
+            return _validation_error("Google Calendar is not connected.", status_code=400)
+        from google_calendar_sync import sync_events_to_google
+        entries = get_vendor_calendar(int(user["id"]))
+        saved   = get_saved_markets_for_user(int(user["id"]))
+        result  = sync_events_to_google(integration, entries + saved)
+        return JSONResponse(result)
+
+    @app.post("/api/calendar/google/availability")
+    async def handle_gcal_availability(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        integration = get_calendar_integration(int(user["id"]), "google")
+        if not integration:
+            return _validation_error("Google Calendar is not connected.", status_code=400)
+        from google_calendar_sync import fetch_google_busy_times, parse_busy_windows
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            body = {}
+        days_ahead = max(1, min(int(body.get("days", 14)), 60))
+        now  = datetime.now(timezone.utc)
+        end  = now + timedelta(days=days_ahead)
+        try:
+            busy = fetch_google_busy_times(integration, now, end)
+        except Exception as exc:
+            logger.warning("Failed to fetch Google busy times: %s", exc)
+            return _validation_error(f"Could not fetch calendar availability: {exc}", status_code=502)
+        return JSONResponse({"ok": True, "busy": busy, "free_windows": parse_busy_windows(busy)})
+
+    @app.post("/api/calendar/feed/rotate")
+    async def handle_feed_token_rotate(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        token = rotate_feed_token(int(user["id"]))
+        base_url = str(request.base_url).rstrip("/")
+        return JSONResponse({"ok": True, "ics_feed_url": f"{base_url}/calendar-feed/{token}.ics"})
+
+    # ── ICS PUBLIC FEED ────────────────────────────────────────────────────────
+
+    @app.get("/calendar-feed/{token}")
+    async def handle_ics_feed(token: str) -> Response:
+        clean_token = token.removesuffix(".ics")
+        vendor_id   = get_vendor_id_by_feed_token(clean_token)
+        if not vendor_id:
+            return Response(content="Calendar feed not found.", status_code=404, media_type="text/plain")
+        entries       = get_vendor_calendar(vendor_id)
+        saved_markets = get_saved_markets_for_user(vendor_id)
+        from storage_production import list_production_tasks, init_production_db
+        init_production_db()
+        task_events = [
+            {
+                "id":          f"task-{t['id']}",
+                "name":        f"[Make] {t['product_name']} \u00d7{t['quantity_to_make']}",
+                "date":        t.get("due_date") or "",
+                "description": f"Production task for {t.get('event_name') or 'upcoming event'}",
+            }
+            for t in list_production_tasks(vendor_id, status="pending")
+            if t.get("due_date")
+        ]
+        ics = export_events_to_ics(entries + saved_markets + task_events, calendar_name="Vendor Atlas")
+        return Response(
+            content=ics,
+            media_type="text/calendar; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="vendor-atlas.ics"'},
+        )
+
     @app.get("/api/saved-markets")
     async def handle_saved_markets(request: Request) -> JSONResponse:
         user = _require_user(request)
@@ -4495,6 +4697,282 @@ def create_app() -> FastAPI:
         return JSONResponse({"ok": True, "deleted": task_id})
 
     # ── END SMART PLANNER ─────────────────────────────────────────────────────
+
+    # ── MATERIAL INVENTORY ────────────────────────────────────────────────────
+
+    @app.get("/api/materials")
+    async def handle_list_materials(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        mats = list_materials(int(user["id"]))
+        return JSONResponse({"ok": True, "materials": mats, "count": len(mats)})
+
+    @app.post("/api/materials")
+    async def handle_create_material(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        material_name = str(body.get("material_name") or "").strip()
+        if not material_name:
+            return _validation_error("material_name is required.")
+        try:
+            mat = create_material(
+                vendor_id=int(user["id"]),
+                material_name=material_name,
+                quantity=float(body.get("quantity") or 0),
+                unit=str(body.get("unit") or "units").strip(),
+                supplier_url=str(body.get("supplier_url") or "").strip(),
+                shipping_days=int(body.get("shipping_days") or 0),
+                last_price=float(body.get("last_price") or 0),
+                low_stock_threshold=float(body.get("low_stock_threshold") or 0),
+            )
+        except ValueError as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "material": mat}, status_code=201)
+
+    @app.patch("/api/materials/{material_id}")
+    async def handle_update_material(request: Request, material_id: int) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        existing = get_material(material_id, int(user["id"]))
+        if not existing:
+            return _validation_error("Material not found.", status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        updated = update_material(material_id, int(user["id"]), body)
+        return JSONResponse({"ok": True, "material": updated})
+
+    @app.delete("/api/materials/{material_id}")
+    async def handle_delete_material(request: Request, material_id: int) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        deleted = delete_material(material_id, int(user["id"]))
+        if not deleted:
+            return _validation_error("Material not found.", status_code=404)
+        return JSONResponse({"ok": True, "deleted": material_id})
+
+    # ── PRODUCT MATERIAL RECIPES ──────────────────────────────────────────────
+
+    @app.get("/api/materials/recipes")
+    async def handle_list_recipes(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        recipes = get_recipes_for_vendor(int(user["id"]))
+        return JSONResponse({"ok": True, "recipes": recipes, "count": len(recipes)})
+
+    @app.post("/api/materials/recipes")
+    async def handle_upsert_recipe(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        product_id = body.get("product_id")
+        material_id = body.get("material_id")
+        quantity_required = body.get("quantity_required")
+        if not product_id or not material_id:
+            return _validation_error("product_id and material_id are required.")
+        # Verify material belongs to this vendor
+        mat = get_material(int(material_id), int(user["id"]))
+        if not mat:
+            return _validation_error("Material not found.", status_code=404)
+        try:
+            recipe = upsert_product_material(
+                int(product_id),
+                int(material_id),
+                float(quantity_required or 1),
+            )
+        except ValueError as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "recipe": recipe})
+
+    @app.delete("/api/materials/recipes")
+    async def handle_delete_recipe(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        product_id = body.get("product_id")
+        material_id = body.get("material_id")
+        if not product_id or not material_id:
+            return _validation_error("product_id and material_id are required.")
+        deleted = delete_product_material(int(product_id), int(material_id))
+        if not deleted:
+            return _validation_error("Recipe entry not found.", status_code=404)
+        return JSONResponse({"ok": True})
+
+    # ── MATERIAL ALERTS ───────────────────────────────────────────────────────
+
+    @app.get("/api/materials/alerts")
+    async def handle_material_alerts(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        alerts = generate_material_alerts(int(user["id"]))
+        return JSONResponse({"ok": True, "alerts": alerts, "count": len(alerts)})
+
+    # ── SUPPLIER DEAL SEARCH ──────────────────────────────────────────────────
+
+    @app.get("/api/materials/deals")
+    async def handle_supplier_deals(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        deals = get_supplier_deal_suggestions(int(user["id"]))
+        return JSONResponse({"ok": True, "deals": deals, "count": len(deals)})
+
+    @app.get("/api/materials/search")
+    async def handle_material_search(request: Request, q: str = "") -> JSONResponse:
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not q.strip():
+            return _validation_error("q parameter required.")
+        results = search_material_suppliers(q.strip(), int(user["id"]))
+        comparison = compare_supplier_prices(q.strip(), int(user["id"]))
+        return JSONResponse({"ok": True, "results": results, "comparison": comparison})
+
+    # ── AI PRODUCTION SCHEDULE ────────────────────────────────────────────────
+
+    @app.get("/api/production-ai/schedule")
+    async def handle_production_ai_schedule(request: Request, event_id: str = "") -> JSONResponse:
+        """
+        Generate a full AI production schedule for a vendor and event.
+        Includes material requirements, order deadlines, and calendar suggestions.
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not event_id.strip():
+            return _validation_error("event_id query param is required.")
+        schedule = generate_production_schedule(int(user["id"]), event_id.strip())
+        if "error" in schedule:
+            return _validation_error(schedule["error"], status_code=404)
+        return JSONResponse({"ok": True, "schedule": schedule})
+
+    @app.post("/api/production-ai/schedule/accept")
+    async def handle_accept_production_suggestion(request: Request) -> JSONResponse:
+        """
+        Accept a calendar suggestion from the AI production schedule.
+        Saves it as a production block in the vendor calendar.
+
+        Body: { title, date, start_time, end_time, notes }
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        title = str(body.get("title") or "").strip()
+        start_time = str(body.get("start_time") or "").strip()
+        end_time = str(body.get("end_time") or "").strip()
+        notes = str(body.get("notes") or "").strip()
+        if not title or not start_time or not end_time:
+            return _validation_error("title, start_time, and end_time are required.")
+        try:
+            event = create_calendar_event(
+                user_id=int(user["id"]),
+                title=title,
+                start_time=start_time,
+                end_time=end_time,
+                type="production",
+                notes=notes,
+            )
+        except ValueError as exc:
+            return _validation_error(str(exc))
+        return JSONResponse({"ok": True, "calendar_event": event}, status_code=201)
+
+    @app.get("/api/production-ai/requirements")
+    async def handle_material_requirements(
+        request: Request,
+        product_id: int = 0,
+        quantity: int = 1,
+    ) -> JSONResponse:
+        """
+        Calculate material requirements for N units of a product.
+        Also checks stock and returns order/shipping analysis.
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        if not product_id:
+            return _validation_error("product_id is required.")
+        requirements = calculate_material_requirements(int(user["id"]), product_id, max(quantity, 1))
+        inventory_check = check_material_inventory(int(user["id"]), requirements)
+        shipping = calculate_shipping_time(int(user["id"]), requirements)
+        return JSONResponse({
+            "ok": True,
+            "product_id": product_id,
+            "quantity": quantity,
+            "requirements": requirements,
+            "inventory_check": inventory_check,
+            "shipping": shipping,
+        })
+
+    # ── DASHBOARD WIDGET DATA ─────────────────────────────────────────────────
+
+    @app.get("/api/dashboard/production-widgets")
+    async def handle_dashboard_production_widgets(request: Request) -> JSONResponse:
+        """
+        Single endpoint that returns all production-planning dashboard widgets:
+          - material_alerts     (Feature 5)
+          - production_suggestion (Feature 3 — top event schedule)
+          - supplier_deals      (Feature 6)
+        """
+        user = _require_user(request)
+        if not user:
+            return _validation_error("Authentication required.", status_code=401)
+        vendor_id = int(user["id"])
+
+        alerts = generate_material_alerts(vendor_id)
+        deals = get_supplier_deal_suggestions(vendor_id)
+
+        # Quick production suggestion: first upcoming recommended event
+        production_suggestion = None
+        try:
+            events = recommend_events(vendor_id)
+            if events:
+                sched = generate_production_schedule(vendor_id, events[0]["id"])
+                if "error" not in sched:
+                    production_suggestion = {
+                        "event": sched["event"],
+                        "event_date": sched["event_date"],
+                        "days_to_event": sched["days_to_event"],
+                        "calendar_suggestions": sched["calendar_suggestions"][:3],
+                        "summary": sched["summary"],
+                        "order_actions": {
+                            "urgent": sched["order_actions"]["urgent"][:3],
+                            "upcoming": sched["order_actions"]["upcoming"][:3],
+                        },
+                    }
+        except Exception:
+            pass
+
+        return JSONResponse({
+            "ok": True,
+            "material_alerts": alerts[:5],
+            "production_suggestion": production_suggestion,
+            "supplier_deals": [d for d in deals if d.get("needs_reorder")][:5],
+        })
+
+    # ── END MATERIAL / PRODUCTION AI ──────────────────────────────────────────
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def catch_all_not_found(request: Request, full_path: str) -> JSONResponse:
