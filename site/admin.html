@@ -293,6 +293,16 @@
       </div>
 
       <!-- Pending Verification Requests -->
+      <div class="admin-section" id="feature-flags-section">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Feature Flags</h2>
+          <span style="font-size:.78rem;color:var(--muted)">Overrides survive restarts. Env vars take effect on next deploy.</span>
+        </div>
+        <div id="flags-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.75rem;margin-top:.5rem;">
+          <div style="color:var(--muted);font-size:.875rem;">Loading flags…</div>
+        </div>
+      </div>
+
       <div class="admin-section">
         <div class="admin-section-header">
           <h2 class="admin-section-title">Pending Verifications</h2>
@@ -457,6 +467,87 @@
     for (var i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
     return AVATAR_COLORS[h % AVATAR_COLORS.length];
   }
+
+  // ── Feature Flags Panel ───────────────────────────────────────────────────
+  const FLAG_LABELS = {
+    vendor_profiles:       { label: 'Vendor Profiles',        group: 'MVP' },
+    market_discovery:      { label: 'Market Discovery',       group: 'MVP' },
+    market_applications:   { label: 'Market Applications',    group: 'MVP' },
+    vendor_dashboard:      { label: 'Vendor Dashboard',       group: 'MVP' },
+    market_map:            { label: 'Market Map',             group: 'MVP' },
+    inventory_tracking:    { label: 'Inventory Tracking',     group: 'MVP' },
+    vendor_calendar:       { label: 'Vendor Calendar',        group: 'MVP' },
+    profit_planner:        { label: 'Profit Planner',         group: 'MVP' },
+    shopify_sync:          { label: 'Shopify Sync',           group: 'MVP' },
+    event_recommendations: { label: 'Event Recommendations',  group: 'MVP' },
+    social_feed:           { label: 'Social Feed',            group: 'Non-MVP' },
+    community_rooms:       { label: 'Community Rooms',        group: 'Non-MVP' },
+    direct_messages:       { label: 'Direct Messages',        group: 'Non-MVP' },
+    shopper_dashboard:     { label: 'Shopper Dashboard',      group: 'Non-MVP' },
+    marketplace_listings:  { label: 'Marketplace Listings',   group: 'Non-MVP' },
+    advanced_admin:        { label: 'Advanced Admin',         group: 'Non-MVP' },
+  };
+
+  async function loadFlags() {
+    const grid = document.getElementById('flags-grid');
+    if (!grid) return;
+    try {
+      const res = await fetch('/api/admin/flags', { credentials: 'include' });
+      const data = await res.json();
+      if (!data.ok) { grid.innerHTML = '<p style="color:var(--danger)">Could not load flags.</p>'; return; }
+      renderFlags(data.flags, grid);
+    } catch (e) {
+      grid.innerHTML = '<p style="color:var(--danger)">Error loading flags.</p>';
+    }
+  }
+
+  function renderFlags(flags, grid) {
+    const entries = Object.entries(FLAG_LABELS);
+    grid.innerHTML = entries.map(function([key, meta]) {
+      if (!(key in flags)) return '';
+      const on = flags[key];
+      const groupColor = meta.group === 'MVP' ? 'var(--primary,#0f766e)' : 'var(--muted)';
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem;">' +
+        '<div>' +
+          '<div style="font-size:.875rem;font-weight:600;">' + esc(meta.label) + '</div>' +
+          '<div style="font-size:.72rem;color:' + groupColor + ';">' + esc(meta.group) + '</div>' +
+        '</div>' +
+        '<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">' +
+          '<input type="checkbox" data-flag="' + esc(key) + '" ' + (on ? 'checked' : '') + ' style="width:1rem;height:1rem;cursor:pointer;">' +
+          '<span style="font-size:.8rem;color:' + (on ? 'var(--primary,#0f766e)' : 'var(--muted)') + ';">' + (on ? 'On' : 'Off') + '</span>' +
+        '</label>' +
+      '</div>';
+    }).join('');
+
+    grid.querySelectorAll('input[data-flag]').forEach(function(cb) {
+      cb.addEventListener('change', async function() {
+        const flag = cb.dataset.flag;
+        const enabled = cb.checked;
+        cb.disabled = true;
+        try {
+          const res = await fetch('/api/admin/flags', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flag, enabled }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            renderFlags(data.flags, grid);
+          } else {
+            cb.checked = !enabled;
+            cb.disabled = false;
+            alert('Could not update flag: ' + (data.error || 'unknown error'));
+          }
+        } catch (e) {
+          cb.checked = !enabled;
+          cb.disabled = false;
+        }
+      });
+    });
+  }
+
+  loadFlags();
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }

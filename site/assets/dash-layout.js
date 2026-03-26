@@ -158,9 +158,58 @@
     '</button></li>';
   }
 
-  function applyRoleNav(role) {
+  // Feature flag href filter — hrefs not in this map are always shown
+  var HREF_FLAG_MAP = {
+    '/feed':            'social_feed',
+    '/community':       'community_rooms',
+    '/community/room':  'community_rooms',
+    '/messages':        'direct_messages',
+    '/shopper-dashboard': 'shopper_dashboard',
+    '/listings':        'marketplace_listings',
+    '/market-map':      'market_map',
+  };
+
+  function filterNavByFlags(sections, featureFlags) {
+    if (!featureFlags) return sections;
+    return sections.map(function(section) {
+      return Object.assign({}, section, {
+        items: section.items.filter(function(item) {
+          var flagKey = HREF_FLAG_MAP[item.href];
+          if (!flagKey) return true;
+          return featureFlags[flagKey] !== false;
+        })
+      });
+    }).filter(function(s) { return s.items.length > 0; });
+  }
+
+  function filterBottomNavByFlags(items, featureFlags) {
+    if (!featureFlags) return items;
+    return items.filter(function(item) {
+      var flagKey = HREF_FLAG_MAP[item.href];
+      if (!flagKey) return true;
+      return featureFlags[flagKey] !== false;
+    });
+  }
+
+  function applyRoleNav(role, featureFlags) {
     var config = NAV_CONFIGS[role] || NAV_CONFIGS.vendor;
-    var sectionsHtml = buildNavSectionsHtml(config.sections);
+    var filteredSections = filterNavByFlags(config.sections, featureFlags);
+    var filteredBottom = filterBottomNavByFlags(config.bottomNav, featureFlags);
+    // Add Market Map to vendor nav if enabled
+    if (featureFlags && featureFlags['market_map']) {
+      filteredSections = filteredSections.map(function(section) {
+        if (section.label === 'Main' && role === 'vendor') {
+          var hasMap = section.items.some(function(i) { return i.href === '/market-map'; });
+          if (!hasMap) {
+            return Object.assign({}, section, {
+              items: section.items.concat([{ icon: 'map', text: 'Market Map', href: '/market-map' }])
+            });
+          }
+        }
+        return section;
+      });
+    }
+    var sectionsHtml = buildNavSectionsHtml(filteredSections);
 
     // Desktop sidebar nav
     var sidebarNav = document.querySelector('#dash-sidebar .dash-nav');
@@ -172,7 +221,7 @@
 
     // Bottom nav items
     var bottomNavItems = document.querySelector('.bottom-nav .bottom-nav-items');
-    if (bottomNavItems) bottomNavItems.innerHTML = buildBottomNavHtml(config.bottomNav);
+    if (bottomNavItems) bottomNavItems.innerHTML = buildBottomNavHtml(filteredBottom);
 
     // Reattach "More" button listener (rebuilt above)
     var newMoreBtn = document.getElementById('bottom-nav-more');
@@ -184,15 +233,20 @@
 
   async function loadRoleNav() {
     try {
-      var res = await fetch('/api/auth/me', { credentials: 'include' });
-      if (!res.ok) return;
-      var data = await res.json();
+      var [authRes, cfgRes] = await Promise.all([
+        fetch('/api/auth/me', { credentials: 'include' }),
+        fetch('/api/config', { credentials: 'include' }),
+      ]);
+      if (!authRes.ok) return;
+      var data = await authRes.json();
       var user = data.user || data;
       var role = (user.role || 'vendor').toLowerCase();
       // Normalise role aliases
       if (role === 'organizer') role = 'market';
       if (!NAV_CONFIGS[role]) role = 'vendor';
-      applyRoleNav(role);
+      var featureFlags = {};
+      try { var cfgData = await cfgRes.json(); featureFlags = cfgData.features || {}; } catch (_) {}
+      applyRoleNav(role, featureFlags);
       // Apply unread badge after nav DOM is rebuilt
       fetchUnread();
     } catch (_) {

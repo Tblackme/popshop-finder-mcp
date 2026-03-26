@@ -28,6 +28,7 @@ from typing import Any
 
 import analytics as _analytics
 import uvicorn
+from features.flags import Feature, FeatureDisabledError, flags as _flags
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
@@ -267,6 +268,15 @@ PUBLIC_PAGE_ROUTES = {
     "/vendor-verify": "vendor-verify.html",
     "/admin/verify": "admin-verify.html",
     "/admin/users": "admin-users.html",
+}
+
+# Feature flag required for each page route (None = always accessible)
+PAGE_ROUTE_FLAGS: dict[str, Feature | None] = {
+    "/feed":              Feature.SOCIAL_FEED,
+    "/community":         Feature.COMMUNITY_ROOMS,
+    "/community/room":    Feature.COMMUNITY_ROOMS,
+    "/messages":          Feature.DIRECT_MESSAGES,
+    "/listings":          Feature.MARKETPLACE_LISTINGS,
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -547,6 +557,14 @@ def _validate_email(email: str) -> bool:
 
 def _validation_error(message: str, status_code: int = 400) -> JSONResponse:
     return JSONResponse({"ok": False, "error": message}, status_code=status_code)
+
+
+def _feature_disabled(feature: Feature) -> JSONResponse:
+    """Return a 404 response when a feature flag is off."""
+    return JSONResponse(
+        {"ok": False, "error": f"Feature not available: {feature.value}"},
+        status_code=404,
+    )
 
 
 def _normalize_shopify_domain(raw_shop: str) -> str:
@@ -1556,7 +1574,14 @@ def create_app() -> FastAPI:
         return "text/html" in accept and "application/json" not in accept
 
     for route_path, filename in PUBLIC_PAGE_ROUTES.items():
-        async def _page_handler(filename: str = filename) -> Response:
+        _required_flag = PAGE_ROUTE_FLAGS.get(route_path)
+        async def _page_handler(
+            request: Request,
+            filename: str = filename,
+            _flag: "Feature | None" = _required_flag,
+        ) -> Response:
+            if _flag is not None and not _flags.is_enabled(_flag):
+                return _feature_disabled(_flag)
             return serve_page(filename)
 
         app.add_api_route(route_path, _page_handler, methods=["GET"], response_class=FileResponse)
@@ -1582,6 +1607,12 @@ def create_app() -> FastAPI:
             return RedirectResponse(url="/admin", status_code=302)
         return serve_page("dashboard.html")
 
+    @app.get("/market-map", response_class=FileResponse)
+    async def handle_market_map_page(request: Request) -> Response:
+        if not _flags.is_enabled(Feature.MARKET_MAP):
+            return _feature_disabled(Feature.MARKET_MAP)
+        return serve_page("market-map.html")
+
     @app.get("/market-dashboard", response_class=FileResponse)
     async def handle_market_dashboard_page(request: Request) -> Response:
         user = _require_user(request)
@@ -1595,6 +1626,8 @@ def create_app() -> FastAPI:
 
     @app.get("/shopper-dashboard", response_class=FileResponse)
     async def handle_shopper_dashboard_page(request: Request) -> Response:
+        if not _flags.is_enabled(Feature.SHOPPER_DASHBOARD):
+            return _feature_disabled(Feature.SHOPPER_DASHBOARD)
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
@@ -1749,6 +1782,7 @@ def create_app() -> FastAPI:
             "ai_discovery": bool(flags.get("ai_discovery")),
             "posthog_key": _os.environ.get("POSTHOG_KEY", ""),
             "posthog_host": _os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com"),
+            "features": _flags.mvp_flags(),
         })
 
     @app.get("/api/debug/env")
@@ -2337,6 +2371,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/shopper-dashboard")
     async def handle_shopper_dashboard_data(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.SHOPPER_DASHBOARD):
+            return _feature_disabled(Feature.SHOPPER_DASHBOARD)
         user = _require_user(request)
         if not user:
             return _validation_error("Authentication required.", status_code=401)
@@ -2976,6 +3012,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/messages/unread")
     async def handle_messages_unread(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.DIRECT_MESSAGES):
+            return _feature_disabled(Feature.DIRECT_MESSAGES)
         user = _require_user(request)
         if not user:
             return _validation_error("Authentication required.", status_code=401)
@@ -2984,6 +3022,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/messages/conversations")
     async def handle_list_conversations(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.DIRECT_MESSAGES):
+            return _feature_disabled(Feature.DIRECT_MESSAGES)
         user = _require_user(request)
         if not user:
             return _validation_error("Authentication required.", status_code=401)
@@ -2992,6 +3032,8 @@ def create_app() -> FastAPI:
 
     @app.post("/api/messages/conversations")
     async def handle_create_conversation(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.DIRECT_MESSAGES):
+            return _feature_disabled(Feature.DIRECT_MESSAGES)
         user = _require_user(request)
         if not user:
             return _validation_error("Authentication required.", status_code=401)
@@ -3095,6 +3137,37 @@ def create_app() -> FastAPI:
 
     # ── ADMIN ─────────────────────────────────────────────────────────────────
 
+    @app.get("/api/admin/flags")
+    async def handle_admin_flags_get(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _is_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        return JSONResponse({"ok": True, "flags": _flags.all_flags()})
+
+    @app.post("/api/admin/flags")
+    async def handle_admin_flags_set(request: Request) -> JSONResponse:
+        user = _require_user(request)
+        if not user or not _is_admin(user):
+            return _validation_error("Admin access required.", status_code=403)
+        try:
+            body = await request.json()
+        except Exception:
+            return _validation_error("Invalid JSON")
+        flag_name = str(body.get("flag", "")).strip()
+        enabled = body.get("enabled")
+        reset = bool(body.get("reset"))
+        try:
+            feature = Feature(flag_name)
+        except ValueError:
+            return _validation_error(f"Unknown flag: {flag_name}")
+        if reset:
+            _flags.clear_override(feature)
+        else:
+            if enabled is None:
+                return _validation_error("'enabled' is required")
+            _flags.set_override(feature, bool(enabled))
+        return JSONResponse({"ok": True, "flags": _flags.all_flags()})
+
     @app.get("/api/admin/stats")
     async def handle_admin_stats(request: Request) -> JSONResponse:
         user = _require_user(request)
@@ -3105,6 +3178,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/admin/users")
     async def handle_admin_list_users(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.ADVANCED_ADMIN):
+            return _feature_disabled(Feature.ADVANCED_ADMIN)
         user = _require_user(request)
         if not user or not _require_admin(user):
             return _validation_error("Admin access required.", status_code=403)
@@ -3839,6 +3914,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/feed")
     async def handle_feed(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.SOCIAL_FEED):
+            return _feature_disabled(Feature.SOCIAL_FEED)
         """Video-first discovery feed with vendor posts."""
         limit = min(int(request.query_params.get("limit", 20)), 100)
         offset = int(request.query_params.get("offset", 0))
@@ -3902,6 +3979,8 @@ def create_app() -> FastAPI:
 
     @app.post("/api/feed/posts")
     async def handle_create_post(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.SOCIAL_FEED):
+            return _feature_disabled(Feature.SOCIAL_FEED)
         uid = _read_session_user_id(request)
         if not uid:
             return JSONResponse({"ok": False, "error": "Sign in required"}, status_code=401)
@@ -3966,6 +4045,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/community/groups")
     async def handle_list_groups(request: Request) -> JSONResponse:
+        if not _flags.is_enabled(Feature.COMMUNITY_ROOMS):
+            return _feature_disabled(Feature.COMMUNITY_ROOMS)
         group_type = request.query_params.get("type") or None
         groups = list_groups(group_type)
         uid = _read_session_user_id(request)

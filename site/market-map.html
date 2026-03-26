@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Map | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <style>
+    .map-page { display: flex; flex-direction: column; height: calc(100vh - var(--topbar-height, 56px)); }
+    .map-toolbar { padding: .75rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+    .map-toolbar input, .map-toolbar select { padding: .4rem .75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .875rem; }
+    .map-toolbar input { width: 160px; }
+    #market-map { flex: 1; min-height: 400px; }
+    .map-count { font-size: .8rem; color: var(--muted); margin-left: auto; }
+    .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border-radius: var(--radius); box-shadow: var(--shadow-md); }
+    .leaflet-popup-tip { background: var(--surface); }
+    .map-popup h3 { margin: 0 0 .25rem; font-size: .95rem; }
+    .map-popup p  { margin: 0 0 .2rem; font-size: .8rem; color: var(--muted); }
+    .map-popup .pill { font-size: .72rem; padding: .2rem .5rem; border-radius: 999px; background: var(--primary-muted, #d1fae5); color: var(--primary, #0f766e); display: inline-block; margin-top: .35rem; }
+    .map-popup a.btn-sm { display: inline-block; margin-top: .5rem; padding: .3rem .8rem; background: var(--primary, #0f766e); color: #fff; border-radius: var(--radius); font-size: .8rem; text-decoration: none; }
+    .map-popup a.btn-sm:hover { opacity: .85; }
+  </style>
+</head>
+<body class="dash-layout">
+
+  <div id="dash-sidebar" class="dash-sidebar">
+    <div class="dash-brand"><a href="/">Vendor Atlas</a></div>
+    <nav class="dash-nav"></nav>
+    <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">&#8249;</button>
+  </div>
+
+  <div class="dash-main">
+    <header class="dash-topbar">
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">&#9776;</button>
+      <h1 class="dash-page-title">Market Map</h1>
+    </header>
+
+    <div class="map-page">
+      <div class="map-toolbar">
+        <input type="text" id="map-filter-city" placeholder="Filter by city…">
+        <select id="map-filter-category">
+          <option value="">All categories</option>
+          <option value="craft">Craft</option>
+          <option value="art">Art</option>
+          <option value="handmade">Handmade</option>
+          <option value="food">Food</option>
+          <option value="vintage">Vintage</option>
+          <option value="farmers">Farmers</option>
+        </select>
+        <select id="map-filter-size">
+          <option value="">Any size</option>
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+        <span class="map-count" id="map-count"></span>
+      </div>
+      <div id="market-map"></div>
+    </div>
+  </div>
+
+  <div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+    <div class="mobile-drawer-inner">
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">&times;</button>
+      <nav class="mobile-drawer-nav"></nav>
+    </div>
+  </div>
+  <div class="mobile-overlay" id="mobile-overlay"></div>
+  <nav class="bottom-nav">
+    <div class="bottom-nav-items"></div>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/assets/app.js"></script>
+  <script src="/assets/dash-layout.js"></script>
+  <script>
+  (async function () {
+    // Fetch all map events
+    let allEvents = [];
+    try {
+      const res = await fetch('/api/events/map', { credentials: 'include' });
+      const data = await res.json();
+      allEvents = data.events || [];
+    } catch (e) {
+      console.warn('Could not load map events', e);
+    }
+
+    const map = L.map('market-map').setView([39.5, -98.35], 4);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    const markerIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#0f766e;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -10],
+    });
+
+    let markers = [];
+
+    function formatDate(d) {
+      if (!d) return '';
+      try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+      catch { return d; }
+    }
+
+    function renderMarkers(events) {
+      markers.forEach(function (m) { map.removeLayer(m); });
+      markers = [];
+      events.forEach(function (ev) {
+        var lat = parseFloat(ev.latitude);
+        var lng = parseFloat(ev.longitude);
+        if (!lat || !lng) return;
+        var m = L.marker([lat, lng], { icon: markerIcon });
+        var eventUrl = '/event-details/' + encodeURIComponent(ev.id);
+        m.bindPopup(
+          '<div class="map-popup">' +
+          '<h3>' + (ev.name || 'Market') + '</h3>' +
+          '<p>' + [ev.city, ev.state].filter(Boolean).join(', ') + '</p>' +
+          (ev.date ? '<p>' + formatDate(ev.date) + '</p>' : '') +
+          (ev.booth_price ? '<p>Booth: $' + ev.booth_price + '</p>' : '') +
+          (ev.vendor_category ? '<span class="pill">' + ev.vendor_category + '</span>' : '') +
+          '<br><a class="btn-sm" href="' + eventUrl + '">View event</a>' +
+          '</div>'
+        );
+        m.addTo(map);
+        markers.push(m);
+      });
+      document.getElementById('map-count').textContent = markers.length + ' market' + (markers.length !== 1 ? 's' : '') + ' shown';
+    }
+
+    function applyFilters() {
+      var city = (document.getElementById('map-filter-city').value || '').toLowerCase().trim();
+      var cat  = (document.getElementById('map-filter-category').value || '').toLowerCase();
+      var size = (document.getElementById('map-filter-size').value || '').toLowerCase();
+      var filtered = allEvents.filter(function (ev) {
+        if (city && !(ev.city || '').toLowerCase().includes(city)) return false;
+        if (cat  && (ev.vendor_category || '').toLowerCase() !== cat) return false;
+        if (size && (ev.event_size || '').toLowerCase() !== size) return false;
+        return true;
+      });
+      renderMarkers(filtered);
+    }
+
+    renderMarkers(allEvents);
+
+    ['map-filter-city', 'map-filter-category', 'map-filter-size'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', applyFilters);
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+  })();
+  </script>
+</body>
+</html>
