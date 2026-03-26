@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coming Soon | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg, #f8f9fa);
+      font-family: var(--font, system-ui, sans-serif);
+      margin: 0;
+      padding: 1.5rem;
+    }
+    .cs-card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 32px rgba(0,0,0,.08);
+      padding: 3rem 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    .cs-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 1.5rem;
+      background: var(--brand-light, #e8f5f4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cs-icon svg {
+      width: 34px;
+      height: 34px;
+      stroke: var(--brand, #0f766e);
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .cs-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      background: var(--brand-light, #ccfbf1);
+      color: var(--brand, #0f766e);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: .3rem .9rem;
+      margin-bottom: 1.1rem;
+    }
+    .cs-card h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 0 0 .6rem;
+      color: var(--text, #111827);
+      line-height: 1.25;
+    }
+    .cs-feature-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--brand, #0f766e);
+      margin: 0 0 .75rem;
+      display: none; /* shown by JS when param present */
+    }
+    .cs-card p {
+      color: var(--muted, #6b7280);
+      font-size: .93rem;
+      line-height: 1.65;
+      margin: 0 0 2rem;
+      max-width: 36ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cs-divider {
+      height: 1px;
+      background: var(--line, #e5e7eb);
+      margin: 1.5rem 0;
+    }
+    .cs-hint {
+      font-size: .8rem;
+      color: var(--muted, #9ca3af);
+      margin: 0 0 1.5rem;
+    }
+    .cs-actions {
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+    }
+    .btn-primary {
+      background: var(--brand, #0f766e);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: .75rem 1.5rem;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .88; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted, #6b7280);
+      border: 1.5px solid var(--line, #e5e7eb);
+      border-radius: 10px;
+      padding: .7rem 1.5rem;
+      font-size: .9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-ghost:hover { border-color: var(--brand, #0f766e); color: var(--brand, #0f766e); }
+    .cs-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-weight: 800;
+      font-size: .85rem;
+      color: var(--muted, #9ca3af);
+      text-decoration: none;
+      margin-top: 2rem;
+    }
+    .cs-brand:hover { color: var(--brand, #0f766e); }
+  </style>
+</head>
+<body>
+  <div class="cs-card">
+    <div class="cs-icon">
+      <!-- Rocket / building icon -->
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+    </div>
+
+    <span class="cs-badge">
+      <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h2.5a.75.75 0 0 0 0-1.5H8.75V4.75A.75.75 0 0 0 8 4z"/></svg>
+      Coming Soon
+    </span>
+
+    <h1 id="cs-title">This feature is on its way.</h1>
+    <p id="cs-feature-name" class="cs-feature-name"></p>
+    <p id="cs-description">We're building something great here. This feature will be available in an upcoming release — check back soon.</p>
+
+    <div class="cs-divider"></div>
+    <p class="cs-hint">Stay tuned — we'll have more to share soon.</p>
+
+    <div class="cs-actions">
+      <a href="/dashboard" class="btn-primary" id="cs-dashboard-btn">Back to Dashboard</a>
+      <a href="/find-my-next-market" class="btn-ghost">Find Markets</a>
+    </div>
+
+    <a href="/" class="cs-brand">
+      <span style="background:var(--brand,#0f766e);color:#fff;width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;">VA</span>
+      Vendor Atlas
+    </a>
+  </div>
+
+  <script>
+  (function () {
+    var FEATURE_LABELS = {
+      social_feed:          { name: 'Vendor Social Feed',        desc: 'Share your market setups and connect with other vendors — coming to your dashboard soon.' },
+      community_rooms:      { name: 'Community Rooms',           desc: 'Join vendor circles and event rooms to stay connected between markets.' },
+      direct_messages:      { name: 'Direct Messages',           desc: 'Message other vendors and organizers directly inside Vendor Atlas.' },
+      shopper_dashboard:    { name: 'Shopper Dashboard',         desc: 'A dedicated space for shoppers to track saved markets, followed vendors, and upcoming events.' },
+      marketplace_listings: { name: 'Marketplace Listings',      desc: 'Browse and list products in the Vendor Atlas marketplace.' },
+      advanced_admin:       { name: 'Advanced Admin Tools',      desc: 'User management, roles, and advanced admin controls — restricted to platform administrators.' },
+      market_map:           { name: 'Interactive Market Map',    desc: 'Explore markets on a live map filtered by city, category, and event size.' },
+    };
+
+    var params = new URLSearchParams(window.location.search);
+    var featureKey = params.get('feature') || '';
+    var info = FEATURE_LABELS[featureKey];
+
+    if (info) {
+      document.getElementById('cs-title').textContent = info.name + ' — Coming Soon';
+      document.getElementById('cs-description').textContent = info.desc;
+      document.title = info.name + ' — Coming Soon | Vendor Atlas';
+    }
+
+    // Smart back button: go to the right dashboard based on role
+    (async function () {
+      try {
+        var res = await fetch('/api/auth/me', { credentials: 'include' });
+        var data = await res.json();
+        var role = (data.user && data.user.role) || 'vendor';
+        var btn = document.getElementById('cs-dashboard-btn');
+        if (role === 'market') btn.href = '/market-dashboard';
+        else if (role === 'shopper') btn.href = '/shopper-dashboard';
+        else if (role === 'admin') btn.href = '/admin';
+        else btn.href = '/dashboard';
+      } catch (_) {}
+    })();
+  })();
+  </script>
+</body>
+</html>

@@ -268,6 +268,7 @@ PUBLIC_PAGE_ROUTES = {
     "/vendor-verify": "vendor-verify.html",
     "/admin/verify": "admin-verify.html",
     "/admin/users": "admin-users.html",
+    "/coming-soon": "coming-soon.html",
 }
 
 # Feature flag required for each page route (None = always accessible)
@@ -277,6 +278,7 @@ PAGE_ROUTE_FLAGS: dict[str, Feature | None] = {
     "/community/room":    Feature.COMMUNITY_ROOMS,
     "/messages":          Feature.DIRECT_MESSAGES,
     "/listings":          Feature.MARKETPLACE_LISTINGS,
+    "/admin/users":       Feature.ADVANCED_ADMIN,
 }
 
 MONTH_NAME_PATTERN = re.compile(
@@ -1581,6 +1583,8 @@ def create_app() -> FastAPI:
             _flag: "Feature | None" = _required_flag,
         ) -> Response:
             if _flag is not None and not _flags.is_enabled(_flag):
+                if _prefers_html(request):
+                    return RedirectResponse(url=f"/coming-soon?feature={_flag.value}", status_code=302)
                 return _feature_disabled(_flag)
             return serve_page(filename)
 
@@ -1610,7 +1614,7 @@ def create_app() -> FastAPI:
     @app.get("/market-map", response_class=FileResponse)
     async def handle_market_map_page(request: Request) -> Response:
         if not _flags.is_enabled(Feature.MARKET_MAP):
-            return _feature_disabled(Feature.MARKET_MAP)
+            return RedirectResponse(url=f"/coming-soon?feature={Feature.MARKET_MAP.value}", status_code=302)
         return serve_page("market-map.html")
 
     @app.get("/market-dashboard", response_class=FileResponse)
@@ -1627,7 +1631,7 @@ def create_app() -> FastAPI:
     @app.get("/shopper-dashboard", response_class=FileResponse)
     async def handle_shopper_dashboard_page(request: Request) -> Response:
         if not _flags.is_enabled(Feature.SHOPPER_DASHBOARD):
-            return _feature_disabled(Feature.SHOPPER_DASHBOARD)
+            return RedirectResponse(url=f"/coming-soon?feature={Feature.SHOPPER_DASHBOARD.value}", status_code=302)
         user = _require_user(request)
         if not user:
             return RedirectResponse(url="/signin", status_code=302)
