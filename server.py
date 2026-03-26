@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import analytics as _analytics
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -1477,6 +1478,10 @@ def create_app() -> FastAPI:
                 logger.warning("[discovery:%s] %s failed: %s", label, keywords[0], exc)
         return saved
 
+    @app.on_event("shutdown")
+    async def _on_shutdown() -> None:
+        _analytics.shutdown()
+
     @app.on_event("startup")
     async def _background_seed_events() -> None:
         async def _run() -> None:
@@ -1734,6 +1739,7 @@ def create_app() -> FastAPI:
         No sensitive keys are exposed here.
         """
         flags = getattr(app.state, "ai_flags", {})
+        import os as _os
         return JSONResponse({
             "ok": True,
             "free_tier": True,           # core platform always free
@@ -1741,6 +1747,8 @@ def create_app() -> FastAPI:
             "ai_matching": bool(flags.get("ai_match")),
             "ai_content": bool(flags.get("ai_content")),
             "ai_discovery": bool(flags.get("ai_discovery")),
+            "posthog_key": _os.environ.get("POSTHOG_KEY", ""),
+            "posthog_host": _os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com"),
         })
 
     @app.get("/api/debug/env")
@@ -1826,6 +1834,8 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             return _validation_error(str(exc), status_code=409)
 
+        _analytics.identify(int(user["id"]), {"role": user.get("role", ""), "username": user.get("username", "")})
+        _analytics.track("user_signed_up", user_id=user["id"], properties={"role": user.get("role", "")})
         response = JSONResponse({"ok": True, "user": user})
         _set_session_cookie(response, int(user["id"]))
         return response
@@ -1869,6 +1879,7 @@ def create_app() -> FastAPI:
         if not user:
             return _validation_error("Incorrect username, email, or password.", status_code=401)
 
+        _analytics.track("user_signed_in", user_id=user["id"], properties={"role": user.get("role", "")})
         response = JSONResponse({"ok": True, "user": user})
         _set_session_cookie(response, int(user["id"]))
         return response
@@ -3789,6 +3800,7 @@ def create_app() -> FastAPI:
             event_size=event_size,
             distance_radius=distance_radius,
         )
+        _analytics.track("market_searched", properties={"city": city, "state": state, "vendor_category": vendor_category, "result_count": payload.get("search_count", 0) + payload.get("discover_count", 0)})
         return JSONResponse(payload)
 
     @app.get("/api/listings/kansas-city")

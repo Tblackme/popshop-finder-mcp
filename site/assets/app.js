@@ -1,3 +1,13 @@
+// ── PostHog analytics ────────────────────────────────────────────────────────
+// Loaded async after /api/config resolves — key is never hardcoded in source.
+function initPostHog(apiKey, apiHost) {
+  if (!apiKey || window.__posthogInitialized) return;
+  window.__posthogInitialized = true;
+  apiHost = apiHost || "https://us.i.posthog.com";
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}var u=t.createElement("script");u.type="text/javascript";u.crossOrigin="anonymous";u.async=!0;u.src=s.api_host+"/static/array.js";var l=t.getElementsByTagName("script")[0];l.parentNode.insertBefore(u,l);var c=e;for(void 0!==a?c=e[a]=[]:a="posthog",c.people=c.people||[],c.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},c.people.toString=function(){return c.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(c,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init(apiKey, { api_host: apiHost, capture_pageview: true, persistence: "localStorage" });
+}
+
 const vendorScenarios = {
   farmer: {
     title: "Farmers Market Vendor",
@@ -5896,7 +5906,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupVendorScenarios();
   setupBugReport();
 
+  // Init PostHog before auth so pageview fires with the right key
+  try {
+    const cfg = await api("/api/config", { method: "GET" });
+    if (cfg.posthog_key) initPostHog(cfg.posthog_key, cfg.posthog_host);
+  } catch { /* analytics optional */ }
+
   const auth = await getAuthState();
+  if (auth.authenticated && auth.user?.id && window.posthog) {
+    posthog.identify(String(auth.user.id), { role: auth.user.role, username: auth.user.username });
+  }
   setupAdminPanel(auth);
   renderAuthNav(auth);
   syncHomepageRoleEntryLinks(auth);
