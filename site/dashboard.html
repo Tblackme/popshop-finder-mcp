@@ -7,99 +7,124 @@
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/dash-layout.css">
   <style>
-    /* ── Dashboard-specific card styles ───────────────────────────────── */
-    .shopify-banner {
-      background: linear-gradient(135deg, #0f766e 0%, #0b5b55 100%);
-      color: #fff;
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      flex-wrap: wrap;
+    /* ── Widget grid ─────────────────────────────────────────────────── */
+    .w-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
-    .shopify-banner h2 { margin: 0 0 .25rem; color: #fff; font-size: 1.15rem; }
-    .shopify-banner p { margin: 0; opacity: .85; font-size: .9rem; }
-    .shopify-banner .banner-actions { margin-left: auto; display: flex; gap: .6rem; flex-wrap: wrap; }
-    .shopify-banner .btn-white { background: #fff; color: var(--brand); font-weight: 700; border-radius: 9px; padding: .5rem 1.1rem; border: none; cursor: pointer; font-size: .9rem; }
-    .shopify-banner .btn-outline { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); border-radius: 9px; padding: .5rem 1.1rem; cursor: pointer; font-size: .9rem; }
-    .shopify-banner input.banner-input { background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.4); color: #fff; border-radius: 9px; padding: .45rem .85rem; font-size: .9rem; width: 180px; }
-    .shopify-banner input.banner-input::placeholder { color: rgba(255,255,255,.6); }
-    .product-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .65rem; margin-top: .85rem; }
-    .product-mini-card { background: rgba(19,38,35,.04); border-radius: var(--radius-md); padding: .65rem .75rem; font-size: .83rem; }
-    .product-mini-card .pname { font-weight: 600; margin-bottom: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .product-mini-card .pprice { color: var(--brand); font-weight: 700; }
-    .product-mini-card .pstock { color: var(--muted); font-size: .75rem; }
-    .event-row { display: flex; align-items: center; gap: .75rem; padding: .65rem 0; border-bottom: 1px solid var(--line); }
-    .event-row:last-child { border-bottom: none; }
-    .event-row-main { flex: 1; min-width: 0; }
-    .event-row-main strong { display: block; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .event-row-meta { font-size: .78rem; color: var(--muted); }
+    .w-grid .full { grid-column: 1 / -1; }
+
+    /* ── Base widget ─────────────────────────────────────────────────── */
+    .widget {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .55rem;
+      box-shadow: 0 4px 18px rgba(21,32,51,.05);
+    }
+    .widget-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+    .widget-head .eyebrow { margin: 0; }
+    .widget-link { font-size: .76rem; color: var(--brand); text-decoration: none; font-weight: 600; white-space: nowrap; }
+    .widget h3 { margin: 0; font-size: 1rem; line-height: 1.3; }
+    .widget-body { flex: 1; font-size: .875rem; color: var(--muted); }
+    .widget-foot { margin-top: auto; padding-top: .4rem; display: flex; gap: .45rem; flex-wrap: wrap; }
+
+    /* ── Tool strip ──────────────────────────────────────────────────── */
+    .tool-strip { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .tool-pill {
+      display: inline-flex; align-items: center; gap: .38rem;
+      padding: .4rem .8rem; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--surface, #fafafa);
+      font-size: .8rem; font-weight: 600; color: var(--ink); text-decoration: none;
+      transition: background .13s, border-color .13s;
+    }
+    .tool-pill:hover { background: #eff6ff; border-color: var(--brand); color: var(--brand); }
+    .tool-pill svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Shopify banner ──────────────────────────────────────────────── */
+    .s-banner {
+      background: linear-gradient(135deg, #0f766e 0%, #0b5b55 100%);
+      color: #fff; border-radius: 20px; padding: 1.25rem 1.4rem;
+      display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap;
+    }
+    .s-banner h3 { margin: 0 0 .18rem; color: #fff; font-size: 1rem; }
+    .s-banner p  { margin: 0; opacity: .85; font-size: .875rem; }
+    .s-banner .s-actions { margin-left: auto; display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+    .s-banner .btn-w { background: #fff; color: #0f766e; font-weight: 700; border-radius: 9px; padding: .42rem .95rem; border: none; cursor: pointer; font-size: .85rem; }
+    .s-banner .btn-o { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); border-radius: 9px; padding: .42rem .95rem; font-size: .85rem; text-decoration: none; }
+    .s-banner input.s-input { background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.4); color: #fff; border-radius: 9px; padding: .38rem .75rem; font-size: .875rem; width: 155px; }
+    .s-banner input.s-input::placeholder { color: rgba(255,255,255,.6); }
+    .product-mini-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(115px,1fr)); gap: .45rem; margin-top: .7rem; }
+    .product-mini-card { background: rgba(255,255,255,.12); border-radius: 10px; padding: .5rem .65rem; font-size: .78rem; color: #fff; }
+    .product-mini-card .pname { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-mini-card .pstock { opacity: .6; font-size: .72rem; }
+
+    /* ── Row patterns ────────────────────────────────────────────────── */
+    .ev-row { display: flex; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+    .ev-row:last-child { border-bottom: none; }
+    .ev-row-main { flex: 1; min-width: 0; }
+    .ev-row-main strong { display: block; font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev-row-meta { font-size: .75rem; color: var(--muted); }
+
+    .inv-row { display: flex; align-items: center; gap: .6rem; padding: .42rem 0; border-bottom: 1px solid var(--line); }
+    .inv-row:last-child { border-bottom: none; }
+    .inv-row-name { flex: 1; font-size: .875rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-qty { font-size: .76rem; font-weight: 700; border-radius: 8px; padding: .15rem .5rem; white-space: nowrap; }
+    .inv-qty.ok  { background: #dcfce7; color: #166534; }
+    .inv-qty.low { background: #fef3c7; color: #92400e; }
+    .inv-qty.out { background: #fee2e2; color: #991b1b; }
+
+    .prod-row { display: flex; align-items: center; gap: .55rem; padding: .45rem 0; border-bottom: 1px solid var(--line); }
+    .prod-row:last-child { border-bottom: none; }
+    .prod-row-text { flex: 1; min-width: 0; }
+    .prod-row-text strong { display: block; font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prod-row-text span { font-size: .75rem; color: var(--muted); }
+
+    .notif-row { display: flex; gap: .4rem; padding: .42rem 0; border-bottom: 1px solid var(--line); }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); flex-shrink: 0; margin-top: .33rem; }
+
+    /* ── Alert pills ─────────────────────────────────────────────────── */
+    .alert-pill { border-radius: 11px; padding: .55rem .8rem; margin-bottom: .4rem; font-size: .82rem; }
+    .alert-pill.crit { background: #fee2e2; border-left: 3px solid #dc2626; }
+    .alert-pill.high { background: #fef3c7; border-left: 3px solid #b45309; }
+    .alert-pill.low  { background: #e8f5ee; border-left: 3px solid #2a7a4f; }
+    .alert-pill strong { display: block; font-size: .82rem; margin-bottom: .12rem; }
+
+    /* ── Badges ──────────────────────────────────────────────────────── */
+    .badge { display: inline-block; background: var(--brand); color: #fff; font-size: .62rem; font-weight: 800; border-radius: 99px; padding: .1rem .4rem; vertical-align: middle; margin-left: .3rem; }
+    .badge-red { background: #dc2626; }
+
+    /* ── Coming soon ─────────────────────────────────────────────────── */
+    .widget-soon { opacity: .6; pointer-events: none; user-select: none; }
+    .soon-pill { background: var(--line); color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 99px; padding: .16rem .52rem; }
+
+    /* ── Hero ────────────────────────────────────────────────────────── */
+    .dash-hero { margin-bottom: 1.1rem; }
+    .dash-hero h1 { font-size: 1.4rem; margin: .2rem 0 .3rem; }
+    .dash-hero p  { margin: 0; font-size: .88rem; color: var(--muted); }
   </style>
 </head>
 <body>
 
-<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
+<!-- Mobile drawer (populated by dash-layout.js) -->
 <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
 <nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
   <div class="mobile-drawer-header">
-    <a class="mobile-drawer-logo" href="/">
-      <span>VA</span><span>Vendor Atlas</span>
-    </a>
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
     <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
       <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
-  <div class="mobile-drawer-nav dash-nav">
-    <div class="dash-nav-section">
-      <div class="dash-nav-label">Main</div>
-      <a class="dash-nav-item" href="/dashboard">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
-        <span class="dash-nav-text">Dashboard</span>
-      </a>
-      <a class="dash-nav-item" href="/feed">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-        <span class="dash-nav-text">Feed</span>
-      </a>
-      <a class="dash-nav-item" href="/community">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-        <span class="dash-nav-text">Community</span>
-      </a>
-      <a class="dash-nav-item" href="/discover">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
-        <span class="dash-nav-text">Discover</span>
-      </a>
-    </div>
-    <div class="dash-nav-section">
-      <div class="dash-nav-label">Vendor</div>
-      <a class="dash-nav-item" href="/my-shop">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
-        <span class="dash-nav-text">My Shop</span>
-      </a>
-      <a class="dash-nav-item" href="/final-plan">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-        <span class="dash-nav-text">Profit</span>
-      </a>
-      <a class="dash-nav-item" href="/messages">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-        <span class="dash-nav-text">Messages</span>
-      </a>
-    </div>
-    <div class="dash-nav-section">
-      <div class="dash-nav-label">Account</div>
-      <a class="dash-nav-item" href="/settings">
-        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-        <span class="dash-nav-text">Settings</span>
-      </a>
-    </div>
-  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
 </nav>
 
-<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
 <div class="dash-shell">
 
-  <!-- ── Sidebar (desktop) ─────────────────────────────────────────────── -->
   <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
     <div class="dash-sidebar-header">
       <a class="dash-sidebar-logo" href="/">
@@ -110,173 +135,220 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
-
-    <nav class="dash-nav">
-      <div class="dash-nav-section">
-        <div class="dash-nav-label">Main</div>
-        <a class="dash-nav-item" href="/dashboard">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
-          <span class="dash-nav-text">Dashboard</span>
-        </a>
-        <a class="dash-nav-item" href="/feed">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-          <span class="dash-nav-text">Feed</span>
-        </a>
-        <a class="dash-nav-item" href="/community">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-          <span class="dash-nav-text">Community</span>
-        </a>
-        <a class="dash-nav-item" href="/discover">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
-          <span class="dash-nav-text">Discover</span>
-        </a>
-      </div>
-
-      <div class="dash-nav-section">
-        <div class="dash-nav-label">Vendor</div>
-        <a class="dash-nav-item" href="/my-shop">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
-          <span class="dash-nav-text">My Shop</span>
-        </a>
-        <a class="dash-nav-item" href="/final-plan">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-          <span class="dash-nav-text">Profit</span>
-        </a>
-        <a class="dash-nav-item" href="/messages">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-          <span class="dash-nav-text">Messages</span>
-        </a>
-      </div>
-
-      <div class="dash-nav-section">
-        <div class="dash-nav-label">Account</div>
-        <a class="dash-nav-item" href="/settings">
-          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-          <span class="dash-nav-text">Settings</span>
-        </a>
-      </div>
-    </nav>
-
-    <div class="dash-sidebar-footer">
-      <div data-auth-nav></div>
-    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
   </aside>
 
-  <!-- ── Main body ─────────────────────────────────────────────────────── -->
   <div class="dash-body">
-
-    <!-- Top bar -->
     <header class="dash-topbar">
       <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
         <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <span class="dash-topbar-title" id="dash-page-title">Dashboard</span>
+      <span class="dash-topbar-title">Dashboard</span>
       <div class="dash-topbar-actions" data-auth-nav></div>
     </header>
 
-    <!-- Page content -->
     <div class="dash-content">
 
-      <div class="dash-page-hero">
-        <span class="eyebrow">Vendor dashboard — free tools</span>
+      <div class="dash-hero">
+        <span class="eyebrow">Vendor dashboard</span>
         <h1 id="dash-welcome">Welcome back.</h1>
-        <p>Your shop, events, and profit tracker — all manual, all free, no AI required.</p>
+        <p>Your markets, shop, inventory, and production — all in one place.</p>
       </div>
 
-      <div class="dash-grid">
-
-        <!-- Vendor planning assistant -->
-        <div data-dashboard-root>
-          <div data-guided-dashboard></div>
-        </div>
+      <div class="w-grid">
 
         <!-- Shopify banner — full width -->
-        <div id="shopify-banner-slot" class="full">
-          <div class="shopify-banner">
-            <div><h2>🛍️ Shopify store</h2><p>Loading…</p></div>
+        <div class="full" id="shopify-banner-slot">
+          <div class="s-banner"><div><h3>Loading…</h3></div></div>
+        </div>
+
+        <!-- Quick tools strip — full width -->
+        <div class="full widget" style="padding:.85rem 1.1rem;">
+          <div class="tool-strip">
+            <a class="tool-pill" href="/discover">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>Find Markets
+            </a>
+            <a class="tool-pill" href="/market-map">
+              <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Market Map
+            </a>
+            <a class="tool-pill" href="/calendar">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar
+            </a>
+            <a class="tool-pill" href="/inventory">
+              <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Inventory
+            </a>
+            <a class="tool-pill" href="/materials">
+              <svg viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/></svg>Materials
+            </a>
+            <a class="tool-pill" href="/my-shop">
+              <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>My Shop
+            </a>
+            <a class="tool-pill" href="/final-plan">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Profit Planner
+            </a>
+            <a class="tool-pill" href="/integrations">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Integrations
+            </a>
           </div>
         </div>
 
         <!-- Saved markets -->
-        <div class="dash-card">
-          <span class="eyebrow">Saved markets</span>
-          <h3>Your shortlist</h3>
-          <div id="saved-markets-slot">
-            <div class="empty-state" style="padding:1rem 0"><strong>Loading…</strong></div>
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Saved markets</span>
+            <a class="widget-link" href="/discover">Browse all →</a>
           </div>
-          <div class="quick-links">
-            <a class="btn btn-primary" href="/discover">Browse events</a>
+          <h3>Your shortlist</h3>
+          <div class="widget-body" id="saved-markets-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-primary" href="/discover">Find Markets</a>
             <a class="btn btn-secondary" href="/final-plan">Profit plan</a>
           </div>
         </div>
 
-        <!-- My Shop card -->
-        <div class="dash-card">
-          <span class="eyebrow">My shop</span>
+        <!-- My Shop -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">My shop</span>
+            <a class="widget-link" id="dash-shop-link" href="/my-shop" style="display:none">View public →</a>
+          </div>
           <h3>Products &amp; profile</h3>
-          <div id="dash-shop-summary" style="margin:.6rem 0 1rem;font-size:.88rem;color:var(--muted);">Loading…</div>
-          <div class="quick-links">
+          <div class="widget-body" id="dash-shop-summary">Loading…</div>
+          <div class="widget-foot">
             <a class="btn btn-primary" href="/my-shop">Manage shop</a>
-            <a class="btn btn-secondary" id="dash-shop-link" href="#" style="display:none">View public page</a>
           </div>
         </div>
 
-        <!-- Quick actions -->
-        <div class="dash-card">
-          <span class="eyebrow">Vendor tools</span>
-          <h3>Quick actions</h3>
-          <div class="quick-links" style="margin-top:.85rem;">
-            <a class="btn btn-primary" href="/discover">Browse events</a>
-            <a class="btn btn-secondary" href="/final-plan">Profit planner</a>
-            <a class="btn btn-secondary" href="/my-shop">My shop</a>
-            <a class="btn btn-secondary" href="/profile">Scoring profiles</a>
+        <!-- Inventory snapshot -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Inventory</span>
+            <a class="widget-link" href="/inventory">Manage →</a>
           </div>
-          <div style="margin-top:1.25rem;" id="dash-plan-slot">
-            <a class="btn btn-ghost" href="/final-plan" style="margin-top:.5rem;">Open planning wizard →</a>
-          </div>
-        </div>
-
-        <!-- Notifications panel -->
-        <div class="dash-card" id="notifications-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
-            <span class="eyebrow">Alerts</span>
-            <a href="/planner" style="font-size:.78rem;color:var(--brand);text-decoration:none;">Open planner →</a>
-          </div>
-          <h3 style="margin:0 0 .85rem;">
-            Notifications
-            <span id="dash-notif-badge" style="display:none;margin-left:.4rem;background:var(--brand);color:#fff;font-size:.65rem;font-weight:700;border-radius:99px;padding:.15rem .45rem;vertical-align:middle;"></span>
+          <h3>
+            Stock snapshot
+            <span class="badge badge-red" id="inv-low-badge" style="display:none"></span>
           </h3>
-          <div id="dash-notif-list" style="font-size:.88rem;color:var(--muted);">Loading…</div>
+          <div class="widget-body" id="inventory-snapshot-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-primary" href="/inventory">Update stock</a>
+          </div>
         </div>
 
-        <!-- Verification status card -->
-        <div class="dash-card" id="verify-status-card">
-          <span class="eyebrow">Verification</span>
+        <!-- Calendar upcoming -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Calendar</span>
+            <a class="widget-link" href="/calendar">Full calendar →</a>
+          </div>
+          <h3>Upcoming events</h3>
+          <div class="widget-body" id="calendar-upcoming-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-primary" href="/calendar">Open calendar</a>
+          </div>
+        </div>
+
+        <!-- Material alerts -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Material tracking</span>
+            <a class="widget-link" href="/materials">Manage →</a>
+          </div>
+          <h3>
+            Material alerts
+            <span class="badge badge-red" id="material-alert-badge" style="display:none"></span>
+          </h3>
+          <div class="widget-body" id="material-alerts-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-secondary" href="/materials">View materials</a>
+          </div>
+        </div>
+
+        <!-- Production suggestions -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">AI production planner</span>
+            <a class="widget-link" href="/planner">Planner →</a>
+          </div>
+          <h3>Production suggestions</h3>
+          <div class="widget-body" id="production-suggestions-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-secondary" href="/planner">Open planner</a>
+          </div>
+        </div>
+
+        <!-- Supplier deals -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Supplier comparison</span>
+            <a class="widget-link" href="/materials">View all →</a>
+          </div>
+          <h3>Reorder alerts</h3>
+          <div class="widget-body" id="supplier-deals-slot">Loading…</div>
+          <div class="widget-foot">
+            <a class="btn btn-secondary" href="/materials">Compare suppliers</a>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Alerts</span>
+            <a class="widget-link" href="/planner">Planner →</a>
+          </div>
+          <h3>
+            Notifications
+            <span class="badge" id="dash-notif-badge" style="display:none"></span>
+          </h3>
+          <div class="widget-body" id="dash-notif-list">Loading…</div>
+        </div>
+
+        <!-- Verification -->
+        <div class="widget">
+          <div class="widget-head">
+            <span class="eyebrow">Verification</span>
+          </div>
           <h3>Build shopper trust</h3>
-          <div id="verify-status-content" style="margin:.6rem 0 1rem;font-size:.88rem;color:var(--muted);">Loading…</div>
-          <div class="quick-links" id="verify-status-links"></div>
+          <div class="widget-body" id="verify-status-content">Loading…</div>
+          <div class="widget-foot" id="verify-status-links"></div>
         </div>
 
-        <!-- AI Recommended Events (Feature 1) -->
-        <div class="dash-card" id="ai-recs-card" style="display:none;">
-          <span class="eyebrow">AI-powered</span>
-          <h3>Recommended Events</h3>
-          <div id="ai-recs-slot"></div>
+        <!-- AI: Recommended Events (conditional) -->
+        <div class="widget" id="ai-recs-card" style="display:none;">
+          <div class="widget-head">
+            <span class="eyebrow">AI-powered</span>
+          </div>
+          <h3>Recommended events</h3>
+          <div class="widget-body" id="ai-recs-slot"></div>
         </div>
 
-        <!-- AI Vendor Insights (Feature 2) -->
-        <div class="dash-card" id="ai-insights-card" style="display:none;">
-          <span class="eyebrow">AI-powered</span>
-          <h3>Your Business Insights</h3>
-          <div id="ai-insights-slot"></div>
+        <!-- AI: Vendor Insights (conditional) -->
+        <div class="widget" id="ai-insights-card" style="display:none;">
+          <div class="widget-head">
+            <span class="eyebrow">AI-powered</span>
+          </div>
+          <h3>Business insights</h3>
+          <div class="widget-body" id="ai-insights-slot"></div>
         </div>
 
-      </div>
-    </div>
-  </div>
-</div>
+        <!-- Coming soon — single merged card -->
+        <div class="widget widget-soon">
+          <div class="widget-head">
+            <span class="eyebrow" style="color:var(--muted)">Coming soon</span>
+            <span class="soon-pill">Beta</span>
+          </div>
+          <h3 style="color:var(--muted)">Social &amp; community</h3>
+          <div class="widget-body">
+            Vendor feed, community rooms, and direct messages are in development. You'll be notified when they go live.
+          </div>
+        </div>
 
-<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+      </div><!-- /.w-grid -->
+    </div><!-- /.dash-content -->
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
 <nav class="bottom-nav" aria-label="Mobile navigation">
   <ul class="bottom-nav-items">
     <li class="bottom-nav-item">
@@ -286,21 +358,21 @@
       </a>
     </li>
     <li class="bottom-nav-item">
-      <a class="bottom-nav-link" href="/feed">
-        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Feed
-      </a>
-    </li>
-    <li class="bottom-nav-item">
       <a class="bottom-nav-link" href="/discover">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-        Discover
+        Markets
       </a>
     </li>
     <li class="bottom-nav-item">
-      <a class="bottom-nav-link" href="/community">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Community
+      <a class="bottom-nav-link" href="/calendar">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendar
+      </a>
+    </li>
+    <li class="bottom-nav-item">
+      <a class="bottom-nav-link" href="/my-shop">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        My Shop
       </a>
     </li>
     <li class="bottom-nav-item">
@@ -316,211 +388,348 @@
 <script src="/assets/dash-layout.js"></script>
 <script src="/assets/ai-features.js"></script>
 <script>
-  (async function () {
-    // Auth check
-    let me = null;
-    try {
-      const r = await fetch("/api/auth/me", { credentials: "include" });
-      if (!r.ok) { window.location.href = "/signin"; return; }
-      me = await r.json();
-      if (me.role && me.role !== "vendor") {
-        window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
-        return;
-      }
-    } catch (_) { window.location.href = "/signin"; return; }
+(async function () {
 
-    document.getElementById("dash-welcome").textContent =
-      `Hi ${escapeHtml(me.display_name || me.username || "there")}, here's your dashboard.`;
-
-    if (me.username) {
-      const shopLink = document.getElementById("dash-shop-link");
-      shopLink.href = "/shop/" + encodeURIComponent(me.username);
-      shopLink.style.display = "";
-    }
-
-    const [shopifyMe, shopifyProducts, dashboard, myProducts] = await Promise.all([
-      fetch("/api/shopify/me", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
-      fetch("/api/dashboard", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch("/api/vendor/products", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]);
-
-    renderShopifyBanner(shopifyMe, shopifyProducts, me);
-    renderSavedMarkets(dashboard);
-    renderShopSummary(myProducts, me);
-    loadVerificationCard();
-    loadNotifications();
-
-    // ── AI Features (non-blocking, degrade gracefully) ──────────────────
-    if (typeof AI !== "undefined") {
-      const vendor = { id: me.id, vendor_category: me.vendor_category || me.interests || "" };
-      const products = myProducts?.products || [];
-      const savedEvents = dashboard?.saved_markets || [];
-
-      // Feature 1: Recommended Events
-      const recsCard = document.getElementById("ai-recs-card");
-      if (recsCard) {
-        recsCard.style.display = "";
-        AI.renderRecommendedEvents("#ai-recs-slot", vendor);
-      }
-
-      // Feature 2: Vendor Sales Insights
-      const insightsCard = document.getElementById("ai-insights-card");
-      if (insightsCard) {
-        insightsCard.style.display = "";
-        AI.renderInsightsPanel("#ai-insights-slot", vendor, products, savedEvents);
-      }
-    }
-  })();
-
-  async function loadNotifications() {
-    const listEl  = document.getElementById("dash-notif-list");
-    const badgeEl = document.getElementById("dash-notif-badge");
-    if (!listEl) return;
-    try {
-      const res = await fetch("/api/notifications", { credentials: "include" });
-      if (!res.ok) { listEl.textContent = ""; return; }
-      const data = await res.json();
-      const notifs = data.notifications || [];
-      const unread = data.unread || 0;
-
-      if (unread > 0 && badgeEl) { badgeEl.textContent = unread; badgeEl.style.display = ""; }
-
-      if (!notifs.length) {
-        listEl.innerHTML = '<span style="color:var(--muted);font-size:.85rem;">No notifications yet.</span>';
-        return;
-      }
-
-      listEl.innerHTML = notifs.slice(0, 5).map(function (n) {
-        const isUnread = !n.read_at;
-        const dot = isUnread
-          ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--brand);margin-right:.45rem;vertical-align:middle;flex-shrink:0;"></span>'
-          : '';
-        return '<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--line);">' +
-          dot +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-weight:' + (isUnread ? '700' : '400') + ';font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
-              escapeHtml(n.title) +
-            '</div>' +
-            '<div style="font-size:.77rem;color:var(--muted);">' + escapeHtml(n.body) + '</div>' +
-          '</div>' +
-          '</div>';
-      }).join('') +
-      '<div style="margin-top:.65rem;"><a href="/planner" style="font-size:.82rem;color:var(--brand);">View all in Planner →</a></div>';
-    } catch (_) { if (listEl) listEl.textContent = ""; }
-  }
-
-  async function loadVerificationCard() {
-    const contentEl = document.getElementById("verify-status-content");
-    const linksEl = document.getElementById("verify-status-links");
-    if (!contentEl) return;
-    try {
-      const res = await fetch("/api/vendor/verify/status", { credentials: "include" });
-      if (!res.ok) { contentEl.textContent = ""; return; }
-      const data = await res.json();
-      const status = data.verification_status || "basic";
-      const statusLabels = {
-        basic:    { icon: "🏷️", text: "Your account is not yet verified.", color: "var(--muted)" },
-        pending:  { icon: "⏳", text: "Your verification application is under review.", color: "#a16207" },
-        verified: { icon: "✓",  text: "You are a Verified Vendor!", color: "var(--success, #027a48)" },
-        trusted:  { icon: "⭐", text: "Trusted Vendor — highest trust level.", color: "#854d0e" },
-      };
-      const info = statusLabels[status] || statusLabels.basic;
-      contentEl.innerHTML = `<span style="font-weight:600;color:${info.color};">${info.icon} ${info.text}</span>`;
-      if (status === "basic") {
-        linksEl.innerHTML = `<a class="btn btn-primary" href="/vendor-verify">Get Verified →</a><a class="btn btn-secondary" href="/vendor-verify">Learn more</a>`;
-      } else if (status === "pending") {
-        linksEl.innerHTML = `<a class="btn btn-secondary" href="/vendor-verify">View application</a>`;
-      } else {
-        linksEl.innerHTML = `<a class="btn btn-secondary" href="/my-shop">View my shop →</a>`;
-      }
-    } catch (_) { contentEl.textContent = ""; }
-  }
-
-  function renderShopifyBanner(shopify, products, me) {
-    const slot = document.getElementById("shopify-banner-slot");
-    if (!shopify) {
-      slot.innerHTML = `
-        <div class="shopify-banner">
-          <div>
-            <h2>🛍️ Connect your Shopify store</h2>
-            <p>Show your products on your public vendor page and track inventory before events.</p>
-          </div>
-          <div class="banner-actions">
-            <input class="banner-input" id="banner-shop-input" placeholder="yourstore">
-            <button class="btn-white" id="banner-connect-btn">Connect</button>
-            <a class="btn-outline" href="/integrations">Settings</a>
-          </div>
-        </div>`;
-      document.getElementById("banner-connect-btn")?.addEventListener("click", () => {
-        const val = (document.getElementById("banner-shop-input")?.value || "").trim();
-        if (val) window.location.href = "/api/shopify/connect?shop=" + encodeURIComponent(val);
-      });
+  /* ── Auth check ──────────────────────────────────────────────────── */
+  let me = null;
+  try {
+    const r = await fetch("/api/auth/me", { credentials: "include" });
+    if (!r.ok) { window.location.href = "/signin"; return; }
+    me = await r.json();
+    if (me.role && me.role !== "vendor") {
+      window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
       return;
     }
+  } catch (_) { window.location.href = "/signin"; return; }
 
-    const shopName = String(shopify.shop || "").replace(".myshopify.com", "");
-    const shopUrl = me?.username ? "/shop/" + encodeURIComponent(me.username) : "#";
+  document.getElementById("dash-welcome").textContent =
+    "Hi " + escapeHtml(me.display_name || me.username || "there") + ", here's your dashboard.";
+
+  if (me.username) {
+    const l = document.getElementById("dash-shop-link");
+    l.href = "/shop/" + encodeURIComponent(me.username);
+    l.style.display = "";
+  }
+
+  /* ── Primary data (needed for above-fold widgets) ────────────────── */
+  const [shopifyConn, shopifyProducts, dashboard, myProducts] = await Promise.all([
+    fetch("/api/shopify/me",       { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch("/api/shopify/products", { credentials: "include" }).then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch("/api/dashboard",        { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch("/api/vendor/products",  { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+
+  renderShopifyBanner(shopifyConn, shopifyProducts, me);
+  renderSavedMarkets(dashboard);
+  renderShopSummary(myProducts, me);
+
+  /* ── Secondary non-blocking loads ───────────────────────────────── */
+  loadInventorySnapshot();
+  loadCalendarUpcoming();
+  loadProductionWidgets();
+  loadNotifications();
+  loadVerificationCard();
+
+  /* ── AI features (conditional) ───────────────────────────────────── */
+  if (typeof AI !== "undefined") {
+    const vendor    = { id: me.id, vendor_category: me.vendor_category || me.interests || "" };
+    const products  = myProducts?.products || [];
+    const savedEvts = dashboard?.saved_markets || [];
+    const recsCard  = document.getElementById("ai-recs-card");
+    if (recsCard) { recsCard.style.display = ""; AI.renderRecommendedEvents("#ai-recs-slot", vendor); }
+    const insCard = document.getElementById("ai-insights-card");
+    if (insCard) { insCard.style.display = ""; AI.renderInsightsPanel("#ai-insights-slot", vendor, products, savedEvts); }
+  }
+
+})();
+
+/* ── Shopify banner ──────────────────────────────────────────────────── */
+function renderShopifyBanner(shopify, products, me) {
+  const slot = document.getElementById("shopify-banner-slot");
+  if (!shopify) {
     slot.innerHTML = `
-      <div class="shopify-banner">
-        <div style="flex:1;min-width:0;">
-          <h2>🛍️ ${escapeHtml(shopName)} <span style="font-size:.75rem;font-weight:500;opacity:.8;">connected</span></h2>
-          <p>${products.length} product${products.length === 1 ? "" : "s"} synced · <a href="${shopUrl}" style="color:#fff;text-decoration:underline;opacity:.9;">View public shop →</a></p>
-          ${products.length ? `
-            <div class="product-mini-grid">
-              ${products.slice(0, 4).map(p => `
-                <div class="product-mini-card" style="background:rgba(255,255,255,.12);color:#fff;">
-                  <div class="pname" style="color:#fff;">${escapeHtml(p.name)}</div>
-                  <div class="pprice" style="color:rgba(255,255,255,.9);">${p.price > 0 ? "$" + Number(p.price).toFixed(2) : "Free"}</div>
-                  <div class="pstock" style="color:rgba(255,255,255,.6);">Stock: ${p.inventory_quantity ?? "—"}</div>
-                </div>`).join("")}
-            </div>` : ""}
+      <div class="s-banner">
+        <div>
+          <h3>Connect your Shopify store</h3>
+          <p>Show products on your vendor page and track inventory before events.</p>
         </div>
-        <div class="banner-actions">
-          <button class="btn-white" id="banner-sync-btn">Sync products</button>
-          <a class="btn-outline" href="${shopUrl}">My shop</a>
-          <a class="btn-outline" href="/integrations">Settings</a>
+        <div class="s-actions">
+          <input class="s-input" id="banner-shop-input" placeholder="yourstore.myshopify.com">
+          <button class="btn-w" id="banner-connect-btn">Connect</button>
+          <a class="btn-o" href="/integrations">Settings</a>
         </div>
       </div>`;
-
-    document.getElementById("banner-sync-btn")?.addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      btn.disabled = true; btn.textContent = "Syncing…";
-      try {
-        await fetch("/api/shopify/sync", { method: "POST", credentials: "include" });
-        btn.textContent = "Synced ✓";
-      } catch (_) { btn.textContent = "Sync products"; btn.disabled = false; }
-      setTimeout(() => { if (!btn.disabled) return; btn.textContent = "Sync products"; btn.disabled = false; }, 3000);
+    document.getElementById("banner-connect-btn")?.addEventListener("click", () => {
+      const val = (document.getElementById("banner-shop-input")?.value || "").trim();
+      if (val) window.location.href = "/api/shopify/connect?shop=" + encodeURIComponent(val);
     });
+    return;
   }
+  const shopName = String(shopify.shop || "").replace(".myshopify.com", "");
+  const shopUrl  = me?.username ? "/shop/" + encodeURIComponent(me.username) : "#";
+  slot.innerHTML = `
+    <div class="s-banner">
+      <div style="flex:1;min-width:0;">
+        <h3>${escapeHtml(shopName)} <span style="font-weight:400;opacity:.75;font-size:.8rem;">connected</span></h3>
+        <p>${products.length} product${products.length === 1 ? "" : "s"} synced ·
+           <a href="${shopUrl}" style="color:#fff;text-decoration:underline;opacity:.9;">View public shop →</a></p>
+        ${products.length ? `<div class="product-mini-grid">${products.slice(0,4).map(p => `
+          <div class="product-mini-card">
+            <div class="pname">${escapeHtml(p.name)}</div>
+            <div>${p.price > 0 ? "$" + Number(p.price).toFixed(2) : "Free"}</div>
+            <div class="pstock">Stock: ${p.inventory_quantity ?? "—"}</div>
+          </div>`).join("")}</div>` : ""}
+      </div>
+      <div class="s-actions">
+        <button class="btn-w" id="banner-sync-btn">Sync products</button>
+        <a class="btn-o" href="${shopUrl}">My shop</a>
+        <a class="btn-o" href="/integrations">Settings</a>
+      </div>
+    </div>`;
+  document.getElementById("banner-sync-btn")?.addEventListener("click", async e => {
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.textContent = "Syncing…";
+    try {
+      await fetch("/api/shopify/sync", { method: "POST", credentials: "include" });
+      btn.textContent = "Synced ✓";
+    } catch (_) { btn.textContent = "Sync products"; btn.disabled = false; }
+    setTimeout(() => { btn.textContent = "Sync products"; btn.disabled = false; }, 3000);
+  });
+}
 
-  function renderShopSummary(data, me) {
-    const el = document.getElementById("dash-shop-summary");
-    if (!el) return;
-    const count = data?.products?.length ?? 0;
-    if (count === 0) {
-      el.innerHTML = `<span>No products added yet.</span> <a href="/my-shop" style="color:var(--brand);font-weight:600;">Set up your shop →</a>`;
-    } else {
-      el.innerHTML = `<strong>${count}</strong> product${count === 1 ? "" : "s"} listed · <a href="/my-shop" style="color:var(--brand);">Manage →</a>`;
-    }
+/* ── Saved markets ───────────────────────────────────────────────────── */
+function renderSavedMarkets(dashboard) {
+  const slot = document.getElementById("saved-markets-slot");
+  const markets = dashboard?.saved_markets || [];
+  if (!markets.length) {
+    slot.innerHTML = `<p style="color:var(--muted);margin:0">No saved markets yet. Browse Discover to build your shortlist.</p>`;
+    return;
   }
+  slot.innerHTML = markets.slice(0,4).map(e => `
+    <div class="ev-row">
+      <div class="ev-row-main">
+        <strong>${escapeHtml(e.name || e.title || "Event")}</strong>
+        <div class="ev-row-meta">${escapeHtml([e.city,e.state].filter(Boolean).join(", "))}${e.date ? " · " + escapeHtml(e.date) : ""}</div>
+      </div>
+      <a class="btn btn-secondary" style="font-size:.76rem;padding:.25rem .6rem;" href="${e.id ? "/event/" + e.id : "/discover"}">View</a>
+    </div>`).join("");
+}
 
-  function renderSavedMarkets(dashboard) {
-    const slot = document.getElementById("saved-markets-slot");
-    const markets = dashboard?.saved_markets || [];
-    if (!markets.length) {
-      slot.innerHTML = `<p class="muted" style="font-size:.88rem;margin:.5rem 0;">No saved markets yet. Browse Discover to save events to your shortlist.</p>`;
+/* ── My Shop summary ─────────────────────────────────────────────────── */
+function renderShopSummary(data, me) {
+  const el = document.getElementById("dash-shop-summary");
+  if (!el) return;
+  const count = data?.products?.length ?? 0;
+  if (!count) {
+    el.innerHTML = `<span style="color:var(--muted)">No products yet.</span> <a href="/my-shop" style="color:var(--brand);font-weight:600">Set up your shop →</a>`;
+    return;
+  }
+  const top = (data.products || []).slice(0,3);
+  el.innerHTML = `<strong>${count}</strong> product${count === 1 ? "" : "s"} listed` +
+    `<div style="margin:.5rem 0 .2rem;display:flex;flex-direction:column;gap:.22rem;">${top.map(p =>
+      `<div style="display:flex;justify-content:space-between;font-size:.8rem;">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:68%">${escapeHtml(p.name||p.title||"")}</span>
+        <span style="color:var(--brand);font-weight:600">${p.price > 0 ? "$" + Number(p.price).toFixed(2) : "—"}</span>
+      </div>`).join("")}</div>`;
+}
+
+/* ── Inventory snapshot ──────────────────────────────────────────────── */
+async function loadInventorySnapshot() {
+  const slot  = document.getElementById("inventory-snapshot-slot");
+  const badge = document.getElementById("inv-low-badge");
+  try {
+    const res   = await fetch("/inventory", { credentials: "include", headers: { Accept: "application/json" } });
+    if (!res.ok) { slot.innerHTML = `<a href="/inventory" style="color:var(--brand)">Set up inventory →</a>`; return; }
+    const data  = await res.json();
+    const items = data.inventory || [];
+    if (!items.length) {
+      slot.innerHTML = `<p style="color:var(--muted);margin:0">Nothing tracked yet.</p><a href="/inventory" style="color:var(--brand);font-size:.82rem">Add inventory →</a>`;
       return;
     }
-    slot.innerHTML = markets.slice(0, 4).map(e => `
-      <div class="event-row">
-        <div class="event-row-main">
-          <strong>${escapeHtml(e.name || e.title || "Event")}</strong>
-          <div class="event-row-meta">${escapeHtml([e.city, e.state].filter(Boolean).join(", "))}${e.date ? " · " + escapeHtml(e.date) : ""}</div>
-        </div>
-        <a class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .75rem;" href="${e.id ? "/event/" + e.id : "/discover"}">View</a>
-      </div>`).join("");
+    const low = items.filter(i => Number(i.quantity) > 0 && Number(i.quantity) <= 5).length;
+    const out = items.filter(i => Number(i.quantity) === 0).length;
+    if (low + out > 0) { badge.textContent = (low + out) + " low"; badge.style.display = ""; }
+    slot.innerHTML = items.slice(0,5).map(i => {
+      const qty = Number(i.quantity || 0);
+      const cls = qty === 0 ? "out" : qty <= 5 ? "low" : "ok";
+      return `<div class="inv-row">
+        <span class="inv-row-name">${escapeHtml(i.product_name || "")}</span>
+        <span class="inv-qty ${cls}">${qty}</span>
+      </div>`;
+    }).join("") + (items.length > 5 ? `<p style="font-size:.76rem;color:var(--muted);margin:.4rem 0 0">+${items.length - 5} more</p>` : "");
+  } catch (_) {
+    slot.innerHTML = `<a href="/inventory" style="color:var(--brand)">Open inventory →</a>`;
   }
+}
+
+/* ── Calendar upcoming ───────────────────────────────────────────────── */
+async function loadCalendarUpcoming() {
+  const slot = document.getElementById("calendar-upcoming-slot");
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const res     = await fetch("/calendar", { credentials: "include", headers: { Accept: "application/json" } });
+    if (!res.ok) { slot.innerHTML = `<a href="/calendar" style="color:var(--brand)">Open calendar →</a>`; return; }
+    const data    = await res.json();
+    const entries = (data.calendar || []).filter(e => (e.start_time || "") >= today);
+    if (!entries.length) {
+      slot.innerHTML = `<p style="color:var(--muted);margin:0">No upcoming events.</p><a href="/calendar" style="color:var(--brand);font-size:.82rem">Add to calendar →</a>`;
+      return;
+    }
+    const colors = { event: "#2563eb", production: "#7c3aed", reminder: "#d97706" };
+    slot.innerHTML = entries.slice(0,4).map(e => {
+      const c = colors[e.type] || "#9ca3af";
+      return `<div class="ev-row">
+        <div style="width:3px;border-radius:2px;background:${c};align-self:stretch;flex-shrink:0;"></div>
+        <div class="ev-row-main">
+          <strong>${escapeHtml(e.title || "")}</strong>
+          <div class="ev-row-meta">${escapeHtml((e.start_time || "").slice(0,10))} · ${escapeHtml(e.type || "")}</div>
+        </div>
+      </div>`;
+    }).join("") + (entries.length > 4 ? `<p style="font-size:.76rem;color:var(--muted);margin:.4rem 0 0">+${entries.length - 4} more</p>` : "");
+  } catch (_) {
+    slot.innerHTML = `<a href="/calendar" style="color:var(--brand)">Open calendar →</a>`;
+  }
+}
+
+/* ── Production + material + supplier widgets ────────────────────────── */
+async function loadProductionWidgets() {
+  try {
+    const res  = await fetch("/api/dashboard/production-widgets", { credentials: "include" });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    /* Material alerts */
+    const alerts     = data.material_alerts || [];
+    const alertsSlot = document.getElementById("material-alerts-slot");
+    const alertBadge = document.getElementById("material-alert-badge");
+    if (alertsSlot) {
+      if (alerts.length) {
+        if (alertBadge) { alertBadge.textContent = alerts.length; alertBadge.style.display = ""; }
+        alertsSlot.innerHTML = alerts.slice(0,3).map(a => `
+          <div class="alert-pill ${a.severity === "critical" ? "crit" : a.severity === "high" ? "high" : "low"}">
+            <strong>${escapeHtml(a.material_name)}</strong>
+            ${escapeHtml(a.message)}
+            ${a.order_by_date ? `<div style="font-size:.75rem;font-weight:700;margin-top:.2rem">Order by: ${escapeHtml(a.order_by_date)}</div>` : ""}
+          </div>`).join("") +
+          (alerts.length > 3 ? `<p style="font-size:.76rem;color:var(--muted);margin:.2rem 0 0">+${alerts.length - 3} more alerts</p>` : "");
+      } else {
+        alertsSlot.innerHTML = `<p style="color:var(--muted);margin:0">All materials are well stocked.</p>`;
+      }
+    }
+
+    /* Production suggestions */
+    const sug     = data.production_suggestion;
+    const sugSlot = document.getElementById("production-suggestions-slot");
+    if (sugSlot) {
+      if (sug) {
+        const blocks = sug.calendar_suggestions || [];
+        const urgent = sug.order_actions?.urgent || [];
+        sugSlot.innerHTML =
+          `<div style="font-size:.78rem;color:var(--muted);margin-bottom:.35rem">For: <strong>${escapeHtml(sug.event)}</strong>${sug.days_to_event != null ? " · " + sug.days_to_event + "d away" : ""}</div>` +
+          (urgent.length ? `<div style="background:#fee2e2;border-radius:9px;padding:.45rem .65rem;margin-bottom:.45rem;font-size:.78rem;font-weight:600;color:#dc2626">Order now: ${urgent.slice(0,3).map(o => escapeHtml(o.material_name)).join(", ")}</div>` : "") +
+          (blocks.length
+            ? blocks.slice(0,2).map(b => `
+                <div class="prod-row">
+                  <div class="prod-row-text">
+                    <strong>${escapeHtml(b.title)}</strong>
+                    <span>${escapeHtml(b.date)}</span>
+                  </div>
+                  <button onclick="acceptProductionBlock(this,${JSON.stringify(b).replace(/"/g,"&quot;")})" class="btn btn-primary" style="font-size:.74rem;padding:.25rem .6rem;white-space:nowrap">Add</button>
+                </div>`).join("")
+            : `<p style="color:var(--muted);font-size:.83rem;margin:0">${escapeHtml(sug.summary || "")}</p>`);
+      } else {
+        sugSlot.innerHTML = `<p style="color:var(--muted);margin:0">Save an upcoming event to your calendar to get AI production suggestions.</p>`;
+      }
+    }
+
+    /* Supplier deals */
+    const deals     = data.supplier_deals || [];
+    const dealsSlot = document.getElementById("supplier-deals-slot");
+    if (dealsSlot) {
+      if (deals.length) {
+        dealsSlot.innerHTML = deals.slice(0,3).map(d => `
+          <div class="ev-row">
+            <div class="ev-row-main">
+              <strong>${escapeHtml(d.material_name)}</strong>
+              <div class="ev-row-meta">${d.current_stock} ${escapeHtml(d.unit)} remaining · reorder needed</div>
+            </div>
+            ${d.best_supplier?.supplier_url ? `<a href="${escapeHtml(d.best_supplier.supplier_url)}" target="_blank" rel="noopener" class="btn btn-secondary" style="font-size:.74rem;padding:.25rem .6rem">Order</a>` : ""}
+          </div>`).join("");
+      } else {
+        dealsSlot.innerHTML = `<p style="color:var(--muted);margin:0">No reorder alerts. All supplies are adequate.</p>`;
+      }
+    }
+  } catch (_) { /* non-critical */ }
+}
+
+async function acceptProductionBlock(btn, block) {
+  btn.disabled = true; btn.textContent = "Adding…";
+  try {
+    const res = await fetch("/api/production-ai/schedule/accept", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(block),
+    });
+    btn.textContent = res.ok ? "Added ✓" : "Error";
+  } catch (_) { btn.textContent = "Error"; btn.disabled = false; }
+}
+
+/* ── Notifications ───────────────────────────────────────────────────── */
+async function loadNotifications() {
+  const listEl  = document.getElementById("dash-notif-list");
+  const badgeEl = document.getElementById("dash-notif-badge");
+  if (!listEl) return;
+  try {
+    const res    = await fetch("/api/notifications", { credentials: "include" });
+    if (!res.ok) { listEl.textContent = ""; return; }
+    const data   = await res.json();
+    const notifs = data.notifications || [];
+    const unread = data.unread || 0;
+    if (unread > 0 && badgeEl) { badgeEl.textContent = unread; badgeEl.style.display = ""; }
+    if (!notifs.length) {
+      listEl.innerHTML = `<span style="color:var(--muted)">No notifications yet.</span>`;
+      return;
+    }
+    listEl.innerHTML = notifs.slice(0,4).map(n => {
+      const u = !n.read_at;
+      return `<div class="notif-row">
+        ${u ? '<div class="notif-dot"></div>' : '<div style="width:7px;flex-shrink:0"></div>'}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:${u ? 700 : 400};font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(n.title)}</div>
+          <div style="font-size:.74rem;color:var(--muted)">${escapeHtml(n.body)}</div>
+        </div>
+      </div>`;
+    }).join("") + `<div style="margin-top:.45rem"><a href="/planner" style="font-size:.78rem;color:var(--brand)">View all in Planner →</a></div>`;
+  } catch (_) { if (listEl) listEl.textContent = ""; }
+}
+
+/* ── Verification ────────────────────────────────────────────────────── */
+async function loadVerificationCard() {
+  const contentEl = document.getElementById("verify-status-content");
+  const linksEl   = document.getElementById("verify-status-links");
+  if (!contentEl) return;
+  try {
+    const res    = await fetch("/api/vendor/verify/status", { credentials: "include" });
+    if (!res.ok) { contentEl.textContent = ""; return; }
+    const data   = await res.json();
+    const status = data.verification_status || "basic";
+    const labels = {
+      basic:    { icon: "○", text: "Not yet verified.",          color: "var(--muted)" },
+      pending:  { icon: "◑", text: "Application under review.",  color: "#a16207" },
+      verified: { icon: "✓", text: "Verified Vendor!",           color: "#027a48" },
+      trusted:  { icon: "★", text: "Trusted Vendor.",            color: "#854d0e" },
+    };
+    const info = labels[status] || labels.basic;
+    contentEl.innerHTML = `<span style="font-weight:600;color:${info.color}">${info.icon} ${info.text}</span>`;
+    if (status === "basic") {
+      linksEl.innerHTML = `<a class="btn btn-primary" href="/vendor-verify">Get Verified →</a>`;
+    } else if (status === "pending") {
+      linksEl.innerHTML = `<a class="btn btn-secondary" href="/vendor-verify">View application</a>`;
+    } else {
+      linksEl.innerHTML = `<a class="btn btn-secondary" href="/my-shop">View my shop →</a>`;
+    }
+  } catch (_) { contentEl.textContent = ""; }
+}
 </script>
 </body>
 </html>

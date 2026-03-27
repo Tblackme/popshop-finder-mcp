@@ -25,6 +25,7 @@
     users:     '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     shield:    '<svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-4"/></svg>',
     more:      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+    map:       '<svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   };
 
   // ── Role nav configurations ──────────────────────────────────────────────
@@ -40,6 +41,7 @@
         { label: 'Vendor', items: [
           { icon: 'shop',      text: 'My Shop',     href: '/my-shop' },
           { icon: 'saved',     text: 'Inventory',   href: '/inventory' },
+          { icon: 'more',      text: 'Materials',   href: '/materials' },
           { icon: 'events',    text: 'Calendar',    href: '/calendar' },
           { icon: 'analytics', text: 'Business',    href: '/business' },
           { icon: 'events',    text: 'History',     href: '/history' },
@@ -160,13 +162,20 @@
 
   // Feature flag href filter — hrefs not in this map are always shown
   var HREF_FLAG_MAP = {
-    '/feed':            'social_feed',
-    '/community':       'community_rooms',
-    '/community/room':  'community_rooms',
-    '/messages':        'direct_messages',
+    '/feed':              'social_feed',
+    '/community':         'community_rooms',
+    '/community/room':    'community_rooms',
+    '/messages':          'direct_messages',
     '/shopper-dashboard': 'shopper_dashboard',
-    '/listings':        'marketplace_listings',
-    '/market-map':      'market_map',
+    '/listings':          'marketplace_listings',
+    '/market-map':        'market_map',
+    '/discover':          'market_discovery',
+    '/inventory':         'inventory_tracking',
+    '/calendar':          'vendor_calendar',
+    '/final-plan':        'profit_planner',
+    '/profit':            'profit_planner',
+    '/integrations':      'shopify_sync',
+    '/planner':           'event_recommendations',
   };
 
   function filterNavByFlags(sections, featureFlags) {
@@ -191,7 +200,10 @@
     });
   }
 
+  var _featureFlags = {};
+
   function applyRoleNav(role, featureFlags) {
+    _featureFlags = featureFlags || {};
     var config = NAV_CONFIGS[role] || NAV_CONFIGS.vendor;
     var filteredSections = filterNavByFlags(config.sections, featureFlags);
     var filteredBottom = filterBottomNavByFlags(config.bottomNav, featureFlags);
@@ -392,6 +404,7 @@
   }
 
   function startUnreadPolling() {
+    if (_featureFlags['direct_messages'] === false) return;
     fetchUnread();
     setInterval(fetchUnread, 30000);
   }

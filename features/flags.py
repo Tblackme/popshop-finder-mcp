@@ -56,6 +56,10 @@ class Feature(str, Enum):
     MARKETPLACE_LISTINGS  = "marketplace_listings"
     ADVANCED_ADMIN        = "advanced_admin"
 
+    # ── Production AI features (default ON) ──────────────────────────────────
+    MATERIAL_TRACKING     = "material_tracking"
+    PRODUCTION_AI         = "production_ai"
+
 
 # Env var name for each feature
 _ENV_MAP: dict[Feature, str] = {
@@ -82,6 +86,9 @@ _ENV_MAP: dict[Feature, str] = {
     Feature.SHOPPER_DASHBOARD:    "FEATURE_SHOPPER_DASHBOARD",
     Feature.MARKETPLACE_LISTINGS: "FEATURE_MARKETPLACE_LISTINGS",
     Feature.ADVANCED_ADMIN:       "FEATURE_ADVANCED_ADMIN",
+
+    Feature.MATERIAL_TRACKING:    "FEATURE_MATERIAL_TRACKING",
+    Feature.PRODUCTION_AI:        "FEATURE_PRODUCTION_AI",
 }
 
 # Default state when env var is absent
@@ -109,6 +116,9 @@ _DEFAULTS: dict[Feature, bool] = {
     Feature.SHOPPER_DASHBOARD:    False,
     Feature.MARKETPLACE_LISTINGS: False,
     Feature.ADVANCED_ADMIN:       False,
+
+    Feature.MATERIAL_TRACKING:    True,
+    Feature.PRODUCTION_AI:        True,
 }
 
 _AI_MASTER_KEY = "AI_ALL_ENABLED"
