@@ -22,6 +22,7 @@ import re
 import secrets
 import sys
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -1447,7 +1448,24 @@ async def handle_jsonrpc(
 
 def create_app() -> FastAPI:
     """Create the FastAPI application."""
-    app = FastAPI(title="Vendor Atlas MCP Server", version=SERVER_INFO["version"])
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # startup
+        async def _run() -> None:
+            await asyncio.sleep(5)
+            saved = await _run_discovery("startup")
+            logger.info("[discovery:startup] complete — %d events processed", saved)
+            while True:
+                await asyncio.sleep(4 * 3600)
+                saved = await _run_discovery("periodic")
+                logger.info("[discovery:periodic] complete — %d events processed", saved)
+        asyncio.create_task(_run())
+        yield
+        # shutdown
+        _analytics.shutdown()
+
+    app = FastAPI(title="Vendor Atlas MCP Server", version=SERVER_INFO["version"], lifespan=lifespan)
     site_dir = Path(__file__).resolve().parent / "site"
     init_db()
     init_events_db()
@@ -1532,23 +1550,6 @@ def create_app() -> FastAPI:
             except Exception as exc:
                 logger.warning("[discovery:%s] %s failed: %s", label, keywords[0], exc)
         return saved
-
-    @app.on_event("shutdown")
-    async def _on_shutdown() -> None:
-        _analytics.shutdown()
-
-    @app.on_event("startup")
-    async def _background_seed_events() -> None:
-        async def _run() -> None:
-            await asyncio.sleep(5)
-            saved = await _run_discovery("startup")
-            logger.info("[discovery:startup] complete — %d events processed", saved)
-            # Re-run every 4 hours to keep data fresh
-            while True:
-                await asyncio.sleep(4 * 3600)
-                saved = await _run_discovery("periodic")
-                logger.info("[discovery:periodic] complete — %d events processed", saved)
-        asyncio.create_task(_run())
 
     # AI add-on router — mounted only when the module is available
     try:
