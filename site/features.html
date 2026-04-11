@@ -5,31 +5,390 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Features | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <style>
+    .features-grid { display:grid; gap:1.5rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+    .feature-block { background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); padding:1.3rem 1.4rem; position:relative; }
+    .feature-block.soon { opacity:.72; }
+    .feature-block h3 { margin:0 0 .35rem; font-size:1rem; display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+    .feature-block p { margin:0; font-size:.85rem; color:var(--muted); line-height:1.55; }
+    .tier-pill { display:inline-flex; align-items:center; font-size:.66rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; border-radius:99px; padding:.18rem .55rem; white-space:nowrap; }
+    .pill-free     { background:rgba(107,114,128,.1);  color:#374151; }
+    .pill-craft    { background:rgba(232,159,71,.12);  color:#92400e; }
+    .pill-business { background:rgba(15,118,110,.1);   color:var(--brand); }
+    .pill-studio   { background:rgba(19,38,35,.1);     color:var(--text); }
+    .pill-soon     { background:rgba(107,114,128,.08); color:var(--muted); }
+    .soon-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:var(--line); color:var(--muted); border-radius:99px; padding:.2rem .6rem; }
+    .section-intro { margin-bottom:2rem; }
+    .section-intro h2 { margin:0 0 .35rem; }
+    .section-intro p { margin:0; color:var(--muted); font-size:.93rem; }
+    .role-divider { display:flex; align-items:center; gap:1rem; margin:3rem 0 1.5rem; }
+    .role-divider h2 { margin:0; font-size:1.35rem; white-space:nowrap; }
+    .role-divider::after { content:""; flex:1; height:1px; background:var(--line); }
+    .legend { display:flex; flex-wrap:wrap; gap:.6rem; margin-bottom:2.5rem; }
+    .ai-label { font-size:.75rem; color:var(--muted); display:flex; align-items:center; gap:.3rem; margin-top:.4rem; }
+  </style>
 </head>
 <body>
   <header class="topbar">
     <div class="container nav nav-journey">
       <a class="brand" href="/"><span class="brand-mark">VA</span><span>Vendor Atlas</span></a>
       <nav class="nav-links">
-        <a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a>
+        <a href="/">Home</a><a href="/pricing">Pricing</a><a href="/discover">Discover</a><a href="/signup">Sign Up</a>
       </nav>
       <div class="nav-actions" data-auth-nav></div>
       <button class="hamburger" type="button" data-mobile-toggle aria-label="Open menu"><span></span><span></span><span></span></button>
     </div>
-    <div class="container mobile-drawer" data-mobile-drawer><a href="/">Home</a><a href="/dashboard">Plan</a><a href="/discover">Discover</a><a href="/final-plan">Profit</a><div data-mobile-auth-nav></div></div>
+    <div class="container mobile-drawer" data-mobile-drawer>
+      <a href="/">Home</a><a href="/pricing">Pricing</a><a href="/discover">Discover</a><a href="/signup">Sign Up</a>
+      <div data-mobile-auth-nav></div>
+    </div>
   </header>
+
   <main>
-    <section class="page-hero"><div class="container"><span class="eyebrow">Platform features</span><h1>Tools that help vendors choose better events.</h1><p>Vendor Atlas is designed to make event search, comparison, and saved planning feel like one clean workflow instead of a dozen disconnected tabs.</p></div></section>
-    <section><div class="container cards-3">
-      <article class="feature-card"><h3>Market discovery tools</h3><p class="muted">Search stored event data and newly discovered candidates by city, date, category, and event size.</p></article>
-      <article class="feature-card"><h3>Event and pop-up finder</h3><p class="muted">Use the finder page to search markets fast and keep results in a frontend-ready layout.</p></article>
-      <article class="feature-card"><h3>Vendor planning dashboard</h3><p class="muted">Members can review saved markets, update profile details, and keep planning notes in one place.</p></article>
-      <article class="feature-card"><h3>Saved market tracking</h3><p class="muted">Save markets directly from search results and revisit organizer links and booth pricing later.</p></article>
-      <article class="feature-card"><h3>Smart filtering</h3><p class="muted">Narrow results with event size, category, state, and travel-radius style filters.</p></article>
-      <article class="feature-card"><h3>Auth-aware workflows</h3><p class="muted">Public visitors can explore; members unlock saving, profile editing, and dashboard access.</p></article>
-    </div></section>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow">Platform features</span>
+        <h1>Every tool. Clearly labelled.</h1>
+        <p>Everything Vendor Atlas does — and what's coming next. Manual tools always exist alongside AI. AI is never required.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+
+        <!-- Legend -->
+        <div class="legend">
+          <span class="tier-pill pill-free">Free</span>
+          <span class="tier-pill pill-craft">Handcrafted $7/mo</span>
+          <span class="tier-pill pill-business">Business $11/mo</span>
+          <span class="tier-pill pill-studio">Studio $29/mo</span>
+          <span class="tier-pill pill-soon">Coming soon</span>
+          <span style="font-size:.78rem;color:var(--muted);align-self:center;">✨ = AI feature (Business+, always optional)</span>
+        </div>
+
+        <!-- ── VENDOR FEATURES ──────────────────────────────────── -->
+        <div class="role-divider"><h2>🛍 Vendors</h2></div>
+
+        <div class="section-intro">
+          <p>Tools for solo sellers at pop-ups, craft markets, and fairs. Every AI feature has a manual fallback — it's always a button next to something you can already do yourself.</p>
+        </div>
+
+        <div class="features-grid">
+
+          <div class="feature-block">
+            <h3>Public shop page <span class="tier-pill pill-free">Free</span></h3>
+            <p>Your own vendor page at <code>/shop/username</code> — products, bio, upcoming events, and contact info. Visible to shoppers and organizers.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Event discovery <span class="tier-pill pill-free">Free</span></h3>
+            <p>Search and browse markets, pop-ups, and craft fairs by city, category, date, and event size. Save up to 5 events on the free tier.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Basic profit calculator <span class="tier-pill pill-free">Free</span></h3>
+            <p>One-time profit estimate per event — booth fee, expected revenue, take-home. No history saved on the free tier.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Unlimited saved events <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Save as many events as you want. Revisit organizer links, booth pricing, and application deadlines any time.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Application tracker <span class="tier-pill pill-craft">Handcrafted</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Track every event you've applied to with a status column — Applied, Waitlisted, Accepted, Declined. All in one place.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Full profit planner + history <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Save profit records per event, review your season at a glance, and export to CSV. Includes booth fee, revenue, material costs, and take-home.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Inventory tracker <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Track stock levels per product with low and out-of-stock flags. Know what to restock before every event.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Materials tracker <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Log supply costs per material and tie them to your products. Feeds directly into the profit planner for accurate cost-of-goods.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Pre-event packing checklist <span class="tier-pill pill-craft">Handcrafted</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Auto-generated from your inventory — see exactly what to pack for each event and check it off as you load up.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Calendar + Google/Apple sync <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>View your upcoming events in a calendar layout. Sync to Google Calendar or export an Apple ICS feed so your events show up everywhere.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Event history log <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>A running record of every market you've done — with notes, profit, and date. Reference it when deciding whether to return.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Vendor verification badge <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>A verified badge on your shop page and in vendor discovery. Signals legitimacy to organizers reviewing applications.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>CSV + PDF export <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Export your profit history, inventory, and event log. Useful for accounting, tax prep, and end-of-season review.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ AI event fit scoring <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Each event in Discover gets a fit score based on your shop category, past sales, and vendor profile. Shows a badge and "Why this event" tooltip.</p>
+            <p class="ai-label">Manual fallback: browse and filter events yourself — this just ranks them for you.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ AI bio generator <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Click "Generate for me" next to the bio field. AI drafts a bio based on your shop details. Edit before saving — it's always a suggestion.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ AI product description writer <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Generate a product description from a name and a few tags. One click, fully editable, saves only when you say so.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ AI social caption generator <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Generate an Instagram or Facebook caption announcing your upcoming market. Paste and post — or edit it first.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ Smart schedule suggester <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Ranks available events by travel distance, profit potential, and category fit. Surfaces the best events for your specific situation.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ Nightly event discovery <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>New market and pop-up listings are scraped nightly and surfaced in Discover. Business tier sees them first — free tier sees the same events, one day later.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Shopify / Etsy / Square sync <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Import your product catalog from Shopify or Etsy. Pull in post-event sales from Square to auto-populate your profit log.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Instagram image import <span class="tier-pill pill-business">Business</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Pull product images from your Instagram feed directly into your shop. Saves re-uploading photos you've already posted.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Multiple brand profiles <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Run up to 5 brand identities under one login — each with its own shop page, product catalog, and application history.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Team seats <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Add up to 3 team members to your account. Useful for vendors with assistants or multi-person operations.</p>
+          </div>
+
+        </div>
+
+        <!-- ── ORGANIZER FEATURES ───────────────────────────────── -->
+        <div class="role-divider"><h2>🎪 Market Organizers</h2></div>
+
+        <div class="section-intro">
+          <p>Studio tier includes the full organizer suite. Free tier gets 1 event listing with basic approve/deny.</p>
+        </div>
+
+        <div class="features-grid">
+
+          <div class="feature-block">
+            <h3>Event listing <span class="tier-pill pill-free">Free</span></h3>
+            <p>Publish 1 active event with full details — date, location, booth pricing, categories, and a description. Basic approve/deny for applicants.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Unlimited event listings <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>No cap on active events. Run a seasonal calendar of markets from one account.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Custom application form builder <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Add custom fields, require photos, set per-category limits, and gate applications by vendor type. Your form, your rules.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Booth pricing tiers <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Set multiple booth sizes and pricing — 10×10, 10×20, corner premium. Vendors select their preferred option when applying.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Application review dashboard <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Review all applications in one view. Approve, deny, or waitlist with one click. Filter by category, date applied, or status.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Waitlist auto-promote <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>When an accepted vendor drops out, the next person on the waitlist is automatically notified and given a time-limited window to accept.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Bulk vendor messaging <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Send a message to all accepted vendors at once — event-day reminders, setup instructions, or last-minute changes.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Vendor discovery panel <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Search the Vendor Atlas database to find and invite vendors directly. Filter by category, location, and verification status.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Booth layout builder <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Drag-and-drop grid layout tool. Assign accepted vendors to specific booths. Print or share the layout with your team before the event.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Day-of check-in tool <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Mark vendors as arrived on the day. Track who's set up and who's late from your phone.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Stripe booth fee collection <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Collect booth fees directly through Vendor Atlas. Track paid, outstanding, and refunded balances from your dashboard.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Post-event reports <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Summary reports after each event — attendance estimates, vendor satisfaction scores, and category breakdown. Year-over-year comparison view.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Embeddable vendor directory widget <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Embed a live list of accepted vendors on your own event website. Updates automatically as you approve applications.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ Vendor mix analyzer <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>AI reviews your accepted vendor list and flags category imbalances — "You have 8 jewellery vendors and 2 food vendors. Typical ratio for a market this size is 5:5."</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>✨ Auto-suggested vendors <span class="tier-pill pill-studio">Studio</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>AI recommends Vendor Atlas members that match your event category and open spots. One-click invite from the suggestion list.</p>
+          </div>
+
+        </div>
+
+        <!-- ── SHOPPER FEATURES ─────────────────────────────────── -->
+        <div class="role-divider"><h2>🛒 Shoppers</h2></div>
+
+        <div class="section-intro">
+          <p>Free to find markets. Shopper Pro ($3/mo at launch) unlocks alerts, planning tools, and early access.</p>
+        </div>
+
+        <div class="features-grid">
+
+          <div class="feature-block">
+            <h3>Market map + list <span class="tier-pill pill-free">Free</span></h3>
+            <p>Find upcoming markets near you on an interactive map or browsable list. Filter by city, date, and category.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Vendor directory browse <span class="tier-pill pill-free">Free</span></h3>
+            <p>Browse vendor shop pages before events. See products, upcoming dates, and bio before you even leave the house.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Save favourite vendors <span class="tier-pill pill-free">Free</span></h3>
+            <p>Save up to 10 favourite vendors. Free tier. Shopper Pro removes the limit.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Vendor alerts <span class="tier-pill pill-free">Free</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Get an email when a saved vendor is at a market near you. Free tier included — no upgrade needed for basic alerts.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Unlimited saved vendors <span class="tier-pill pill-craft">Shopper Pro</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>No cap on saved vendors. Follow as many makers as you want.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Weekly market digest <span class="tier-pill pill-craft">Shopper Pro</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>A curated email every week with upcoming markets in your area. Set your city and category preferences once.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Trip planner <span class="tier-pill pill-craft">Shopper Pro</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Build a route across multiple market stops in a single day. See drive times between stops and plan your Saturday around it.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Wish list + budget tracker <span class="tier-pill pill-craft">Shopper Pro</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Save products you want to buy and set a budget per trip. Track what you've spent and what's still on your list.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Early access to new listings <span class="tier-pill pill-craft">Shopper Pro</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>See newly listed markets before they go fully public. Useful for popular events with limited vendor + shopper capacity.</p>
+          </div>
+
+        </div>
+
+        <!-- ── COMMUNITY + REFERRAL ────────────────────────────── -->
+        <div class="role-divider"><h2>🤝 Community + Referral</h2></div>
+
+        <div class="features-grid">
+
+          <div class="feature-block">
+            <h3>Community forums <span class="tier-pill pill-free">Free</span></h3>
+            <p>Read all community posts, tips, and event reviews. Free tier gets read access.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Community posting + event reviews <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Post in city and category forums. Leave anonymous ratings and reviews on events you've vended at.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Direct messaging <span class="tier-pill pill-craft">Handcrafted</span></h3>
+            <p>Message vendors and organizers directly. Rate-limited on free tier.</p>
+          </div>
+
+          <div class="feature-block">
+            <h3>Referral program <span class="tier-pill pill-free">Free</span></h3>
+            <p>Refer anyone to Vendor Atlas — they get 30 days free instead of 7. You earn 1 free month when they subscribe. Max 3 free months per year.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Annual referral race <span class="tier-pill pill-free">Free</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Once a year, a 30-day public leaderboard race. Top 12 earn an Atlas Ambassador badge. Top 3 win free years. 1st place wins a lifetime Studio plan.</p>
+          </div>
+
+          <div class="feature-block soon">
+            <h3>Atlas Ambassador badge <span class="tier-pill pill-free">Earned</span> <span class="soon-badge">Coming soon</span></h3>
+            <p>Permanent crown badge on your shop page. Earned only by finishing top 12 in the annual referral race. Visible to organizers in vendor discovery.</p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <section style="background:var(--surface);border-top:1px solid var(--line);">
+      <div class="container" style="text-align:center;padding:3rem 0;">
+        <span class="eyebrow">Founders pricing</span>
+        <h2 style="margin:.5rem 0 1rem;">Lock in launch prices forever.</h2>
+        <p class="muted" style="max-width:46ch;margin:0 auto 1.75rem;">First 90 days or 500 subscribers — whichever comes first. Everyone who subscribes during the launch window keeps that price forever.</p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+          <a class="btn btn-primary" href="/signup">Join Free</a>
+          <a class="btn btn-secondary" href="/pricing">See Pricing</a>
+        </div>
+      </div>
+    </section>
   </main>
-  <footer class="footer"><div class="container footer-grid"><div>Vendor Atlas</div><div>Feature-rich discovery for modern pop-up sellers.</div></div></footer>
+
+  <footer class="footer"><div class="container footer-grid"><div>Vendor Atlas</div><div>Tools for vendors who actually show up.</div></div></footer>
   <script src="/assets/app.js"></script>
 </body>
 </html>

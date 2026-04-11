@@ -39,19 +39,24 @@
           { icon: 'discover',  text: 'Discover',    href: '/discover' },
         ]},
         { label: 'Vendor', items: [
-          { icon: 'shop',      text: 'My Shop',     href: '/my-shop' },
-          { icon: 'saved',     text: 'Inventory',   href: '/inventory' },
-          { icon: 'more',      text: 'Materials',   href: '/materials' },
-          { icon: 'events',    text: 'Calendar',    href: '/calendar' },
-          { icon: 'analytics', text: 'Business',    href: '/business' },
-          { icon: 'events',    text: 'History',     href: '/history' },
-          { icon: 'saved',     text: 'Profiles',    href: '/profile' },
-          { icon: 'profit',    text: 'Profit',      href: '/final-plan' },
-          { icon: 'settings',  text: 'Integrations', href: '/integrations' },
-          { icon: 'messages',  text: 'Messages',    href: '/messages' },
+          { icon: 'shop',      text: 'My Shop',          href: '/my-shop' },
+          { icon: 'saved',     text: 'Inventory',        href: '/inventory' },
+          { icon: 'more',      text: 'Materials',        href: '/materials' },
+          { icon: 'events',    text: 'Calendar',         href: '/calendar' },
+          { icon: 'events',    text: 'Applications',     href: '/coming-soon?feature=application_tracker', soon: true },
+          { icon: 'analytics', text: 'Business',         href: '/business' },
+          { icon: 'events',    text: 'History',          href: '/history' },
+          { icon: 'saved',     text: 'Profiles',         href: '/profile' },
+          { icon: 'profit',    text: 'Profit',           href: '/final-plan' },
+          { icon: 'settings',  text: 'Integrations',     href: '/integrations' },
+          { icon: 'messages',  text: 'Messages',         href: '/messages' },
+        ]},
+        { label: 'Rewards', items: [
+          { icon: 'saved',     text: 'Referral Race',    href: '/coming-soon?feature=referral_race', soon: true },
         ]},
         { label: 'Account', items: [
-          { icon: 'settings',  text: 'Settings',    href: '/settings' },
+          { icon: 'settings',  text: 'Settings',         href: '/settings' },
+          { icon: 'settings',  text: 'Pricing',          href: '/pricing' },
         ]},
       ],
       bottomNav: [
@@ -64,18 +69,24 @@
     market: {
       sections: [
         { label: 'Main', items: [
-          { icon: 'dashboard', text: 'Dashboard',   href: '/market-dashboard' },
-          { icon: 'feed',      text: 'Feed',         href: '/feed' },
-          { icon: 'community', text: 'Community',    href: '/community' },
-          { icon: 'search',    text: 'Find Vendors', href: '/vendor-discovery' },
+          { icon: 'dashboard', text: 'Dashboard',      href: '/market-dashboard' },
+          { icon: 'feed',      text: 'Feed',            href: '/feed' },
+          { icon: 'community', text: 'Community',       href: '/community' },
+          { icon: 'search',    text: 'Find Vendors',    href: '/vendor-discovery' },
         ]},
         { label: 'Organizer', items: [
-          { icon: 'events',    text: 'Applications', href: '/market-applications' },
-          { icon: 'analytics', text: 'Analytics',    href: '/market-analytics' },
-          { icon: 'messages',  text: 'Messages',     href: '/messages' },
+          { icon: 'events',    text: 'My Events',       href: '/market-applications' },
+          { icon: 'analytics', text: 'Analytics',       href: '/market-analytics' },
+          { icon: 'messages',  text: 'Messages',        href: '/messages' },
+          { icon: 'events',    text: 'Booth Layout',    href: '/coming-soon?feature=booth_layout', soon: true },
+          { icon: 'saved',     text: 'Booth Fees',      href: '/coming-soon?feature=booth_fees', soon: true },
+        ]},
+        { label: 'Rewards', items: [
+          { icon: 'saved',     text: 'Referral Race',   href: '/coming-soon?feature=referral_race', soon: true },
         ]},
         { label: 'Account', items: [
-          { icon: 'settings',  text: 'Settings',     href: '/settings' },
+          { icon: 'settings',  text: 'Settings',        href: '/settings' },
+          { icon: 'settings',  text: 'Pricing',         href: '/pricing' },
         ]},
       ],
       bottomNav: [
@@ -88,16 +99,21 @@
     shopper: {
       sections: [
         { label: 'Browse', items: [
-          { icon: 'home',      text: 'Home',       href: '/shopper-dashboard' },
-          { icon: 'feed',      text: 'Feed',        href: '/feed' },
-          { icon: 'discover',  text: 'Discover',    href: '/discover' },
-          { icon: 'community', text: 'Community',   href: '/community' },
-          { icon: 'saved',     text: 'Saved',       href: '/shopper-dashboard' },
-          { icon: 'messages',  text: 'Messages',    href: '/messages' },
+          { icon: 'home',      text: 'Home',          href: '/shopper-dashboard' },
+          { icon: 'feed',      text: 'Feed',           href: '/feed' },
+          { icon: 'discover',  text: 'Discover',       href: '/discover' },
+          { icon: 'community', text: 'Community',      href: '/community' },
+          { icon: 'saved',     text: 'Saved',          href: '/shopper-dashboard' },
+          { icon: 'messages',  text: 'Messages',       href: '/messages' },
+        ]},
+        { label: 'Shopper Pro', items: [
+          { icon: 'events',    text: 'Trip Planner',   href: '/coming-soon?feature=trip_planner', soon: true },
+          { icon: 'saved',     text: 'Wish List',      href: '/coming-soon?feature=shopper_pro', soon: true },
         ]},
         { label: 'Account', items: [
-          { icon: 'saved',     text: 'Profile',     href: '/profile' },
-          { icon: 'settings',  text: 'Settings',    href: '/settings' },
+          { icon: 'saved',     text: 'Profile',        href: '/profile' },
+          { icon: 'settings',  text: 'Settings',       href: '/settings' },
+          { icon: 'settings',  text: 'Pricing',        href: '/pricing' },
         ]},
       ],
       bottomNav: [
@@ -118,6 +134,7 @@
           { icon: 'discover',  text: 'Discover',     href: '/discover' },
           { icon: 'community', text: 'Community',    href: '/community' },
           { icon: 'messages',  text: 'Messages',     href: '/messages' },
+          { icon: 'settings',  text: 'Feature Flags', href: '/admin' },
         ]},
         { label: 'Account', items: [
           { icon: 'settings',  text: 'Settings',     href: '/settings' },

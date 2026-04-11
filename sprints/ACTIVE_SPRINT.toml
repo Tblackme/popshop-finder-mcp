@@ -1,1576 +1,212 @@
-# Vendor Atlas Refactor Sprint — MVP Master Plan
-# Consumer SaaS frontend + API reliability. Easiest API fixes first, then UX.
-# CRITICAL: Each task must include "prompt" field with full implementation context.
-# See docs/MVP_POPUP_SHOP_FINDER_MASTER_PLAN.md for full in-depth plan.
+# Vendor Atlas Sprint — Discovery Engine + Live Search
+# Focus: get discover_events working with a free search backend, fix the
+# remaining todo items from the MVP sprint, and close the biggest gaps
+# found in the 2026-04-11 smoke test.
+#
+# Smoke test results (2026-04-11):
+#   PASS  16/16 MCP tools
+#   PASS  all server imports
+#   ISSUE discover_events returns 0 live results (Serper credits exhausted, no ANTHROPIC_API_KEY)
+#   ISSUE search_markets returns {found, markets} but sprint docs expect {results_count}
+#   ISSUE ingest_markets_from_csv returns {imported, skipped_duplicates} not {ingested}
+#   ISSUE PIPE-001 (dedup fix) still uncommitted
+#   ISSUE AI-001/AI-002 (AI wire-up) still todo
+#   ISSUE AUTH-001 (real auth) still todo
+#   ISSUE DB-001 (Postgres migration) still todo
 
-sprint_name = "Vendor Atlas — MVP (API + UX + Bug Fixes)"
-start_date = "2026-03-16"
-end_date = "2026-03-30"
-
-# ---------------------------------------------------------------------------
-# PHASE 1: API fixes (easiest first — unblock consumer flows)
-# ---------------------------------------------------------------------------
-
-[tasks.VA-001]
-id = "VA-001"
-name = "Fix API base URL for browser requests"
-description = "Set API_BASE_URL at runtime to same origin so consumer fetch() works when served from the same app."
-estimated_time = "30 min"
-estimated_lines = 15
-agent = "general-purpose"
-phase = "Phase 1: API"
-status = "completed"
-prompt = """
-DESIGN DECISION: Resolve API_BASE_URL at runtime so the consumer site works when served from the same origin or static host.
-WHY: site/index.html currently uses literal '{{API_BASE_URL}}'; no build step substitutes it, so fetch() fails.
-
-Context (CRITICAL):
-- Server serves site/index.html via FileResponse (no template substitution).
-- Frontend CONFIG.API_BASE_URL is used for fetch(CONFIG.API_BASE_URL + '/consumer/run', ...).
-- When served from same origin (e.g. python server.py → GET /), base URL should be window.location.origin.
-- When deployed behind a proxy or static host, may need env or a small /config.json.
-
-Steps:
-1. In site/index.html, replace CONFIG.API_BASE_URL: '{{API_BASE_URL}}' with runtime resolution:
-   - If served from same app: use window.location.origin (e.g. '' or origin) so paths like /consumer/run work.
-   - Option: read from a <script> window.__API_BASE__ set by server, or default to window.location.origin.
-2. Ensure CORS and routes in server.py allow browser requests to /consumer/run from the same origin.
-3. Test: open / in browser, run "Find Markets" or "Save my profile" and confirm network tab shows requests to same origin and succeed (or graceful error if backend unavailable).
-
-Success criteria:
-- No literal '{{API_BASE_URL}}' in delivered HTML; requests go to correct origin or configured base.
-- Consumer flows (search, profile save, compare) work when server is running; clear error message if server is down.
-"""
-dependencies = []
-
-[tasks.API-001]
-id = "API-001"
-name = "Server + billing: return ok false when tool throws"
-description = "Billing middleware returns structured error when handler raises; server returns ok: false + error for consumer."
-estimated_time = "30 min"
-estimated_lines = 25
-agent = "general-purpose"
-phase = "Phase 1: API"
-status = "completed"
-prompt = """
-DESIGN DECISION: When a tool handler raises an exception, the consumer API must return ok: false and a clear error message so the frontend can show a friendly message instead of wrong empty state or JSON parse errors.
-WHY: Billing middleware currently returns {"content": [{"type": "text", "text": "Error: ..."}]}; server then returns ok: true, result: "Error: ...". Frontend JSON.parse(data.result) fails or shows "No markets found".
-
-Context (CRITICAL):
-- server.py handle_consumer_run calls billing_middleware; if result has "error" it returns status 400 with result (billing errors). If handler throws, billing returns content with text "Error: msg" but no "error" key.
-- billing.py create_billing_middleware: in the except block it sets result = "Error: {error_msg}" and returns {"content": [{"type": "text", "text": result}]}.
-
-Steps:
-1. In billing.py: In the middleware's except block, return the same shape as other billing errors so handle_consumer_run can treat it uniformly. Example: return {"error": error_msg} or {"error": {"message": error_msg}}. Do not return content with text "Error: ..." for the consumer path.
-2. In server.py: handle_consumer_run already does "if 'error' in result: return web.json_response(result, status=400)". Ensure the response body includes a key the frontend expects (e.g. error as string or error.message). So when billing returns {"error": "..."}, the client gets {"error": "..."}; optionally also set ok: false in the response for consistency (e.g. return web.json_response({"ok": False, "error": result.get("error") or (result.get("error", {}).get("message") if isinstance(result.get("error"), dict) else "Unknown error")}, status=400)).
-3. Ensure frontend (API-002) handles status 400 and data.error.
-
-Success criteria:
-- When any tool raises, consumer POST /consumer/run gets HTTP 400 (or 500) with body containing ok: false and error: <message>. No ok: true with result string "Error: ...".
-"""
-dependencies = []
-
-[tasks.API-002]
-id = "API-002"
-name = "Frontend: handle API errors and show friendly messages"
-description = "Every consumer fetch handles !data.ok and non-JSON result; show friendly, non-technical error message in UI."
-estimated_time = "30 min"
-estimated_lines = 40
-agent = "general-purpose"
-phase = "Phase 1: API"
-status = "completed"
-prompt = """
-DESIGN DECISION: Every consumer API call must handle !data.ok and non-JSON result; show a friendly, non-technical message in the UI.
-WHY: Prevents "No markets found" when the real issue is a server error, and prevents JSON parse errors or blank screens.
-
-Context (CRITICAL):
-- site/index.html: fetch(CONFIG.API_BASE_URL + '/consumer/run', ...) is used for build_vendor_profile, search_markets, rank_markets_for_vendor, compare_markets_for_vendor.
-- After res.json(), check data.ok. If false, use data.error (or data.error.message or fallback "Something went wrong") and display it where the user expects feedback: results-summary for search, quiz-error for profile, same or modal for compare. Do not call JSON.parse(data.result) when !data.ok.
-- When parsing data.result, keep try/catch; in catch or when the string looks like an error (e.g. starts with "Error:"), treat as error and show a friendly message like "We couldn't load that right now. Please try again." instead of empty state.
-
-Steps:
-1. Profile save: if (!data.ok) { errorEl.textContent = data.error || "We couldn't save your profile. Please try again."; errorEl.classList.remove('hidden'); return; }. Do not parse data.result if !data.ok.
-2. Search: if (!data.ok) { summary.textContent = data.error || "Search failed. Please try again."; list.innerHTML = ''; return; }. When parsing payload, if JSON.parse throws or result is error string, set summary to friendly message and clear list.
-3. Compare (Help me choose): if (!data.ok) show data.error in alert or a small inline message, not raw "Unable to compare markets".
-4. Ensure all .catch(err) blocks show user-friendly text (e.g. err.message or "Something went wrong") not technical stack or "Failed to fetch".
-
-Success criteria:
-- No technical jargon in error messages. User always sees a clear, actionable message when the API fails or returns an error.
-"""
-dependencies = ["API-001"]
-
-[tasks.BUG-001]
-id = "BUG-001"
-name = "Fix config.py duplicate ServerConfig and from_env"
-description = "Single ServerConfig class with all from_env fields; remove duplicate class that causes TypeError."
-estimated_time = "15 min"
-estimated_lines = 35
-agent = "general-purpose"
-phase = "Phase 1: API"
-status = "completed"
-prompt = """
-DESIGN DECISION: config.py defines ServerConfig twice; the second class overwrites the first and its from_env() passes kwargs the second class does not accept, risking TypeError at runtime.
-WHY: Ensures server and any code using get_config() start correctly in all environments.
-
-Context (CRITICAL):
-- config.py: First block is @dataclass ServerConfig with port, host, auth_token, transport, signal_capture_enabled, signal_log_path, serper_api_key, serper_tools, sync_endpoint, session_tracking_enabled. Second block is plain class ServerConfig with only port, host, auth_token, transport and a from_env() that passes the extra fields — so the second class does not accept them.
-- Keep a single ServerConfig with all fields used by from_env (port, host, auth_token, transport, signal_capture_enabled, signal_log_path, serper_api_key, serper_tools, sync_endpoint, session_tracking_enabled). Use @dataclass and one from_env() that returns cls(...) with every field set from os.environ with sensible defaults.
-
-Steps:
-1. Remove the duplicate class. Keep one ServerConfig with all fields: port, host, auth_token, transport, signal_capture_enabled, signal_log_path, serper_api_key, serper_tools, sync_endpoint, session_tracking_enabled.
-2. Single from_env() that reads env and returns cls(port=..., host=..., ...). Defaults: port 3000, host "0.0.0.0", auth_token "", transport "sse", signal_capture_enabled True, signal_log_path "/data/signals/signals.json", serper_api_key "", serper_tools "all", sync_endpoint "", session_tracking_enabled True.
-3. Ensure get_config() and any import of ServerConfig still work.
-
-Success criteria:
-- Only one ServerConfig class. from_env() runs without TypeError. get_config() returns a valid config.
-"""
-dependencies = []
-
-[tasks.VA-002]
-id = "VA-002"
-name = "Design system: buttons and surfaces"
-description = "Rounded rectangle buttons (not pill), lavender primary, white secondary, soft gray background, white cards."
-estimated_time = "1 hour"
-estimated_lines = 50
-agent = "general-purpose"
-phase = "Phase 2: Design"
-prompt = """
-DESIGN DECISION: Apply creator-friendly SaaS style — rounded rectangle buttons (not pill), lavender accent, soft gray background, white cards.
-WHY: Spec asks for "rounded rectangle lavender buttons with subtle shadow"; current CSS uses rounded-full (pill).
-
-Context (CRITICAL):
-- Product: Vendor Atlas. Audience: small business vendors, craft sellers, popup shop owners.
-- Style: Creator-friendly SaaS. Accent: lavender. Buttons: rounded rectangle (e.g. rounded-xl or rounded-2xl), not rounded-full.
-- Primary: lavender filled, subtle shadow. Secondary: white with lavender outline. Hover: slightly darker lavender.
-- Background: very light neutral / soft gray (e.g. bg-slate-50 or similar). Cards: white, rounded corners (e.g. rounded-2xl).
-- Primary action text: "Find My Next Market".
-
-Steps:
-1. In site/index.html <style> and Tailwind classes:
-   - Change .va-primary-btn from rounded-full to rounded-xl (or rounded-2xl). Keep bg-lavender, shadow, hover: darker lavender.
-   - Change .va-secondary-btn from rounded-full to rounded-xl; keep border border-lavender, white bg, hover bg-lavender/5.
-2. Ensure body background is very light neutral (e.g. bg-slate-50); cards .va-card stay white with rounded-2xl and subtle border.
-3. Audit all buttons in the page: hero "Find My Next Market", nav "Find My Next Market", "Find Markets", "Get Started Free", "Upgrade to Pro", "View Details", "Save Event", "Apply", "Explore Dashboard", "Set Up My Vendor Profile", "Help me choose from saved", "Save my profile". Ensure consistent rounded-rectangle and lavender/white style.
-4. Add or adjust shadow for primary buttons per spec ("subtle shadow").
-
-Success criteria:
-- No pill-shaped buttons; all use rounded rectangle (rounded-xl or rounded-2xl).
-- Primary = lavender filled + subtle shadow; secondary = white + lavender outline; hover states correct.
-- Page background soft gray; cards white with rounded corners; generous spacing preserved.
-"""
-status = "completed"
-priority = "high"
-estimated_hours = 1.0
-dependencies = []
-
-[tasks.VA-003]
-id = "VA-003"
-name = "Copy and labels audit — consumer language only"
-description = "Remove MCP, API, SSE, stdio, JSON from all user-visible copy; use spec headings and friendly error messages."
-estimated_time = "30 min"
-estimated_lines = 30
-agent = "general-purpose"
-phase = "Phase 2: Design"
-prompt = """
-DESIGN DECISION: Remove all developer-focused UI and technical language from the consumer-facing site.
-WHY: Interface must feel like a friendly tool for vendors, not a developer platform. No MCP, API, SSE, stdio, JSON, endpoints.
-
-Context (CRITICAL):
-- File: site/index.html (and any other consumer-facing text in site/).
-- Audience: small business vendors, craft sellers, popup shop owners — non-technical.
-- Hide: MCP, API endpoints, SSE, stdio, JSON responses, tool names, protocol terms.
-
-Steps:
-1. Search site/index.html (and site/*) for: MCP, API, endpoint, SSE, stdio, JSON, tool, protocol. Remove or rephrase any that appear in UI, titles, meta description, or user-visible copy.
-2. Ensure headings and CTAs match spec: "Vendor Atlas", "The smartest way to discover and plan your next vendor market.", "Find My Next Market", "Event Finder", "Profit Signals", "Vendor Alerts", "Organizer Contacts", "Save Events", "View Details", "Save Event", "Apply", "Find Markets", "Saved markets", "Get Started Free", "Upgrade to Pro", "About", "Support", "Privacy", "Terms".
-3. Ensure error messages shown to users (e.g. in quiz or search) are friendly and non-technical (e.g. "We couldn't load that right now. Please try again." instead of "Unknown tool" or "Invalid JSON").
-4. Keep meta description and any SEO text consumer-focused: vendors, markets, discovery, planning.
-
-Success criteria:
-- No technical jargon in any user-visible text. All labels match product spec. Error messages are friendly and actionable.
-"""
-status = "completed"
-priority = "high"
-estimated_hours = 0.5
-dependencies = []
-
-[tasks.VA-004]
-id = "VA-004"
-name = "Homepage layout — hero, features, sample markets, pricing, footer"
-description = "Verify hero, 5 feature cards, sample market cards, two-tier pricing, footer match Vendor Atlas spec."
-estimated_time = "1 hour"
-estimated_lines = 60
-agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
-prompt = """
-DESIGN DECISION: Verify and align homepage sections with Vendor Atlas product spec.
-WHY: Single-page layout must match: Hero (city + Find My Next Market), 5 feature cards, sample market results, two-tier pricing, footer.
-
-Context (CRITICAL):
-- Hero: Title "Vendor Atlas", tagline "The smartest way to discover and plan your next vendor market.", search input City, primary button "Find My Next Market".
-- Features: Five rounded cards — Event Finder, Profit Signals, Vendor Alerts, Organizer Contacts, Save Events (exact copy per spec).
-- Sample markets: Example event cards with Market Name, City/State, Date, Vendor Count, Estimated Traffic, Booth Price, Application Deadline, Popularity Score; buttons View Details, Save Event, Apply.
-- Pricing: Free (basic search, limited saved events) and Pro (advanced profit signals, vendor alerts, unlimited saved markets). Footer: About, Support, Privacy, Terms.
-
-Steps:
-1. Confirm hero has: one search input (City), one primary button "Find My Next Market", no extra dev-only controls or labels.
-2. Confirm features section has exactly five cards with the five titles and descriptions from the spec; ensure cards are rounded and visually consistent.
-3. Confirm sample market cards show the listed fields and three buttons; use static example data if backend not required; ensure "Explore Dashboard" or equivalent scrolls to dashboard and triggers search if desired.
-4. Confirm pricing: Free tier and Pro tier with listed bullets; Pro CTA "Upgrade to Pro" (price can be "Coming soon" or placeholder).
-5. Confirm footer has links: About, Support, Privacy, Terms (can be #footer or placeholder hrefs).
-
-Success criteria:
-- Homepage matches spec. No sections missing. Primary action "Find My Next Market" above the fold. Mobile-first: sections stack and remain readable on small screens.
-"""
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-dependencies = ["VA-002"]
-
-[tasks.VA-005]
-id = "VA-005"
-name = "Dashboard — search panel, results, saved markets"
-description = "Wire filters, Find Markets, results cards, saved list, Help me choose; handle loading and empty states."
-estimated_time = "1.5 hours"
-estimated_lines = 80
-agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
-prompt = """
-DESIGN DECISION: Dashboard opens when user clicks "Find My Next Market". Search panel with filters, results as market cards, saved markets list.
-WHY: Main tool is the dashboard: filters, Find Markets button, result cards, and favorites.
-
-Context (CRITICAL):
-- Opening dashboard: hero/nav "Find My Next Market" scrolls to dashboard and can auto-run search (e.g. with hero city pre-filled).
-- Search panel filters: City, Date Range (start/end), Event Size (Small/Medium/Large), Vendor Category (Crafts, Art, Vintage, Food, etc.), Indoor/Outdoor, Distance Radius (10/25/50/100 miles). Primary button: "Find Markets".
-- Results: market cards with Market Name, Location, Date, Vendor Count, Estimated Traffic, Booth Price, Application Deadline, Popularity Score; buttons View Details, Save Event, Apply.
-- Saved markets: list of saved events with ability to view, apply, remove. "Help me choose from saved" when profile + 2+ saved.
-
-Steps:
-1. Ensure dashboard section has all filter inputs and "Find Markets" button; wire "Find My Next Market" to scroll to dashboard and optionally run search with hero city.
-2. Ensure results area shows summary text (e.g. "X markets found") and list of market cards with specified fields and three buttons. Wire "Find Markets" to existing /consumer/run search_markets (and rank_markets_for_vendor if profile exists); handle loading and empty state with friendly copy.
-3. Ensure "Save Event" adds to saved list (localStorage or backend); "Saved markets" section shows count and list; remove and apply from saved list work.
-4. Ensure "Help me choose from saved" calls compare_markets_for_vendor when profile and 2+ saved; show recommendation in friendly way (e.g. modal or inline), not raw JSON.
-
-Success criteria:
-- All filters present and wired. Results render from API. Save/Apply/View Details and saved list work. No technical errors exposed to user.
-"""
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-dependencies = ["VA-001", "VA-002", "API-002"]
+sprint_name = "Vendor Atlas — Discovery Engine + Live Search"
+start_date = "2026-04-11"
+end_date = "2026-04-25"
 
 # ---------------------------------------------------------------------------
-# PHASE 4: UI/WebApp sync + consistency cleanup
+# PHASE 1: Unblock discover_events (highest priority — core value prop)
 # ---------------------------------------------------------------------------
 
-[tasks.SYNC-001]
-id = "SYNC-001"
-name = "Audit and fix broken core functionality"
-description = "Stabilize profit/analytics, saved events, dead buttons, and incorrect routing before any new feature work."
-estimated_time = "3 hours"
-estimated_lines = 120
-agent = "general-purpose"
-phase = "Phase 4: Sync"
-status = "completed"
-priority = "high"
-estimated_hours = 3.0
-prompt = """
-DESIGN DECISION: Fix broken core functionality first.
-WHY: Vendor Atlas should feel reliable before it grows. The most urgent problems are profit visibility, saved-event flow, dead buttons, and role-routing mistakes.
-
-Checklist:
-1. Profit / analytics:
-   - Ensure profit displays on the Business page.
-   - Keep calculation as revenue - expenses - vendor_fee.
-   - Source from vendor_event_stats with zero-safe fallbacks.
-   - Ensure business/analytics buttons are clickable and meaningful.
-2. Saved events:
-   - Verify save event writes to persistence.
-   - Ensure saved events appear in the correct view immediately.
-   - Add clear empty state if no saved items exist.
-3. Buttons:
-   - Audit every visible button in current web flows.
-   - Remove dead clicks and silent failures.
-4. Routing:
-   - Ensure shopper flows never land in vendor-only screens by mistake.
-   - Ensure vendor action language stays Apply while shopper action language stays RSVP or save-oriented where applicable.
-
-Success criteria:
-- Profit page renders correctly and never blanks on missing values.
-- Saved events flow works end-to-end.
-- No obvious dead buttons remain in core flows.
-- Role routing is consistent.
-"""
-dependencies = ["VA-005"]
-
-[tasks.SYNC-002]
-id = "SYNC-002"
-name = "Role-based homepage and entry cleanup"
-description = "Make the homepage and entry flow clearer for shopper, vendor, and organizer without redesigning the entire app."
-estimated_time = "2 hours"
-estimated_lines = 90
-agent = "general-purpose"
-phase = "Phase 4: Sync"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Homepage should clearly orient users by role.
-WHY: The app now supports vendor, organizer, and shopper flows, so entry points should not feel vendor-only or outdated.
-
-Checklist:
-1. Homepage:
-   - Center entry around Shopper, Vendor, Organizer.
-   - Remove outdated 'Find Markets' emphasis where it conflicts with multi-role entry.
-   - Add clear enter-app / instant-login style path.
-2. Shopper:
-   - Replace shopper-facing 'Plan' framing with 'Connect' where appropriate.
-   - Keep shopper actions focused on follow, RSVP/save, and discovery.
-3. Routing:
-   - Shopper dashboard CTA routes to shopper discovery.
-   - Vendor dashboard CTA routes to vendor discovery/planning.
-
-Success criteria:
-- Homepage feels multi-role.
-- Shopper and vendor primary actions are clearly different.
-- Entry flow does not confuse roles.
-"""
-dependencies = ["SYNC-001"]
-
-[tasks.SYNC-003]
-id = "SYNC-003"
-name = "UI consistency and empty-state pass"
-description = "Standardize cards, buttons, copy, and empty states across dashboard screens and supporting pages."
-estimated_time = "2 hours"
-estimated_lines = 100
-agent = "general-purpose"
-phase = "Phase 4: Sync"
-status = "completed"
-priority = "medium"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: The app should feel cohesive even when data is sparse.
-WHY: Inconsistent card/button treatments and weak empty states make the product feel unfinished.
-
-Checklist:
-1. Standardize:
-   - Event cards
-   - Vendor cards
-   - Dashboard card spacing
-   - Button hierarchy
-2. Remove remaining placeholder or fake-looking UI where practical.
-3. Add clear empty states for:
-   - no events
-   - no saved items
-   - no analytics data
-4. Each empty state should suggest the next action.
-
-Success criteria:
-- Core pages use consistent card and button patterns.
-- Empty states guide the user instead of feeling broken.
-- Placeholder copy no longer dominates user-facing screens.
-"""
-dependencies = ["SYNC-001"]
-
-[tasks.SYNC-004]
-id = "SYNC-004"
-name = "Full click-through smoke and state refresh check"
-description = "Validate end-to-end interaction flow so saved, applied, and created data appears immediately and reliably."
-estimated_time = "2 hours"
-estimated_lines = 80
-agent = "general-purpose"
-phase = "Phase 4: Sync"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Finish with a full click-through smoke pass.
-WHY: The product should feel complete and responsive after actions, not just render the right static screens.
-
-Checklist:
-1. Smoke path:
-   - app loads
-   - browse events
-   - click event
-   - save event
-   - shopper RSVP/save action
-   - vendor apply action
-   - dashboard updates
-   - analytics shows real numbers
-2. Verify immediate state refresh after:
-   - save
-   - apply
-   - create event
-3. Capture remaining gaps rather than expanding feature scope.
-
-Success criteria:
-- Core flows feel reliable in one pass.
-- State changes appear without confusing lag or stale UI.
-- Any remaining gaps are documented clearly.
-"""
-dependencies = ["SYNC-001", "SYNC-002", "SYNC-003"]
-
-[tasks.VA-006]
-id = "VA-006"
-name = "Pro pricing CTA and copy"
-description = "Replace Pro $? with Coming soon or real price; ensure Get Started Free and Upgrade to Pro CTAs are clear."
-estimated_time = "15 min"
-estimated_lines = 10
-agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
-prompt = """
-DESIGN DECISION: Replace Pro tier placeholder price and clarify CTAs.
-WHY: Spec says Pro has "Advanced profit signals, Vendor alerts, Unlimited saved markets"; price was "$?".
-
-Context (CRITICAL):
-- Pricing section has Free and Pro. Pro should show clear value and CTA.
-- Options: show "Coming soon" for price, or a real price (e.g. $X/month) if product decision is set. "Upgrade to Pro" button stays.
-
-Steps:
-1. Replace Pro "$?" with either "Coming soon" (and optional "Notify me") or a concrete price per product decision.
-2. Ensure "Get Started Free" and "Upgrade to Pro" are the two CTAs; both use design system buttons (primary for Pro, secondary for Free if desired).
-3. Keep bullet list for Free and Pro per spec; ensure no technical terms in bullets.
-
-Success criteria:
-- Pro tier has clear, non-placeholder price or "Coming soon". CTAs are obvious and styled correctly.
-"""
-status = "completed"
-priority = "low"
-estimated_hours = 0.25
-dependencies = ["VA-004"]
-
-[tasks.VA-007]
-id = "VA-007"
-name = "Mobile-first responsive and touch targets"
-description = "Responsive breakpoints, adequate touch targets, no horizontal scroll; test 320px–1024px."
+[tasks.DISC-001]
+id = "DISC-001"
+name = "Wire Brave Search as free Serper replacement"
+description = "Add Brave Search API support to _fetch_search_results so discover_events works on the free tier (2k/month, no card)."
 estimated_time = "45 min"
 estimated_lines = 40
 agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
-prompt = """
-DESIGN DECISION: Ensure layout is mobile-first responsive with adequate touch targets and readable typography.
-WHY: Vendors may use the site on phones; spec says "Mobile-first responsive layout".
-
-Context (CRITICAL):
-- site/index.html uses Tailwind; ensure breakpoints (sm:, md:, lg:) are used for grid, padding, and font sizes.
-- Buttons and links must be large enough for touch (e.g. min 44px tap target). Spacing: "generous whitespace".
-
-Steps:
-1. Review hero, features grid, sample markets grid, pricing grid, dashboard filters+results: on small viewport, content stacks and remains readable; no horizontal scroll.
-2. Ensure primary actions (Find My Next Market, Find Markets, Save Event, Apply) have sufficient padding (e.g. py-3) and are not too small on mobile.
-3. Test at 320px, 375px, 768px, 1024px widths (or use browser dev tools). Adjust any cramped sections.
-4. Ensure nav collapses or remains usable on mobile (e.g. hamburger or single-row with wrap).
-
-Success criteria:
-- No horizontal overflow on mobile. Touch targets adequate. Generous spacing preserved. Typography scales appropriately.
-"""
-status = "completed"
-priority = "medium"
+phase = "Phase 1: Discovery"
+status = "todo"
+priority = "critical"
 estimated_hours = 0.75
-dependencies = ["VA-002", "VA-004"]
-
-[tasks.VA-008]
-id = "VA-008"
-name = "View Details — event detail view or modal"
-description = "Modal or expand with market fields, description, Apply link; style to match design system."
-estimated_time = "1 hour"
-estimated_lines = 70
-agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
 prompt = """
-DESIGN DECISION: "View Details" should show event details in a modal or inline expand, not just alert.
-WHY: Users expect to see full details (description, organizer, application link, etc.) before applying.
+DESIGN DECISION: Use Brave Search API as the primary web search backend for discover_events.
+WHY: Serper credits are exhausted. Brave gives 2,000 free queries/month with no credit card and structured JSON results nearly identical to Serper. The Claude web_search path was implemented but requires a paid Anthropic plan.
 
 Context (CRITICAL):
-- Market cards have "View Details", "Save Event", "Apply". Backend may return description, application_url, organizer info in search/rank results.
-- Prefer a simple modal or slide-over: same card fields + description + "Apply" link if available. If API does not yet return description/url, show at least the card fields again in modal with "Apply" opening placeholder or link when available.
+- tools/vendor_atlas_pipeline.py, _fetch_search_results(): currently branches on SERPER_API_KEY then falls back to DuckDuckGo HTML scraping.
+- Brave Search API endpoint: https://api.search.brave.com/res/v1/web/search
+- Auth header: X-Subscription-Token: <key>
+- Response shape: { web: { results: [{ title, url, description }] } }
+- New env var: BRAVE_SEARCH_API_KEY (read via os.environ.get)
+- Priority order should be: Brave → Serper → DuckDuckGo fallback
 
 Steps:
-1. Add a detail view: modal or expanded section. Triggered by "View Details" on any market card (sample or search results).
-2. Populate with: name, location, date, vendor count, traffic, booth price, deadline, popularity; add description and application link if present in data.
-3. Include "Apply" (and optionally "Save Event") in the detail view. Close button or backdrop click closes modal.
-4. Style modal to match design system (white card, rounded, lavender primary button).
+1. In tools/vendor_atlas_pipeline.py, add BRAVE_SEARCH_API_KEY = os.environ.get("BRAVE_SEARCH_API_KEY", "") near the top.
+2. Add _parse_brave_results(data, source, city, state, keywords) mirroring _parse_serper_results but reading data["web"]["results"] with fields title/url/description.
+3. In _fetch_search_results, check BRAVE_SEARCH_API_KEY first — POST to Brave endpoint with header X-Subscription-Token and params q=query&count=10. Parse with _parse_brave_results.
+4. Keep existing Serper branch as second fallback, DuckDuckGo as third.
+5. Add BRAVE_SEARCH_API_KEY= to .env.example with a comment pointing to api.search.brave.com.
 
 Success criteria:
-- "View Details" opens a clear detail view. No raw JSON or technical errors. Apply link works when API provides it.
+- With BRAVE_SEARCH_API_KEY set, discover_events returns real live results.
+- Without it, graceful fallback to Serper then DuckDuckGo.
+- No breaking changes to existing tool signatures.
 """
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-dependencies = ["VA-005"]
+dependencies = []
 
-[tasks.VA-009]
-id = "VA-009"
-name = "Apply button + save apply_url in favorites"
-description = "Apply opens apply_url in new tab when present; save full market (incl. apply_url) in favorites so saved Apply works."
-estimated_time = "30 min"
-estimated_lines = 45
-agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
-prompt = """
-DESIGN DECISION: "Apply" opens the organizer application URL when the API provides it; when saving a favorite, store full market (or at least apply_url) so Apply from saved list works too.
-WHY: Spec says "Click apply links". Backend already returns apply_url per market (storage_markets.Market.apply_url). Currently frontend ignores it and saved favorites only store id, name, city, state, date — no apply_url.
-
-Context (CRITICAL):
-- Backend get_markets() returns markets with apply_url (and application_deadline, etc.). Use apply_url (API uses this name) in the frontend.
-- When user clicks "Save Event", store the full market object (or at minimum id, name, city, state, date, apply_url, application_deadline) so the saved list can open Apply link when available.
-- Sample markets: add apply_url to static sample data where you want a demo link (or leave null for "not available" behavior).
-
-Steps:
-1. In market card data shape (sample and API results), use apply_url. When user clicks "Apply", if market.apply_url exists open window.open(market.apply_url, '_blank'); else show a short message (e.g. "Application link isn't available for this market yet").
-2. When saving a favorite (saveFavorite), push the full market object (or object including apply_url) so favorites list has apply_url. In renderFavorites and the saved list "Apply" handler, use the stored apply_url the same way.
-3. Apply same behavior in View Details modal "Apply" when implemented (VA-008).
-4. Remove or replace all "In a full version, this would open..." alerts with the above behavior.
-
-Success criteria:
-- When API returns apply_url, Apply opens it in new tab. When not available, user sees a friendly message. Saved list Apply uses stored apply_url when present.
-"""
-status = "completed"
-priority = "medium"
-estimated_hours = 0.5
-dependencies = ["VA-005", "VA-008"]
-
-[tasks.API-003]
-id = "API-003"
-name = "Distance radius: pass from UI and document coming soon"
-description = "Pass radius_miles from frontend; backend accepts and ignores for MVP; optional 'Distance filter coming soon' note."
+[tasks.DISC-002]
+id = "DISC-002"
+name = "Add BRAVE_SEARCH_API_KEY to .env and test live discovery"
+description = "Set the Brave key in .env and run a live smoke test confirming discover_events returns results for Kansas City MO."
 estimated_time = "15 min"
+estimated_lines = 2
+agent = "general-purpose"
+phase = "Phase 1: Discovery"
+status = "todo"
+priority = "critical"
+estimated_hours = 0.25
+prompt = """
+DESIGN DECISION: Confirm live discovery works end-to-end with the new Brave key.
+WHY: The key needs to be in .env and the full pipeline (search → candidate scoring → page verification) needs a real run to catch any issues.
+
+Steps:
+1. Add BRAVE_SEARCH_API_KEY=<user's key> to .env.
+2. Run: python scripts/test_discover_events_mcp.py --city "Kansas City" --state MO
+3. Confirm at least 3 results are returned.
+4. If 0 results: check candidate scoring thresholds in _is_precise_discovery_candidate — Brave snippets may be shorter than Serper snippets, lowering the precision_score.
+
+Success criteria:
+- discover_events returns ≥ 3 live events for Kansas City MO.
+"""
+dependencies = ["DISC-001"]
+
+[tasks.DISC-003]
+id = "DISC-003"
+name = "Tune candidate precision scoring for Brave Search results"
+description = "Brave snippets are shorter than Serper — adjust _is_precise_discovery_candidate threshold or boost snippet scoring so results aren't filtered out."
+estimated_time = "30 min"
 estimated_lines = 20
 agent = "general-purpose"
-phase = "Phase 3: Dashboard & Homepage"
+phase = "Phase 1: Discovery"
+status = "todo"
+priority = "high"
+estimated_hours = 0.5
 prompt = """
-DESIGN DECISION: Dashboard has Distance radius (10/25/50/100 miles) but backend search_markets and get_markets do not filter by distance yet. Pass radius from UI and set user expectation.
-WHY: Avoids confusion; backend can ignore radius for MVP and add geocoding later.
+DESIGN DECISION: Brave Search result snippets tend to be shorter than Serper's, which can push precision_score below the threshold=3 cutoff.
+WHY: If score < 3, _is_precise_discovery_candidate returns False and the result is dropped before page verification.
 
 Context (CRITICAL):
-- site/index.html filter-radius dropdown sends a value; tools/vendor_atlas_markets.py handle_search_markets does not accept radius_miles; storage_markets.get_markets does not filter by distance.
-- Easiest: pass radius_miles in the request body from frontend (optional). Backend can add radius_miles to the tool schema as optional and ignore it in get_markets for now. Optionally show a small note near the dropdown: "Distance filter coming soon" so users know it does not affect results yet.
+- tools/vendor_atlas_pipeline.py: _candidate_precision_score, _is_precise_discovery_candidate
+- Current threshold: total_score >= 3 AND title_score > 0
+- Brave results have title + url + description (snippet). The snippet is often just 1 sentence.
+- Fix options:
+  a) Add snippet scoring: score += _event_keyword_score(snippet)
+  b) Lower threshold to 2 for Brave source
+  c) Both
 
 Steps:
-1. In site/index.html, include filter-radius value in the search_markets arguments (e.g. radius_miles: 50). Optional: add a one-line note near the dropdown: "Distance filter coming soon."
-2. In tools/vendor_atlas_markets.py, add optional radius_miles to inputSchema and handle_search_markets; do not change get_markets() yet (no geo filtering). This keeps API shape ready for future implementation.
+1. In _fetch_search_results Brave branch, pass snippet through to each candidate dict.
+2. In _candidate_precision_score, add: if snippet: score += _event_keyword_score(snippet)
+3. Optionally lower threshold for brave_search source in _is_precise_discovery_candidate.
+4. Re-run live test and confirm results improve.
 
 Success criteria:
-- Frontend sends radius when user clicks Find Markets. Backend accepts and ignores it. User sees no error. Optional: "Coming soon" note visible.
+- At least 5 candidate events pass the precision filter for a KC MO search.
 """
-status = "completed"
-priority = "low"
-estimated_hours = 0.25
-dependencies = ["VA-005"]
+dependencies = ["DISC-001"]
 
 # ---------------------------------------------------------------------------
-# PHASE 4: Reliability + test coverage
-# ---------------------------------------------------------------------------
-
-[tasks.REL-001]
-id = "REL-001"
-name = "Add smoke tests for consumer tool flows"
-description = "Create tests for profile build, market search, ranking, compare flow, and consumer error responses."
-estimated_time = "2 hours"
-estimated_lines = 120
-agent = "general-purpose"
-phase = "Phase 4: Reliability"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: The MVP now works end to end, so the highest-value next step is protecting the core consumer flows with automated tests.
-WHY: Most recent work touched the browser-facing experience heavily. We need fast confidence that search, profile, ranking, compare, and error handling stay intact.
-
-Context (CRITICAL):
-- Backend entrypoint is server.py with /consumer/run and tool handlers in tools/.
-- Billing middleware in billing.py is expected to return structured errors.
-- Core tools: build_vendor_profile, search_markets, rank_markets_for_vendor, compare_markets_for_vendor.
-- There is currently little or no automated regression coverage.
-
-Steps:
-1. Add tests under tests/ for:
-   - build_vendor_profile returns a profile payload with expected keys.
-   - search_markets returns JSON string payload and handles optional radius_miles.
-   - compare_markets_for_vendor returns recommendation_order for 2+ markets.
-   - /consumer/run returns ok: false and an error message when a handler raises.
-2. Prefer lightweight unit/integration tests using pytest and aiohttp test utilities where appropriate.
-3. Keep fixtures simple and local; do not introduce heavy test infrastructure.
-4. Ensure tests can run without Stripe, external APIs, or network access.
-
-Success criteria:
-- A repeatable test suite covers the main consumer flows and at least one error path.
-- Future regressions in response shape or parsing are caught automatically.
-"""
-dependencies = []
-
-[tasks.REL-002]
-id = "REL-002"
-name = "Add lint/test scripts and README runbook"
-description = "Make validation easy with documented commands for local development."
-estimated_time = "45 min"
-estimated_lines = 40
-agent = "general-purpose"
-phase = "Phase 4: Reliability"
-status = "completed"
-priority = "medium"
-estimated_hours = 0.75
-prompt = """
-DESIGN DECISION: A working product still needs a lightweight runbook so future work stays consistent.
-WHY: Right now validation knowledge lives in the code and terminal history rather than a clear documented path.
-
-Context (CRITICAL):
-- Python project metadata lives in pyproject.toml.
-- README.md exists but is still light.
-- We want a minimal but useful developer workflow: install, run server, run tests, run lint.
-
-Steps:
-1. Add or confirm dev commands in pyproject.toml / README for:
-   - installing dependencies
-   - starting the server
-   - running pytest
-   - running ruff
-2. Keep commands copy-paste friendly and aligned with the current repo structure.
-3. Mention any environment defaults that matter for local runs.
-
-Success criteria:
-- A new contributor can open README and validate the app without reverse-engineering the repo.
-"""
-dependencies = ["REL-001"]
-
-# ---------------------------------------------------------------------------
-# PHASE 5: Richer data + dashboard value
-# ---------------------------------------------------------------------------
-
-[tasks.DATA-001]
-id = "DATA-001"
-name = "Add seed/demo dataset for market discovery"
-description = "Ship a reliable starter dataset so the dashboard has meaningful results out of the box."
-estimated_time = "2 hours"
-estimated_lines = 120
-agent = "general-purpose"
-phase = "Phase 5: Data"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: The dashboard should feel useful immediately, even in a fresh local setup.
-WHY: A polished interface is still undercut if the database starts empty and search returns nothing.
-
-Context (CRITICAL):
-- storage_markets.py persists to vendor_atlas.db in the repo root.
-- tools/vendor_atlas_ingest.py already exists for ingest-related workflows.
-- The frontend expects market fields like name, city, state, start_date, vendor_count, estimated_traffic, booth_price, application_deadline, popularity_score, and apply_url.
-
-Steps:
-1. Add a small, realistic starter dataset for multiple cities/regions relevant to vendors.
-2. Provide an easy local way to populate the DB:
-   - either a script,
-   - or a documented tool invocation,
-   - or startup-safe seeding if the DB is empty.
-3. Include apply_url and organizer/contact-friendly fields when available so detail/apply flows feel real.
-4. Keep the dataset MVP-sized and easy to maintain.
-
-Success criteria:
-- Fresh local setup can search and return meaningful market data without manual DB editing.
-- Saved markets, compare, and detail flows have realistic data to work with.
-"""
-dependencies = []
-
-[tasks.DATA-002]
-id = "DATA-002"
-name = "Surface organizer/contact details in detail view"
-description = "Show organizer name/contact details when the backend has them."
-estimated_time = "1 hour"
-estimated_lines = 50
-agent = "general-purpose"
-phase = "Phase 5: Data"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: View Details should help a vendor decide and act, not just repeat the card summary.
-WHY: The backend/storage model already has organizer_name and organizer_contact, but the modal currently mostly repeats top-level fields.
-
-Context (CRITICAL):
-- Frontend detail modal is in site/index.html.
-- storage_markets.py exposes organizer_name, organizer_contact, apply_url, and other market details.
-- We want the modal to feel more complete while preserving the current design system.
-
-Steps:
-1. Update the detail modal rendering to include organizer details when present.
-2. Show sensible fallbacks when organizer info is missing.
-3. Keep the content consumer-friendly and scannable; avoid dumping raw fields.
-4. Preserve existing Apply and Save Event actions.
-
-Success criteria:
-- A vendor can open View Details and see organizer/contact context when it exists.
-- The modal feels more informative than the card alone.
-"""
-dependencies = ["DATA-001"]
-
-[tasks.DATA-003]
-id = "DATA-003"
-name = "Improve compare experience with ranked recommendation UI"
-description = "Replace the current single-line compare output with a richer, scannable recommendation panel."
-estimated_time = "1.5 hours"
-estimated_lines = 80
-agent = "general-purpose"
-phase = "Phase 5: Data"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Compare should feel like a product feature, not a utility response.
-WHY: The current Help me choose flow writes a summary line into results-summary. It works, but it undersells the recommendation value.
-
-Context (CRITICAL):
-- compare_markets_for_vendor returns recommendation_order and summary-like guidance.
-- Favorites and detail views already exist in site/index.html.
-- There is already modal infrastructure in the page, so a recommendation panel/modal/inline card is feasible.
-
-Steps:
-1. Replace the current compare output with a richer presentation:
-   - top recommendation,
-   - ranked shortlist,
-   - short reasons per market.
-2. Keep the experience friendly and compact on both mobile and desktop.
-3. Reuse existing design language and avoid technical phrasing.
-4. Do not break the existing compare API contract.
-
-Success criteria:
-- Compare produces a clear, visually distinct recommendation experience.
-- Users can understand why one market ranks above another.
-"""
-dependencies = ["DATA-001", "DATA-002"]
-
-# ---------------------------------------------------------------------------
-# PHASE 6: Accessibility + UX hardening
-# ---------------------------------------------------------------------------
-
-[tasks.UX-001]
-id = "UX-001"
-name = "Add loading skeletons and richer empty states"
-description = "Improve perceived quality during search, compare, and initial dashboard use."
-estimated_time = "1.5 hours"
-estimated_lines = 90
-agent = "general-purpose"
-phase = "Phase 6: UX"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Waiting states should feel intentional, not like a frozen page.
-WHY: The MVP currently relies mostly on text-only loading and empty-state messages. Skeletons and stronger empty states will make the dashboard feel much more polished.
-
-Context (CRITICAL):
-- Search and compare flows currently update results-summary text and then render cards.
-- Results list, favorites, and compare areas are all in site/index.html.
-- The visual system now supports richer cards and surfaces.
-
-Steps:
-1. Add loading skeletons for market results while search is in flight.
-2. Improve empty states for:
-   - no search yet,
-   - no results found,
-   - no saved markets yet.
-3. Keep the messages consumer-friendly and aligned with the current design language.
-4. Ensure loading states do not conflict with actual results or error messages.
-
-Success criteria:
-- Searches feel responsive and intentional.
-- Empty states help the user know what to do next.
-"""
-dependencies = ["DATA-001"]
-
-[tasks.UX-002]
-id = "UX-002"
-name = "Accessibility pass for modals, focus, and keyboard use"
-description = "Harden keyboard/focus behavior and basic accessibility semantics."
-estimated_time = "1.5 hours"
-estimated_lines = 70
-agent = "general-purpose"
-phase = "Phase 6: UX"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: The product should be operable without a mouse and with clearer semantics for assistive technologies.
-WHY: We added mobile polish and modals, but the page still needs a focused accessibility pass.
-
-Context (CRITICAL):
-- There are at least two overlay experiences: quiz modal and detail modal.
-- Mobile menu also behaves like an overlay.
-- Current code opens/closes overlays but does not fully manage focus or keyboard escape flows.
-
-Steps:
-1. Add Escape-to-close support for modals and mobile menu.
-2. Improve focus handling:
-   - move focus into the opened overlay,
-   - return focus to the triggering control when closed where practical.
-3. Add helpful ARIA attributes/roles where appropriate for dialogs and status areas.
-4. Ensure interactive controls have accessible labels if text alone is not sufficient.
-
-Success criteria:
-- Modals and the mobile menu are meaningfully usable by keyboard.
-- Focus behavior is less fragile and more accessible.
-"""
-dependencies = []
-
-[tasks.UX-003]
-id = "UX-003"
-name = "Status messaging cleanup and reusable notification pattern"
-description = "Standardize inline success/error/status messages across the page."
-estimated_time = "1 hour"
-estimated_lines = 60
-agent = "general-purpose"
-phase = "Phase 6: UX"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: Status feedback should feel consistent everywhere.
-WHY: The UI now has multiple places that display feedback: results summary, favorites message, modal messages, quiz error. A more unified pattern will make the product feel calmer and clearer.
-
-Context (CRITICAL):
-- site/index.html already includes setInlineMessage and several ad hoc status outputs.
-- Some states write into summary text, some into inline message boxes.
-- We want consistency without introducing a large framework.
-
-Steps:
-1. Review current message surfaces and standardize tone/style.
-2. Reuse existing helper patterns where possible instead of introducing many one-off states.
-3. Keep technical details hidden; messages should be short, friendly, and actionable.
-4. Ensure success, warning, and error treatments are visually distinct.
-
-Success criteria:
-- Feedback across search, save, apply, compare, and profile flows feels consistent.
-- The page communicates state changes clearly without visual clutter.
-"""
-dependencies = ["UX-001"]
-
-# ---------------------------------------------------------------------------
-# PHASE 7: Deployment readiness
-# ---------------------------------------------------------------------------
-
-[tasks.DEP-001]
-id = "DEP-001"
-name = "Optional runtime config endpoint for API base and product flags"
-description = "Add a lightweight config payload for future static hosting and UI flags."
-estimated_time = "1 hour"
-estimated_lines = 50
-agent = "general-purpose"
-phase = "Phase 7: Deployment"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: Same-origin runtime config works for MVP, but a tiny config endpoint makes the frontend more deployment-flexible.
-WHY: Future hosting may separate the site and API. A server-provided config object also gives us a safe place for product flags like 'Pro coming soon'.
-
-Context (CRITICAL):
-- site/index.html currently defaults CONFIG.API_BASE_URL to window.location.origin.
-- server.py serves the landing page and consumer routes directly.
-- We only need a minimal config shape, not a full settings system.
-
-Steps:
-1. Add a small endpoint such as /config.json or /api/config.
-2. Return at least:
-   - api_base_url
-   - optional UI/product flags useful to the frontend
-3. Update the frontend to use that config when available and fall back safely to same-origin.
-4. Keep the implementation simple and cache-safe for MVP+.
-
-Success criteria:
-- Frontend can still run same-origin by default.
-- Future deployment can override API base or feature flags without editing static HTML.
-"""
-dependencies = []
-
-[tasks.DEP-002]
-id = "DEP-002"
-name = "Data path and startup hardening for production-ish runs"
-description = "Make DB/log paths and startup behavior more explicit and robust."
-estimated_time = "1 hour"
-estimated_lines = 50
-agent = "general-purpose"
-phase = "Phase 7: Deployment"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: Local defaults are fine, but production-ish runs need fewer hidden assumptions.
-WHY: storage_markets.py and related paths currently rely on repo-local defaults. That is workable, but fragile when the app runs in other environments.
-
-Context (CRITICAL):
-- storage_markets.py uses vendor_atlas.db in the repo root by default.
-- billing.py and config.py also rely on environment-driven paths/defaults.
-- We want a small hardening pass, not a full infra rewrite.
-
-Steps:
-1. Review path defaults for DB/log/state files and make them configurable where useful.
-2. Ensure startup behavior is safe when directories/files do not exist yet.
-3. Keep local development simple; do not break the current out-of-the-box experience.
-4. Document the relevant env vars briefly in README if new ones are introduced.
-
-Success criteria:
-- The app is easier to run outside one exact local setup.
-- File path assumptions are clearer and less brittle.
-"""
-dependencies = ["REL-002", "DATA-001"]
-
-# ---------------------------------------------------------------------------
-# PHASE 8: FastAPI MCP backend rebuild
-# ---------------------------------------------------------------------------
-
-[tasks.ARCH-001]
-id = "ARCH-001"
-name = "Rebuild Vendor Atlas server on FastAPI"
-description = "Replace or supersede the current aiohttp server with a FastAPI-based MCP server foundation."
-estimated_time = "3 hours"
-estimated_lines = 180
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 3.0
-prompt = """
-DESIGN DECISION: Vendor Atlas should expose its MCP and HTTP functionality through FastAPI rather than the current aiohttp-first server.
-WHY: The requested backend architecture is a FastAPI MCP server with SSE + stdio support and frontend-friendly API routes for market discovery.
-
-Context (CRITICAL):
-- Current server entrypoint is server.py and is built on aiohttp.
-- The new backend must be Python + FastAPI.
-- Server must support:
-  - stdio MCP transport
-  - SSE transport
-  - frontend-facing HTTP routes such as GET /markets/search
-- Keep the MCP JSON-RPC behavior compatible enough for tool invocation while modernizing the HTTP app layer.
-
-Steps:
-1. Build a FastAPI app that becomes the primary backend entrypoint for Vendor Atlas.
-2. Port or reimplement the MCP JSON-RPC handling needed for tool execution.
-3. Support SSE transport for remote MCP clients and stdio transport for local MCP usage.
-4. Keep the implementation production-friendly and easy to extend.
-
-Success criteria:
-- Vendor Atlas runs on FastAPI.
-- SSE and stdio MCP transports both exist in the new backend.
-- The HTTP app can serve the requested search API and MCP-related routes cleanly.
-"""
-dependencies = []
-
-[tasks.DATA-004]
-id = "DATA-004"
-name = "Create events storage schema for discovered markets"
-description = "Store discovered popup markets and vendor events in a structured events table."
-estimated_time = "1.5 hours"
-estimated_lines = 100
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Event discovery results should persist in a dedicated events table with a schema aligned to the product request.
-WHY: The new MCP backend needs a clear storage layer for search, scrape, score, and frontend filtering workflows.
-
-Context (CRITICAL):
-- Requested schema:
-  events
-  - id
-  - name
-  - city
-  - state
-  - date
-  - vendor_count
-  - estimated_traffic
-  - booth_price
-  - application_link
-  - organizer_contact
-  - popularity_score
-  - source_url
-- Existing storage_markets.py may be reusable, but the resulting API/storage contract should match the requested event schema closely.
-
-Steps:
-1. Introduce or adapt the data layer so events are persisted in a clear structured store.
-2. Support inserts/updates from discovery and scraping flows.
-3. Keep storage simple for local development and deployment.
-4. Make the data shape easy to return directly to frontend dashboards.
-
-Success criteria:
-- Discovered/scored event records can be stored and queried.
-- The stored schema aligns with the requested Vendor Atlas event fields.
-"""
-dependencies = ["ARCH-001"]
-
-[tasks.MCP-001]
-id = "MCP-001"
-name = "Implement MCP tool: discover_events"
-description = "Discover candidate vendor markets across web, listing, directory, and social source categories."
-estimated_time = "2.5 hours"
-estimated_lines = 140
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 2.5
-prompt = """
-DESIGN DECISION: Vendor Atlas needs an MCP tool that can search across web/event sources and return structured market results.
-WHY: This is the main discovery capability behind the product.
-
-Context (CRITICAL):
-- Tool capability requested: search_events / search_markets
-- Sources to search:
-  - Google search results
-  - Eventbrite
-  - Facebook events
-  - Instagram hashtags
-  - local market websites
-  - vendor directories
-- MCP tool name to expose: search_markets
-- Tool should return structured event results suitable for the frontend.
-
-Steps:
-1. Implement discovery logic that can query configured web/social/event sources.
-2. Normalize raw findings into a consistent event structure.
-3. Persist useful discovered events to storage where appropriate.
-4. Return MCP-friendly structured output with clear fields and source URLs.
-
-Success criteria:
-- search_markets exists as an MCP tool with input/output schemas.
-- The tool can discover and normalize event candidates from the requested source categories.
-"""
-dependencies = ["ARCH-001", "DATA-004"]
-
-[tasks.MCP-002]
-id = "MCP-002"
-name = "Implement MCP tool: extract_event"
-description = "Scrape an event page and extract structured event details."
-estimated_time = "2 hours"
-estimated_lines = 120
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Vendor Atlas needs a scraper tool that can turn an event URL into structured market data.
-WHY: Search results alone are not enough for a useful dashboard; we need extracted detail fields from event pages.
-
-Context (CRITICAL):
-- MCP tool name to expose: scrape_event
-- Requested extracted fields:
-  - event name
-  - city
-  - state
-  - date
-  - vendor count
-  - estimated traffic
-  - booth price
-  - organizer contact
-  - application link
-- The scraper should work from a given event URL and return a normalized payload.
-
-Steps:
-1. Implement page fetch + parsing logic.
-2. Extract requested fields with sensible fallbacks when pages are incomplete.
-3. Return structured results and optionally persist/update the event record.
-4. Keep the parsing layer easy to extend for Eventbrite, local market pages, and similar sources.
-
-Success criteria:
-- scrape_event exists as an MCP tool with input/output schemas.
-- Given a URL, the tool returns a normalized event object with the requested fields when available.
-"""
-dependencies = ["ARCH-001", "DATA-004"]
-
-[tasks.MCP-003]
-id = "MCP-003"
-name = "Implement MCP tool: enrich_event"
-description = "Add extra web and social signals to an extracted event."
-estimated_time = "2 hours"
-estimated_lines = 110
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "medium"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Social discovery should be a first-class MCP capability for Vendor Atlas.
-WHY: Many popup markets and maker events surface first through social media rather than traditional event listings.
-
-Context (CRITICAL):
-- Tool capability requested: social_event_discovery / discover_social_events
-- Sources:
-  - Instagram hashtags (#popupmarket, #makersmarket, #craftfair)
-  - TikTok event mentions
-  - Facebook public events
-- MCP tool name to expose: discover_social_events
-- Output should emphasize discovered event links and relevant metadata.
-
-Steps:
-1. Implement social discovery queries or connector-based lookups for the requested source categories.
-2. Return normalized discovered links and lightweight event context.
-3. Persist useful discoveries where appropriate for later scraping/scoring.
-4. Keep the tool resilient when some sources are unavailable.
-
-Success criteria:
-- discover_social_events exists as an MCP tool with input/output schemas.
-- The tool returns discovered event links from social-oriented discovery flows.
-"""
-dependencies = ["ARCH-001", "DATA-004"]
-
-[tasks.MCP-004]
-id = "MCP-004"
-name = "Implement MCP tool: score_event"
-description = "Calculate a profit signal for an event based on quality and opportunity indicators."
-estimated_time = "1.5 hours"
-estimated_lines = 80
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Vendor Atlas should score events with a simple profit-signal model that frontend users can understand.
-WHY: Discovery is much more useful when events can be prioritized by opportunity.
-
-Context (CRITICAL):
-- MCP tool name to expose: score_market
-- Requested scoring inputs:
-  - vendor count
-  - popularity indicators
-  - social mentions
-  - event longevity
-  - booth price vs estimated traffic
-- Requested output:
-  - score 0–100
-  - low / medium / high opportunity
-
-Steps:
-1. Define a clear scoring heuristic using the requested factors.
-2. Return both numeric score and opportunity band.
-3. Persist score/popularity fields on stored events when appropriate.
-4. Keep the logic explainable and easy to tune later.
-
-Success criteria:
-- score_market exists as an MCP tool with input/output schemas.
-- The tool returns a 0–100 score and low/medium/high opportunity classification.
-"""
-dependencies = ["ARCH-001", "DATA-004"]
-
-[tasks.MCP-005]
-id = "MCP-005"
-name = "Implement MCP tool: save_event"
-description = "Persist discovered or scored events into the Vendor Atlas database."
-estimated_time = "1 hour"
-estimated_lines = 60
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: Saving should be an explicit MCP capability even if some tools also persist automatically.
-WHY: Agent workflows are clearer when persistence is available as a separate step in the pipeline.
-
-Context (CRITICAL):
-- MCP tool name to expose: save_event
-- Input: normalized event object
-- Output: save confirmation and event id
-
-Steps:
-1. Accept a normalized event payload.
-2. Upsert it into the events store.
-3. Return a clear confirmation payload.
-4. Keep the tool safe for repeat saves.
-
-Success criteria:
-- save_event exists as an MCP tool with input/output schemas.
-- The tool persists a normalized event and returns confirmation.
-"""
-dependencies = ["DATA-004"]
-
-[tasks.MCP-006]
-id = "MCP-006"
-name = "Implement MCP tool: search_events"
-description = "Query stored events for dashboard and agent workflows."
-estimated_time = "1.5 hours"
-estimated_lines = 80
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Search should be a database-backed retrieval step, not a live discovery step.
-WHY: The dashboard and AI agents need fast, stable search over stored opportunities after discovery, extraction, enrichment, and scoring.
-
-Context (CRITICAL):
-- MCP tool name to expose: search_events
-- Filters:
-  - city
-  - date range
-  - event size
-  - vendor category
-  - distance radius
-- Results must be suitable for the dashboard and downstream agents.
-
-Steps:
-1. Query the stored events database with frontend-friendly filters.
-2. Return normalized event objects.
-3. Keep search fast and stable.
-4. Preserve room for a later HTTP endpoint built on the same query layer.
-
-Success criteria:
-- search_events exists as an MCP tool with input/output schemas.
-- The tool returns filtered stored events cleanly.
-"""
-dependencies = ["DATA-004"]
-
-[tasks.API-004]
-id = "API-004"
-name = "Add FastAPI endpoint GET /markets/search"
-description = "Expose frontend-ready market search results with dashboard filters."
-estimated_time = "1.5 hours"
-estimated_lines = 90
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Vendor Atlas needs a dedicated frontend search endpoint separate from MCP tool transport.
-WHY: The search UI should be able to query structured results directly through HTTP with predictable filters.
-
-Context (CRITICAL):
-- Required route: GET /markets/search
-- Filters:
-  - city
-  - date_range
-  - event_size
-  - vendor_category
-  - distance_radius
-- Results must be suitable for a frontend dashboard.
-
-Steps:
-1. Add GET /markets/search to the FastAPI app.
-2. Support the requested filter parameters with sensible parsing/validation.
-3. Return structured JSON results from stored/discovered events.
-4. Keep the response shape frontend-friendly and stable.
-
-Success criteria:
-- /markets/search exists and returns structured JSON event results.
-- The endpoint supports the requested filters cleanly.
-"""
-dependencies = ["ARCH-001", "DATA-004", "MCP-001", "MCP-004"]
-
-[tasks.DEP-003]
-id = "DEP-003"
-name = "Update packaging and deployment for FastAPI MCP server"
-description = "Refresh requirements, Dockerfile, and run configuration for the new FastAPI backend."
-estimated_time = "1 hour"
-estimated_lines = 60
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: The FastAPI rebuild must be deployable and easy to run locally.
-WHY: Backend architecture work is incomplete unless the package/deploy files reflect the new runtime.
-
-Context (CRITICAL):
-- Requirements to include:
-  - FastAPI-based runtime
-  - any scraping/parsing dependencies needed by the new tools
-- Deployment artifacts to update:
-  - requirements.txt
-  - Dockerfile
-- Server must support both SSE and stdio MCP usage patterns.
-
-Steps:
-1. Update dependency manifests for the FastAPI-based server.
-2. Update Dockerfile to run the new backend correctly.
-3. Ensure local run commands and packaging align with the new app entrypoint.
-4. Keep the setup lightweight and production-friendly.
-
-Success criteria:
-- requirements.txt and Dockerfile reflect the FastAPI MCP server.
-- The backend can be run locally and containerized with the new stack.
-"""
-dependencies = ["ARCH-001"]
-
-[tasks.DOC-001]
-id = "DOC-001"
-name = "Add example MCP tool definitions and backend usage docs"
-description = "Document the new FastAPI MCP tools, schemas, and usage patterns."
-estimated_time = "1 hour"
-estimated_lines = 70
-agent = "general-purpose"
-phase = "Phase 8: FastAPI MCP"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.0
-prompt = """
-DESIGN DECISION: The FastAPI MCP backend should ship with example tool definitions and concise usage docs.
-WHY: The project request explicitly asks for example tool definitions and the new MCP surface area will be easier to maintain if documented immediately.
-
-Context (CRITICAL):
-- MCP tools to document:
-  - search_markets
-  - discover_social_events
-  - scrape_event
-  - score_market
-- Each tool should include:
-  - name
-  - description
-  - input schema
-  - output schema
-- Docs should be easy for future UI/backend work to reference.
-
-Steps:
-1. Add example MCP tool definitions in a clear repo location.
-2. Document the FastAPI backend routes/transports at a high level.
-3. Keep examples aligned with the implemented tool contracts.
-4. Avoid stale scaffold language.
-
-Success criteria:
-- The repo includes example MCP tool definitions for the new backend.
-- Developers can quickly understand how to call the new tools and routes.
-"""
-dependencies = ["MCP-001", "MCP-002", "MCP-003", "MCP-004", "API-004"]
-
-# ---------------------------------------------------------------------------
-# PHASE 9: Shopper storefront commerce
-# ---------------------------------------------------------------------------
-
-[tasks.SHOP-001]
-id = "SHOP-001"
-name = "Vendor Shopify storefront setup and token storage"
-description = "Let vendors save a Shopify shop domain and Storefront API token for shopper-facing product browsing."
-estimated_time = "1.5 hours"
-estimated_lines = 90
-agent = "general-purpose"
-phase = "Phase 9: Shopify Storefront"
-status = "completed"
-priority = "high"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Vendor Atlas should support lightweight shopper commerce by letting vendors connect a Shopify storefront without building a cart or payment system.
-WHY: Shoppers need a simple path from vendor discovery to browsing products and buying directly from the vendor's Shopify store.
-
-Context (CRITICAL):
-- Existing Shopify integration is admin-oriented: OAuth + product/inventory sync for the vendor dashboard.
-- New requirement is storefront-oriented:
-  - store shop domain
-  - storefront API token
-  - fetch lightweight product data for public vendor browsing
-- Roles already exist: vendor, market, shopper.
-- Public vendor profiles already resolve through /u/{username} and JSON through /api/vendors/{username}.
-
-Steps:
-1. Extend the Shopify connection storage so a vendor can save:
-   - shop domain
-   - storefront access token
-   while preserving compatibility with the existing admin-token flow.
-2. Add a vendor-facing API route to save/update storefront configuration safely.
-3. Validate and normalize the shop domain format so it becomes a clean Shopify domain.
-4. Keep error states clear and non-technical when a vendor enters invalid store details.
-
-Success criteria:
-- Vendors can save a Shopify storefront configuration.
-- Storefront credentials are persisted and retrievable for vendor-owned flows.
-- Existing admin-oriented Shopify integration is not broken.
-"""
-dependencies = ["DATA-001"]
-
-[tasks.SHOP-002]
-id = "SHOP-002"
-name = "Storefront product fetch and public vendor product API"
-description = "Fetch vendor products from Shopify Storefront GraphQL and expose a safe public product payload."
-estimated_time = "2 hours"
-estimated_lines = 120
-agent = "general-purpose"
-phase = "Phase 9: Shopify Storefront"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Shopper-facing product browsing should use Shopify's Storefront API and expose only the data needed for a fast vendor profile experience.
-WHY: We want a minimal, resilient read-only product layer with no custom checkout stack.
-
-Context (CRITICAL):
-- Required product fields:
-  - name
-  - price
-  - image
-  - product handle
-- Checkout should redirect to Shopify product or checkout pages rather than implementing in-app cart/payment flows.
-- Example fetch shape uses POST https://{shop-domain}/api/2024-01/graphql.json with X-Shopify-Storefront-Access-Token.
-- Public vendor profiles already exist and should gain a shopper-safe products endpoint.
-
-Steps:
-1. Add a Storefront GraphQL fetch helper that requests a small product set and normalizes:
-   - title/name
-   - price amount
-   - first image URL
-   - handle
-   - direct product URL
-2. Add a backend route for public vendor products, such as /api/vendors/{username}/products.
-3. Return loading-safe empty states and structured error payloads when Shopify is unavailable or misconfigured.
-4. Ensure failed Shopify requests do not crash public profile rendering.
-
-Success criteria:
-- Vendor products can be fetched from Shopify Storefront API.
-- Public vendor product responses are normalized, minimal, and stable.
-- Empty/misconfigured/failed Shopify states are handled gracefully.
-"""
-dependencies = ["SHOP-001"]
-
-[tasks.SHOP-003]
-id = "SHOP-003"
-name = "Vendor profile shop section and simple buy flow"
-description = "Add a clean shopper-facing product grid, product detail surface, and Buy from Vendor redirect."
-estimated_time = "2 hours"
-estimated_lines = 140
-agent = "general-purpose"
-phase = "Phase 9: Shopify Storefront"
-status = "completed"
-priority = "high"
-estimated_hours = 2.0
-prompt = """
-DESIGN DECISION: Product browsing should feel native to Vendor Atlas, but buying should stay seamless by sending shoppers to Shopify.
-WHY: The goal is repeated discovery and easy conversion, not duplicating commerce features inside Vendor Atlas.
-
-Context (CRITICAL):
-- Public vendor profiles already support follow/unfollow and upcoming events.
-- New UI requirements:
-  - Shop Products section
-  - clean grid layout
-  - large images
-  - minimal text
-  - fast loading
-  - product details
-  - Buy from Vendor button
-- Shopper role already has a dashboard and vendor discovery flows.
-
-Steps:
-1. Add a "Shop Products" section to the public vendor profile experience.
-2. Render product cards with large images, clear pricing, and minimal supporting copy.
-3. Add a lightweight product detail view or expanded card state that keeps the interaction simple.
-4. Wire "Buy from Vendor" to redirect to the vendor's Shopify product page.
-5. Preserve a clean separation between vendor, market, and shopper interfaces.
-
-Success criteria:
-- Shopper-visible vendor profiles show a clean product grid when Shopify is connected.
-- Product details are easy to view without clutter.
-- Buy actions redirect shoppers directly to Shopify.
-"""
-dependencies = ["SHOP-002"]
-
-[tasks.SHOP-004]
-id = "SHOP-004"
-name = "Storefront loading, empty, and failure UX hardening"
-description = "Add polished loading and fallback states for vendor product browsing and integrations setup."
-estimated_time = "1.25 hours"
-estimated_lines = 90
-agent = "general-purpose"
-phase = "Phase 9: Shopify Storefront"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.25
-prompt = """
-DESIGN DECISION: Shopify storefront browsing must degrade gracefully and never create a broken-feeling vendor profile.
-WHY: Third-party commerce connections are one of the easiest places for instability to leak into shopper UX.
-
-Context (CRITICAL):
-- Current app already has async state patterns for Shopify admin flows and shopper/vendor dashboards.
-- New storefront surfaces need:
-  - loading state
-  - empty state
-  - failed API state
-  - instant feedback after vendor setup changes
-- Language should stay friendly and non-technical.
-
-Steps:
-1. Add visible loading placeholders or status messaging for storefront product fetches.
-2. Add empty states for:
-   - vendor has not connected Shopify
-   - vendor has no products
-   - products are temporarily unavailable
-3. Ensure vendor setup surfaces confirm save/sync success or failure clearly.
-4. Keep public profiles usable even when products cannot be shown.
-
-Success criteria:
-- No broken or blank Shopify storefront sections.
-- Public and vendor-facing Shopify states are understandable and calm.
-- Async failures remain contained and do not interrupt the rest of the profile/dashboard flow.
-"""
-dependencies = ["SHOP-001", "SHOP-002", "SHOP-003"]
-
-[tasks.SHOP-005]
-id = "SHOP-005"
-name = "Storefront integration regression coverage"
-description = "Add backend and UI-oriented regression tests for Shopify storefront setup and product browsing."
-estimated_time = "1.5 hours"
-estimated_lines = 110
-agent = "general-purpose"
-phase = "Phase 9: Shopify Storefront"
-status = "completed"
-priority = "medium"
-estimated_hours = 1.5
-prompt = """
-DESIGN DECISION: Shopify storefront work should land with regression coverage because it touches auth, public profiles, vendor setup, and third-party API failure handling.
-WHY: Commerce-related regressions are easy to miss and highly visible to users.
-
-Context (CRITICAL):
-- Existing smoke coverage lives in tests/test_consumer_flows.py.
-- Network access is restricted in test runs, so Shopify API calls should be mocked or monkeypatched.
-- New tests should cover:
-  - saving storefront domain/token
-  - fetching/serializing storefront products
-  - public vendor product endpoint behavior
-  - empty/failure handling
-  - public profile shopper flow staying stable
-
-Steps:
-1. Add test coverage for saving storefront settings.
-2. Mock Shopify Storefront GraphQL responses and verify normalization.
-3. Test public vendor product API success, empty, and failure states.
-4. Verify the broader shopper/vendor profile flow does not regress.
-
-Success criteria:
-- The storefront integration is protected by regression tests.
-- Tests do not depend on live Shopify credentials or network access.
-"""
-
-# ---------------------------------------------------------------------------
-# PHASE 10: AI layer wire-up + auth + DB migration (remaining work as of 2026-03-19)
+# PHASE 2: Housekeeping (quick wins from smoke test)
 # ---------------------------------------------------------------------------
 
 [tasks.PIPE-001]
 id = "PIPE-001"
-name = "Commit vendor_atlas_pipeline.py dedup fix"
-description = "Commit the has_verified dedup fix already in working tree — prevents low-precision fallback events from slipping in when verified results exist."
+name = "Commit vendor_atlas_pipeline.py dedup fix + Claude search addition"
+description = "Stage and commit the has_verified dedup fix and the new _discover_with_claude function."
 estimated_time = "5 min"
 estimated_lines = 5
 agent = "general-purpose"
-phase = "Phase 10: Remaining"
+phase = "Phase 2: Housekeeping"
 status = "todo"
 priority = "high"
 estimated_hours = 0.1
 prompt = """
-DESIGN DECISION: When at least one verified event exists in the pipeline, skip the low-precision fallback pass entirely.
-WHY: Without this fix, events with precision_score < 2 could still append to results even after a verified event was found, polluting the result set.
-
-Context (CRITICAL):
-- tools/vendor_atlas_pipeline.py, _refine_discovered_events: the `has_verified` flag and the early `continue` guard are already present in the working tree but uncommitted.
-- The fix is a 5-line change: set has_verified = False before the verified loop, flip to True when a verified result is accepted, then skip the fallback loop when has_verified is True.
+DESIGN DECISION: Commit outstanding working-tree changes before adding more work on top.
+WHY: tools/vendor_atlas_pipeline.py has two uncommitted additions: the has_verified dedup fix and the _discover_with_claude function. They are tested and working.
 
 Steps:
-1. Stage tools/vendor_atlas_pipeline.py.
-2. Commit with a clear message: "fix: skip low-precision fallback when verified events exist".
+1. git add tools/vendor_atlas_pipeline.py
+2. git commit -m "feat: add Claude web_search discovery + fix low-precision fallback dedup"
 
 Success criteria:
-- Uncommitted change is committed. _refine_discovered_events only falls back to precision_score >= 2 events when no verified event was accepted.
+- Clean working tree for vendor_atlas_pipeline.py.
 """
 dependencies = []
+
+[tasks.API-003]
+id = "API-003"
+name = "Normalise search_markets response shape"
+description = "search_markets currently returns {found, markets} but callers and sprint docs expect {results_count, events}. Add results_count alias."
+estimated_time = "20 min"
+estimated_lines = 10
+agent = "general-purpose"
+phase = "Phase 2: Housekeeping"
+status = "todo"
+priority = "medium"
+estimated_hours = 0.33
+prompt = """
+DESIGN DECISION: Align search_markets response shape with search_events for consistency.
+WHY: Smoke test confirmed search_markets returns {found, markets} while the dashboard and other callers expect {results_count, events} (the shape search_events uses). This causes silent wrong-empty-state bugs.
+
+Context (CRITICAL):
+- tools/vendoratlas.py handle_search_markets returns JSON with key "found" and "markets".
+- search_events returns "results_count" and "events".
+- The server's /markets/search endpoint and dashboard JS both read results_count.
+
+Steps:
+1. In handle_search_markets, add results_count = found value and events = markets list to the returned dict (keep the old keys too for backwards compat).
+2. Confirm dashboard search flow reads results_count without change.
+
+Success criteria:
+- search_markets returns both {found, markets} AND {results_count, events}.
+- No dashboard breakage.
+"""
+dependencies = []
+
+[tasks.API-004]
+id = "API-004"
+name = "Normalise ingest_markets_from_csv response — add ingested key"
+description = "ingest_markets_from_csv returns {imported, skipped_duplicates} but callers check {ingested}. Add alias."
+estimated_time = "10 min"
+estimated_lines = 5
+agent = "general-purpose"
+phase = "Phase 2: Housekeeping"
+status = "todo"
+priority = "low"
+estimated_hours = 0.17
+prompt = """
+DESIGN DECISION: Add an ingested key to ingest_markets_from_csv response as alias for imported.
+WHY: Smoke test showed callers reading result.ingested get undefined. The actual key is imported.
+
+Context (CRITICAL):
+- tools/vendoratlas.py or tools/vendor_atlas_ingest.py: handle_ingest_markets_from_csv return dict.
+
+Steps:
+1. Add ingested = imported_count to the returned dict (keep imported for backwards compat).
+
+Success criteria:
+- result.ingested == result.imported in all ingest responses.
+"""
+dependencies = []
+
+# ---------------------------------------------------------------------------
+# PHASE 3: AI wire-up (unblock with free Anthropic credits or key)
+# ---------------------------------------------------------------------------
 
 [tasks.AI-001]
 id = "AI-001"
@@ -1579,124 +215,135 @@ description = "Smoke-test /api/ai/content, /api/ai/match, and /api/ai/marketing 
 estimated_time = "1.5 hours"
 estimated_lines = 60
 agent = "general-purpose"
-phase = "Phase 10: Remaining"
+phase = "Phase 3: AI"
 status = "todo"
 priority = "high"
 estimated_hours = 1.5
 prompt = """
-DESIGN DECISION: The AI services (ContentGenerator, SmartMatcher, MarketingAutomation) were scaffolded in commit 2d28503. They need end-to-end validation before being promoted to users.
-WHY: Service code is written but the round-trip from UI button → /api/ai/* → Claude API → response has not been tested.
+DESIGN DECISION: Validate AI endpoints end-to-end before surfacing them in the UI.
+WHY: ContentGenerator, SmartMatcher, MarketingAutomation are scaffolded but the round-trip UI → /api/ai/* → Anthropic → response has not been tested.
 
 Context (CRITICAL):
-- ai/router.py mounts at /api/ai/ with auth + flag checks.
-- features/flags.py reads AI_CONTENT_ENABLED, AI_MATCHING_ENABLED, AI_MARKETING_ENABLED from env.
-- site/assets/ai-features.js wires AI buttons on dashboard, discover, final-plan, my-shop pages.
-- ANTHROPIC_API_KEY must be set in .env for real calls; set AI_*_ENABLED=true to enable each service.
+- AI features are gated behind AI_ENABLED=true in config.py.
+- ANTHROPIC_API_KEY must be set in .env.
+- Endpoints: POST /api/ai/content, /api/ai/match, /api/ai/marketing (check server.py for exact paths).
+- Flag-off path must return HTTP 402 with {ok: false, error: "AI features not enabled"}.
 
 Steps:
-1. With ANTHROPIC_API_KEY set and all AI flags enabled, trigger each AI button on the relevant page and confirm a real response renders.
-2. With a flag disabled, confirm the endpoint returns HTTP 402 and the UI shows a friendly upgrade prompt (not a raw error).
-3. Fix any integration issues found (missing fields, auth errors, malformed prompts).
-4. Add a smoke test to tests/ that mocks the Claude API and verifies the flag-off 402 path.
+1. Set AI_ENABLED=true and ANTHROPIC_API_KEY in .env temporarily.
+2. Start server, POST to each AI endpoint with minimal valid payload.
+3. Confirm 200 + structured response.
+4. Set AI_ENABLED=false, confirm 402.
+5. Document any schema mismatches found.
+6. Remove AI_ENABLED=true from .env when done (leave key).
 
 Success criteria:
-- Each AI endpoint returns a usable response when enabled. Flag-off path returns 402 with a friendly message. UI handles both states gracefully.
+- All three AI endpoints return structured responses when AI_ENABLED=true.
+- 402 when AI_ENABLED=false.
+- No unhandled exceptions in server log.
 """
-dependencies = ["PIPE-001"]
+dependencies = []
 
 [tasks.AI-002]
 id = "AI-002"
 name = "Billing gate UI for AI features"
-description = "When AI flag is off (free tier), show an upgrade prompt instead of an error when the user clicks an AI button."
+description = "Show a clear upgrade prompt when AI features are disabled; wire the AI panel CTA to the pricing/upgrade page."
 estimated_time = "1 hour"
 estimated_lines = 50
 agent = "general-purpose"
-phase = "Phase 10: Remaining"
+phase = "Phase 3: AI"
 status = "todo"
 priority = "medium"
 estimated_hours = 1.0
 prompt = """
-DESIGN DECISION: AI features are gated by feature flags that will eventually map to a paid tier. The upgrade prompt is the billing gate UI.
-WHY: When AI_*_ENABLED=false, /api/ai/* returns 402. site/assets/ai-features.js must handle 402 with a clear, friendly upgrade prompt rather than a generic error or silent failure.
+DESIGN DECISION: When AI_ENABLED is false, show a clear upgrade prompt rather than a broken or empty AI panel.
+WHY: Users hitting /api/ai/* get 402 but the UI currently shows nothing or a generic error.
 
 Context (CRITICAL):
-- site/assets/ai-features.js: each AI button calls its endpoint; on 402, show "Upgrade to Pro to unlock [feature name]" with a CTA linking to /pricing.html or showing a modal.
-- Keep the free tier experience friendly, not punishing. The prompt should feel like an invitation, not a blocker.
+- Dashboard has AI feature panels (content, match, marketing).
+- /api/ai/* returns {ok: false, error: "..."} with HTTP 402 when feature is off.
+- site/pricing.html exists and should be the upgrade destination.
 
 Steps:
-1. In ai-features.js, detect HTTP 402 in the fetch response.
-2. Show a small inline message or modal: "This feature is available on the Pro plan. [Upgrade to Pro]".
-3. Link or CTA goes to /pricing.html (or opens the pricing section if on index.html).
-4. Ensure the upgrade prompt is styled to match design system (lavender CTA, white card).
+1. In the dashboard AI panels, catch HTTP 402 responses.
+2. Show a friendly "Upgrade to unlock AI features" message with a link to /pricing.html.
+3. Style consistently with other upgrade prompts in the dashboard.
 
 Success criteria:
-- 402 from any AI endpoint shows a friendly upgrade prompt. No raw "402 Payment Required" or empty state. Free-tier users understand the value proposition.
+- AI panel shows upgrade prompt (not error) when AI_ENABLED=false.
+- CTA links to /pricing.html.
 """
 dependencies = ["AI-001"]
+
+# ---------------------------------------------------------------------------
+# PHASE 4: Auth + DB (larger items, lower urgency while in dev)
+# ---------------------------------------------------------------------------
 
 [tasks.AUTH-001]
 id = "AUTH-001"
 name = "Wire signup and signin to real auth backend"
-description = "Connect site/signup.html and site/signin.html forms to a real auth flow (Supabase Auth or session tokens); protect vendor-only routes."
+description = "Replace stub/session auth with a real JWT or session-cookie flow backed by storage_users."
 estimated_time = "3 hours"
 estimated_lines = 150
 agent = "general-purpose"
-phase = "Phase 10: Remaining"
+phase = "Phase 4: Auth + DB"
 status = "todo"
-priority = "high"
+priority = "medium"
 estimated_hours = 3.0
 prompt = """
-DESIGN DECISION: signup.html and signin.html pages exist but the auth flow is not yet connected to a real backend.
-WHY: Without real auth, vendor profiles, saved events, and AI features cannot be reliably scoped to a user.
+DESIGN DECISION: Replace the current dev-stub auth with a real stateless JWT flow.
+WHY: Auth is the last major stub blocking a real user going from signup → dashboard → save profile.
 
 Context (CRITICAL):
-- storage_users.py was created in commit 2d28503 with user record handling.
-- Supabase is the intended auth backend (see docs/RENDER_DOPPLER_SUPABASE_SETUP.md).
-- Server currently has no session middleware; user identity is not threaded through API handlers.
+- storage_users.py handles user persistence in SQLite.
+- server.py has /api/auth/signup and /api/auth/signin routes (confirm exact paths).
+- Session management is in middleware/session_manager.py.
+- Frontend auth flow is in site/dashboard.html and site/index.html.
 
 Steps:
-1. Decide auth strategy: Supabase Auth (recommended, already in setup docs) or a simple token issued by the server.
-2. Wire signup.html form to POST /auth/signup; signin.html to POST /auth/signin. Return a session token.
-3. Store session token in localStorage or cookie; send as Authorization header on subsequent API calls.
-4. Add a lightweight auth middleware to server.py that validates the token and injects user_id into request context.
-5. Scope vendor profile, saved events, and AI calls to the authenticated user_id.
-6. Protect vendor-only pages (my-shop, final-plan, dashboard) with a redirect to signin if no token.
+1. On signup: hash password with bcrypt, store in storage_users, return signed JWT (use itsdangerous or PyJWT).
+2. On signin: verify password, return JWT.
+3. Add JWT verification middleware for protected routes.
+4. Wire frontend to store JWT in localStorage and send as Bearer token.
+5. Test: signup → signin → access protected dashboard route.
 
 Success criteria:
-- A new user can sign up, sign in, and have their data scoped to their account. Unauthenticated users are redirected to signin. Auth token is validated server-side.
+- Real users can sign up, sign in, and stay authenticated across page reloads.
+- Invalid/expired tokens get 401.
+- No plaintext passwords stored.
 """
 dependencies = []
 
 [tasks.DB-001]
 id = "DB-001"
 name = "Supabase/Postgres migration for production data"
-description = "Migrate storage_events.py, storage_markets.py, storage_users.py, and storage_ai.py from local SQLite to Supabase/Postgres for the deployed environment."
+description = "Migrate from SQLite to Postgres (Supabase) for events, users, and marketplace tables."
 estimated_time = "4 hours"
 estimated_lines = 200
 agent = "general-purpose"
-phase = "Phase 10: Remaining"
+phase = "Phase 4: Auth + DB"
 status = "todo"
-priority = "high"
+priority = "medium"
 estimated_hours = 4.0
 prompt = """
-DESIGN DECISION: The app currently uses local SQLite for all storage. This is fine for local dev but will not persist across Render deploys and cannot scale.
-WHY: README explicitly states: "the app can deploy on Render now, but it still uses the current local storage modules until a separate Supabase/Postgres migration is completed."
+DESIGN DECISION: Move to Postgres (via Supabase) for production persistence.
+WHY: SQLite is fine for dev but cannot scale for multi-user production. DATABASE_URL and SUPABASE_* keys are already in .env.example.
 
 Context (CRITICAL):
-- Storage modules: storage_events.py, storage_markets.py, storage_users.py, storage_ai.py.
-- All use SQLite via the sqlite3 module with an env-driven path.
-- Supabase project and credentials are expected to be available (see RENDER_DOPPLER_SUPABASE_SETUP.md).
-- The migration should be additive: local SQLite continues to work in dev (DATABASE_URL not set); Supabase/Postgres is used when DATABASE_URL is set.
+- All storage modules (storage_events, storage_users, storage_marketplace, etc.) use sqlite3 directly.
+- db_runtime.py has backend_summary() that checks which backend is active.
+- Target: read DATABASE_URL from env; if set use psycopg3 (psycopg already in requirements.txt), else SQLite.
+- Schema should be identical — only the connection and placeholder syntax changes (? → %s).
 
 Steps:
-1. Add asyncpg or psycopg2-binary (or supabase-py) to requirements.txt.
-2. Refactor each storage module to check for DATABASE_URL env var. If set, use Postgres; otherwise fall back to SQLite.
-3. Write migration SQL (or use Supabase dashboard) to create the equivalent tables in Supabase.
-4. Test locally with DATABASE_URL pointing to a local Postgres or Supabase dev project.
-5. Deploy to Render and verify data persists across deploys.
+1. Add a db.py connection factory: returns sqlite3 conn if no DATABASE_URL, psycopg3 conn if set.
+2. Update each storage module to use the factory and swap ? placeholders for %s when on Postgres.
+3. Add a migration script (scripts/migrate_to_postgres.py) that reads existing SQLite and bulk-inserts to Postgres.
+4. Test: set DATABASE_URL to a Supabase connection string, run migrations, confirm all storage tests pass.
 
 Success criteria:
-- With DATABASE_URL set, all storage reads/writes go to Supabase/Postgres. Without it, local SQLite works as before. Data persists across Render restarts.
+- App runs on both SQLite (dev) and Postgres (prod) with same code.
+- No data loss during migration.
+- All 16 MCP tools pass smoke test on Postgres backend.
 """
 dependencies = ["AUTH-001"]
-dependencies = ["SHOP-001", "SHOP-002", "SHOP-003", "SHOP-004"]

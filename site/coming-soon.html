@@ -172,13 +172,47 @@
   <script>
   (function () {
     var FEATURE_LABELS = {
-      social_feed:          { name: 'Vendor Social Feed',        desc: 'Share your market setups and connect with other vendors — coming to your dashboard soon.' },
-      community_rooms:      { name: 'Community Rooms',           desc: 'Join vendor circles and event rooms to stay connected between markets.' },
-      direct_messages:      { name: 'Direct Messages',           desc: 'Message other vendors and organizers directly inside Vendor Atlas.' },
-      shopper_dashboard:    { name: 'Shopper Dashboard',         desc: 'A dedicated space for shoppers to track saved markets, followed vendors, and upcoming events.' },
-      marketplace_listings: { name: 'Marketplace Listings',      desc: 'Browse and list products in the Vendor Atlas marketplace.' },
-      advanced_admin:       { name: 'Advanced Admin Tools',      desc: 'User management, roles, and advanced admin controls — restricted to platform administrators.' },
-      market_map:           { name: 'Interactive Market Map',    desc: 'Explore markets on a live map filtered by city, category, and event size.' },
+      // Existing
+      social_feed:            { name: 'Vendor Social Feed',           tier: null,         desc: 'Share your market setups and connect with other vendors — coming to your dashboard soon.' },
+      community_rooms:        { name: 'Community Rooms',              tier: null,         desc: 'Join vendor circles and event rooms to stay connected between markets.' },
+      direct_messages:        { name: 'Direct Messages',              tier: 'Handcrafted',desc: 'Message other vendors and organizers directly inside Vendor Atlas.' },
+      shopper_dashboard:      { name: 'Shopper Dashboard',            tier: null,         desc: 'A dedicated space for shoppers to track saved markets, followed vendors, and upcoming events.' },
+      marketplace_listings:   { name: 'Marketplace Listings',         tier: null,         desc: 'Browse and list products in the Vendor Atlas marketplace.' },
+      advanced_admin:         { name: 'Advanced Admin Tools',         tier: null,         desc: 'User management, roles, and advanced admin controls — restricted to platform administrators.' },
+      market_map:             { name: 'Interactive Market Map',       tier: null,         desc: 'Explore markets on a live map filtered by city, category, and event size.' },
+      // Phase 2 — Vendor core
+      application_tracker:    { name: 'Application Tracker',          tier: 'Handcrafted',desc: 'Track every event you\'ve applied to with a live status — Applied, Waitlisted, Accepted, or Declined. All in one place.' },
+      packing_checklist:      { name: 'Pre-event Packing Checklist',  tier: 'Handcrafted',desc: 'Auto-generated from your inventory — see exactly what to pack for each event and check it off as you load up.' },
+      // Phase 4 — AI tools
+      ai_event_scoring:       { name: 'AI Event Fit Scoring',         tier: 'Business',   desc: 'Each event in Discover gets a fit score based on your shop category and past sales. Shows a badge and "Why this event" tooltip. Manual browsing always works without it.' },
+      ai_bio_generator:       { name: 'AI Bio Generator',             tier: 'Business',   desc: 'Click "Generate for me" next to your bio field. AI drafts a bio from your shop details — edit before saving. Always a suggestion, never automatic.' },
+      ai_product_desc:        { name: 'AI Product Description Writer',tier: 'Business',   desc: 'Generate a product description from a name and tags. One click, fully editable, saves only when you confirm.' },
+      ai_caption:             { name: 'AI Caption Generator',         tier: 'Business',   desc: 'Generate an Instagram or Facebook caption announcing your upcoming market. Paste and post — or edit it first.' },
+      smart_scheduler:        { name: 'Smart Schedule Suggester',     tier: 'Business',   desc: 'AI ranks available events by travel distance, profit potential, and category fit. Surfaces the best events for your specific situation.' },
+      nightly_discovery:      { name: 'Nightly Event Discovery',      tier: 'Business',   desc: 'New market listings are scraped nightly and surfaced in Discover. Business tier sees them first.' },
+      // Phase 5 — Organizer suite
+      booth_layout:           { name: 'Booth Layout Builder',         tier: 'Studio',     desc: 'Drag-and-drop grid layout tool. Assign accepted vendors to specific booths and share the layout before the event.' },
+      waitlist_autopromote:   { name: 'Waitlist Auto-Promote',        tier: 'Studio',     desc: 'When an accepted vendor drops out, the next on the waitlist is automatically notified and given a time window to accept.' },
+      custom_app_form:        { name: 'Custom Application Form Builder', tier: 'Studio',  desc: 'Add custom fields, require photos, set per-category vendor limits, and gate applications by vendor type.' },
+      booth_fees:             { name: 'Stripe Booth Fee Collection',  tier: 'Studio',     desc: 'Collect booth fees directly through Vendor Atlas. Track paid, outstanding, and refunded balances from your dashboard.' },
+      embeddable_widget:      { name: 'Embeddable Vendor Directory',  tier: 'Studio',     desc: 'Embed a live list of accepted vendors on your own event website. Updates automatically as you approve applications.' },
+      post_event_report:      { name: 'Post-Event Reports',           tier: 'Studio',     desc: 'Summary reports after each event — attendance estimates, vendor satisfaction, and category breakdown. Year-over-year comparison.' },
+      ai_vendor_mix:          { name: 'AI Vendor Mix Analyzer',       tier: 'Studio',     desc: 'AI reviews your accepted vendor list and flags category imbalances — useful when filling a market with the right mix of sellers.' },
+      // Phase 7 — Integrations
+      shopify_sync:           { name: 'Shopify / Etsy / Square Sync', tier: 'Business',   desc: 'Import your product catalog from Shopify or Etsy. Pull in post-event sales from Square to auto-populate your profit log.' },
+      instagram_import:       { name: 'Instagram Image Import',       tier: 'Business',   desc: 'Pull product images from your Instagram feed directly into your shop. No re-uploading photos you\'ve already posted.' },
+      // Phase 8 — Shopper Pro
+      shopper_pro:            { name: 'Shopper Pro',                  tier: 'Shopper Pro',desc: 'Unlimited saved vendors, weekly market digest, trip planner, wish list, and early access to new listings. $3/mo at launch.' },
+      trip_planner:           { name: 'Shopper Trip Planner',         tier: 'Shopper Pro',desc: 'Build a route across multiple market stops in a single day. See drive times and plan your Saturday around it.' },
+      shopper_alerts:         { name: 'Vendor Alerts',                tier: null,         desc: 'Get an email when a saved vendor is at a market near you. Available free — Shopper Pro removes the cap on saved vendors.' },
+      // Phase 9 — Referral race
+      referral_race:          { name: 'Annual Referral Race',         tier: null,         desc: 'Once a year, a 30-day public leaderboard race with a live countdown. Top 12 earn an Atlas Ambassador badge. 1st place wins a lifetime Studio plan.' },
+      ambassador_badge:       { name: 'Atlas Ambassador Badge',       tier: 'Earned',     desc: 'A permanent crown badge earned only by finishing top 12 in the annual referral race. Visible on your shop page and in organizer vendor discovery.' },
+      // Phase 10 — Launch
+      founders_badge:         { name: 'Founding Member Badge',        tier: null,         desc: 'A permanent badge for anyone who subscribes during the launch window (first 90 days or 500 subscribers). Locks in founders pricing forever.' },
+      // Studio multi-brand
+      multi_brand:            { name: 'Multiple Brand Profiles',      tier: 'Studio',     desc: 'Run up to 5 brand identities under one login — each with its own shop page, product catalog, and application history.' },
+      team_seats:             { name: 'Team Seats',                   tier: 'Studio',     desc: 'Add up to 3 team members to your account. Useful for vendors with assistants or multi-person operations.' },
     };
 
     var params = new URLSearchParams(window.location.search);
@@ -189,6 +223,11 @@
       document.getElementById('cs-title').textContent = info.name + ' — Coming Soon';
       document.getElementById('cs-description').textContent = info.desc;
       document.title = info.name + ' — Coming Soon | Vendor Atlas';
+      if (info.tier) {
+        var fn = document.getElementById('cs-feature-name');
+        fn.textContent = info.tier + ' tier feature';
+        fn.style.display = 'block';
+      }
     }
 
     // Smart back button: go to the right dashboard based on role

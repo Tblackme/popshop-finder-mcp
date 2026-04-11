@@ -18,8 +18,8 @@
     .leaflet-popup-tip { background: var(--surface); }
     .map-popup h3 { margin: 0 0 .25rem; font-size: .95rem; }
     .map-popup p  { margin: 0 0 .2rem; font-size: .8rem; color: var(--muted); }
-    .map-popup .pill { font-size: .72rem; padding: .2rem .5rem; border-radius: 999px; background: var(--primary-muted, #d1fae5); color: var(--primary, #0f766e); display: inline-block; margin-top: .35rem; }
-    .map-popup a.btn-sm { display: inline-block; margin-top: .5rem; padding: .3rem .8rem; background: var(--primary, #0f766e); color: #fff; border-radius: var(--radius); font-size: .8rem; text-decoration: none; }
+    .map-popup .pill { font-size: .72rem; padding: .2rem .5rem; border-radius: 999px; background: var(--primary-soft, #DBEAFE); color: var(--brand, #2563EB); display: inline-block; margin-top: .35rem; }
+    .map-popup a.btn-sm { display: inline-block; margin-top: .5rem; padding: .3rem .8rem; background: var(--brand, #2563EB); color: #fff; border-radius: var(--radius); font-size: .8rem; text-decoration: none; }
     .map-popup a.btn-sm:hover { opacity: .85; }
   </style>
 </head>
@@ -96,7 +96,7 @@
 
     const markerIcon = L.divIcon({
       className: '',
-      html: '<div style="width:14px;height:14px;border-radius:50%;background:#0f766e;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#2563EB;border:2px solid #fff;box-shadow:0 2px 6px rgba(37,99,235,.40)"></div>',
       iconSize: [14, 14],
       iconAnchor: [7, 7],
       popupAnchor: [0, -10],

@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 from datetime import UTC, datetime
 from html import unescape
@@ -12,6 +13,8 @@ import httpx
 
 SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "")
 SERPER_SEARCH_URL = "https://google.serper.dev/search"
+
+logger = logging.getLogger(__name__)
 
 from storage_events import Event, get_event_by_id, upsert_event
 from storage_events import search_events as query_events
@@ -617,12 +620,96 @@ def _dedupe_discovered_events(events: list[dict[str, Any]]) -> list[dict[str, An
     return deduped
 
 
+async def _discover_with_claude(
+    city: str,
+    state: str,
+    keywords: list[str],
+) -> list[dict[str, Any]]:
+    """Use Claude with web_search to find vendor events. Returns candidates in the same
+    format as the Serper/DuckDuckGo path so the rest of the pipeline is unchanged."""
+    import anthropic
+
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_api_key:
+        return []
+
+    client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
+    location_text = _build_location_text(city, state)
+    kw_text = ", ".join(keywords) if keywords else "popup market, makers market, craft fair"
+
+    prompt = (
+        f"Search the web for upcoming vendor events, popup markets, makers markets, and craft fairs "
+        f"in {location_text} where small vendors or makers can apply for booth space.\n\n"
+        f"Search for: {kw_text}\n\n"
+        f"Return a JSON array of up to 10 real events you find. Each object must have:\n"
+        f'- "title": event name\n'
+        f'- "url": event page URL\n'
+        f'- "city": city name\n'
+        f'- "state": state abbreviation\n'
+        f'- "date": date string if found, else null\n'
+        f'- "application_link": vendor application URL if found, else null\n'
+        f'- "organizer_contact": organizer email if found, else null\n'
+        f'- "snippet": 1-2 sentence description\n\n'
+        f"Return ONLY the raw JSON array, no other text."
+    )
+
+    response = await client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=2048,
+        tools=[{"type": "web_search_20250305", "name": "web_search"}],
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    for block in response.content:
+        if not hasattr(block, "text"):
+            continue
+        text = block.text.strip()
+        start = text.find("[")
+        end = text.rfind("]") + 1
+        if start < 0 or end <= start:
+            continue
+        try:
+            events = json.loads(text[start:end])
+            return [
+                {
+                    "title": str(e.get("title") or "").strip(),
+                    "url": str(e.get("url") or "").strip(),
+                    "source": "claude_search",
+                    "precision_score": 6,
+                    "city": e.get("city") or city,
+                    "state": e.get("state") or state,
+                    "date": e.get("date"),
+                    "application_link": e.get("application_link"),
+                    "organizer_contact": e.get("organizer_contact"),
+                    "snippet": e.get("snippet", ""),
+                    "discovered_via": "claude_search",
+                    "event_id": None,
+                }
+                for e in events
+                if str(e.get("title") or "").strip() and str(e.get("url") or "").strip()
+            ]
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+    return []
+
+
 async def _discover_live_candidates(
     city: str,
     state: str,
     keywords: list[str],
     requested_sources: list[str],
 ) -> list[dict[str, Any]]:
+    # Try Claude web_search first — richer results, no per-source scraping needed
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if anthropic_api_key:
+        try:
+            results = await _discover_with_claude(city, state, keywords)
+            if results:
+                return results
+        except Exception as exc:
+            logger.warning("Claude discovery failed, falling back to web scrape: %s", exc)
+
     location_text = _build_location_text(city, state)
     normalized_sources = [_normalize_source_name(source) for source in requested_sources]
 
