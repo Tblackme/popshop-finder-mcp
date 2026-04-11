@@ -8,11 +8,34 @@
   <link rel="stylesheet" href="/assets/dash-layout.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
-    .map-page { display: flex; flex-direction: column; height: calc(100vh - var(--topbar-height, 56px)); }
-    .map-toolbar { padding: .75rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
-    .map-toolbar input, .map-toolbar select { padding: .4rem .75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .875rem; }
+    /* ── Map shell: sits below topbar, fills remaining viewport ── */
+    body { overflow: hidden; }
+    .dash-main {
+      margin-left: var(--sidebar-w, 240px);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: margin-left var(--transition, 220ms);
+    }
+    .dash-sidebar.collapsed ~ .dash-main { margin-left: var(--sidebar-w-col, 64px); }
+    @media (max-width: 900px) { .dash-main { margin-left: 0; } }
+
+    .dash-topbar {
+      flex-shrink: 0;
+      position: relative; /* override sticky so it stays in flow */
+    }
+
+    .map-page {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;        /* allow flex child to shrink below content size */
+      overflow: hidden;
+    }
+    .map-toolbar { padding: .75rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+    .map-toolbar input, .map-toolbar select { padding: .4rem .75rem; border: 1px solid var(--border); border-radius: var(--radius-sm, 10px); background: var(--bg); color: var(--text); font-size: .875rem; }
     .map-toolbar input { width: 160px; }
-    #market-map { flex: 1; min-height: 400px; }
+    #market-map { flex: 1; min-height: 0; }
     .map-count { font-size: .8rem; color: var(--muted); margin-left: auto; }
     .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border-radius: var(--radius); box-shadow: var(--shadow-md); }
     .leaflet-popup-tip { background: var(--surface); }
