@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product Costs | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    /* ── Sub-nav ───────────────────────────────────────────────────────── */
+    .profit-subnav {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      padding: .75rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .profit-subnav a {
+      text-decoration: none;
+      padding: .35rem .85rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1.5px solid transparent;
+      transition: all .15s;
+    }
+    .profit-subnav a:hover { background: var(--surface-alt); color: var(--brand); }
+    .profit-subnav a.active { background: var(--brand); color: #fff; }
+
+    /* ── Section card ──────────────────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    .section-header h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+
+    /* ── Product cards ─────────────────────────────────────────────────── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .product-cost-card {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.2rem;
+      transition: box-shadow .15s, border-color .15s;
+    }
+    .product-cost-card:hover { box-shadow: var(--shadow-sm); }
+    .product-cost-card.green-card { border-left: 4px solid #10B981; }
+    .product-cost-card.amber-card { border-left: 4px solid #F59E0B; }
+    .product-cost-card.red-card   { border-left: 4px solid #EF4444; }
+
+    .pc-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .5rem;
+      margin-bottom: .8rem;
+    }
+    .pc-name { font-weight: 700; font-size: .95rem; color: var(--text); flex: 1; }
+    .margin-badge {
+      display: inline-block;
+      padding: .22rem .65rem;
+      border-radius: 99px;
+      font-size: .72rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .margin-badge.green { background: #dcfce7; color: #166534; }
+    .margin-badge.amber { background: #fef3c7; color: #92400e; }
+    .margin-badge.red   { background: #fee2e2; color: #991b1b; }
+
+    .pc-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .35rem;
+      margin-bottom: .7rem;
+    }
+    .pc-stat { text-align: center; }
+    .pc-stat-value { font-size: .95rem; font-weight: 700; color: var(--text); }
+    .pc-stat-label { font-size: .67rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; margin-top: .1rem; }
+
+    /* ── Cost breakdown bar ────────────────────────────────────────────── */
+    .cost-bar-wrap { margin-bottom: .65rem; }
+    .cost-bar-track {
+      background: var(--border);
+      border-radius: 99px;
+      height: 7px;
+      overflow: hidden;
+      display: flex;
+      gap: 1px;
+    }
+    .cost-bar-seg { height: 100%; border-radius: 99px; transition: width .3s; }
+    .cost-bar-seg.materials  { background: var(--brand); }
+    .cost-bar-seg.packaging  { background: #10B981; }
+    .cost-bar-seg.labor      { background: #F59E0B; }
+    .cost-bar-legend {
+      display: flex;
+      gap: .75rem;
+      margin-top: .35rem;
+      font-size: .68rem;
+      color: var(--muted);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      margin-right: .25rem;
+      vertical-align: middle;
+    }
+
+    .pc-supply-list { margin-bottom: .6rem; }
+    .pc-supply-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .25rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .pc-supply-item:last-child { border-bottom: none; }
+    .pc-supply-item span { font-weight: 600; color: var(--text); }
+
+    .pc-actions { display: flex; gap: .4rem; margin-top: .6rem; }
+    .pc-btn {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: .25rem .65rem;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .12s;
+    }
+    .pc-btn:hover { border-color: var(--brand); color: var(--brand); }
+    .pc-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Empty state ───────────────────────────────────────────────────── */
+    .products-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      font-size: .9rem;
+      grid-column: 1 / -1;
+    }
+    .products-empty strong { display: block; margin-bottom: .4rem; color: var(--text); font-size: 1rem; }
+
+    /* ── Buttons ───────────────────────────────────────────────────────── */
+    .btn-add {
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: .45rem 1rem;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-add:hover { background: var(--brand-deep); }
+
+    /* ── Modal ─────────────────────────────────────────────────────────── */
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,.45);
+      z-index: 1000;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      overflow-y: auto;
+    }
+    .modal-bg.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      max-width: 540px;
+      width: 100%;
+      box-shadow: 0 24px 60px rgba(15,23,42,.18);
+      margin: auto;
+    }
+    .modal-box h3 { margin: 0 0 1.25rem; font-size: 1.05rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: .75rem; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; }
+    .form-group label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .form-group input, .form-group select {
+      padding: .5rem .75rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--brand); }
+    .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.25rem; }
+    .btn-cancel { background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: .45rem 1rem; font-size: .85rem; cursor: pointer; color: var(--muted); }
+
+    /* ── Supply rows in modal ──────────────────────────────────────────── */
+    .supply-rows { margin: .75rem 0; }
+    .supply-row-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: .4rem;
+      align-items: center;
+      margin-bottom: .4rem;
+    }
+    .supply-row-item select, .supply-row-item input {
+      padding: .38rem .6rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: .85rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .supply-row-item .row-cost {
+      font-size: .8rem;
+      color: var(--brand);
+      font-weight: 700;
+      min-width: 55px;
+      text-align: right;
+    }
+    .supply-row-item .remove-row {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 0 .2rem;
+    }
+    .btn-add-row {
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: .38rem .75rem;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--brand);
+      width: 100%;
+      margin-top: .25rem;
+      transition: border-color .12s, background .12s;
+    }
+    .btn-add-row:hover { border-color: var(--brand); background: var(--surface-alt); }
+
+    /* ── Cost preview panel ────────────────────────────────────────────── */
+    .cost-preview {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .75rem 1rem;
+      margin: .75rem 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: .5rem;
+      font-size: .8rem;
+    }
+    .cp-item { text-align: center; }
+    .cp-value { font-size: .95rem; font-weight: 800; color: var(--text); }
+    .cp-label { color: var(--muted); font-size: .68rem; margin-top: .1rem; }
+    .cp-margin.green { color: #10B981; }
+    .cp-margin.amber { color: #F59E0B; }
+    .cp-margin.red   { color: #EF4444; }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .page-hero { margin-bottom: 1.5rem; }
+    .page-hero .eyebrow { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+    .page-hero h1 { margin: .2rem 0 .3rem; font-size: 1.5rem; font-weight: 800; }
+    .page-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+    .legend-note {
+      display: flex;
+      gap: 1rem;
+      font-size: .76rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: .3rem; vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/">
+        <span class="dash-sidebar-mark">VA</span>
+        <span class="dash-sidebar-title">Vendor Atlas</span>
+      </a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title">Product Costs</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- Hero -->
+      <div class="page-hero">
+        <span class="eyebrow">Profitability</span>
+        <h1>Product Cost Builder</h1>
+        <p>Break down every product's true cost — materials, packaging, labor — and see your real margin.</p>
+      </div>
+
+      <!-- Sub-navigation -->
+      <nav class="profit-subnav" aria-label="Profit section navigation">
+        <a href="/profit">Profit Overview</a>
+        <a href="/supplies">Supplies</a>
+        <a href="/product-costs" class="active">Product Costs</a>
+        <a href="/profit-analytics">Analytics</a>
+        <a href="/ai-insights">AI Insights</a>
+      </nav>
+
+      <!-- Products grid -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Your Products</h2>
+          <button class="btn-add" id="open-product-modal">+ Add Product</button>
+        </div>
+        <div class="legend-note">
+          <span><span class="legend-swatch" style="background:#10B981"></span>Green = margin ≥ 40%</span>
+          <span><span class="legend-swatch" style="background:#F59E0B"></span>Amber = 20–39%</span>
+          <span><span class="legend-swatch" style="background:#EF4444"></span>Red = below 20%</span>
+        </div>
+        <div class="products-grid" id="products-grid">
+          <div class="products-empty">
+            <strong>No products yet</strong>
+            Click "Add Product" to build your first cost breakdown.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.dash-content -->
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items"></ul>
+</nav>
+
+<!-- Add/Edit Product Modal -->
+<div class="modal-bg" id="product-modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Add Product</h3>
+    <input type="hidden" id="edit-idx" value="">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="product-name" placeholder="e.g. Soy Candle 8oz">
+      </div>
+      <div class="form-group">
+        <label>Sell Price ($)</label>
+        <input type="number" id="product-price" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Packaging Cost ($)</label>
+        <input type="number" id="product-packaging" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Labor Cost ($)</label>
+        <input type="number" id="product-labor" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+
+    <!-- Supply rows -->
+    <div style="margin-top:.25rem">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.5rem;">Supplies Used (per unit)</div>
+      <div class="supply-rows" id="supply-rows"></div>
+      <button class="btn-add-row" id="add-supply-row">+ Add Supply</button>
+    </div>
+
+    <!-- Live cost preview -->
+    <div class="cost-preview" id="cost-preview">
+      <div class="cp-item"><div class="cp-value" id="cp-total-cost">$0.00</div><div class="cp-label">Total Cost</div></div>
+      <div class="cp-item"><div class="cp-value" id="cp-profit">$0.00</div><div class="cp-label">Profit/Piece</div></div>
+      <div class="cp-item"><div class="cp-value cp-margin" id="cp-margin">0%</div><div class="cp-label">Margin</div></div>
+      <div class="cp-item"><div class="cp-value" id="cp-sell">$0.00</div><div class="cp-label">Sell Price</div></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="close-product-modal">Cancel</button>
+      <button class="btn-add" id="save-product">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'va_products';
+  var SUPPLY_KEY = 'va_supplies';
+
+  // ── Persistence ────────────────────────────────────────────────────────
+  function loadProducts() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { return []; }
+  }
+  function saveProducts(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
+  function loadSupplies() {
+    try { return JSON.parse(localStorage.getItem(SUPPLY_KEY) || '[]'); } catch(e) { return []; }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function fmt(n) {
+    return '$' + parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function fmtPct(n) { return parseFloat(n || 0).toFixed(1) + '%'; }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function marginClass(m) {
+    return m >= 40 ? 'green' : m >= 20 ? 'amber' : 'red';
+  }
+  function cardClass(m) {
+    return m >= 40 ? 'green-card' : m >= 20 ? 'amber-card' : 'red-card';
+  }
+
+  function supplyUnitCost(supply) {
+    var qty = parseFloat(supply.qty) || 0;
+    var cost = parseFloat(supply.totalCost) || 0;
+    if (qty <= 0) return 0;
+    return cost / qty;
+  }
+
+  // ── Render products ────────────────────────────────────────────────────
+  function renderProducts() {
+    var products = loadProducts();
+    var grid = document.getElementById('products-grid');
+    if (!products.length) {
+      grid.innerHTML = '<div class="products-empty"><strong>No products yet</strong>Click "Add Product" to build your first cost breakdown.</div>';
+      return;
+    }
+
+    grid.innerHTML = products.map(function(p, idx) {
+      var margin = parseFloat(p.margin || 0);
+      var mCls = marginClass(margin);
+      var cCls = cardClass(margin);
+      var totalCost = parseFloat(p.totalCost || 0);
+      var sellPrice = parseFloat(p.sellPrice || 0);
+      var matCost = parseFloat(p.materialCost || 0);
+      var pkgCost = parseFloat(p.packagingCost || 0);
+      var labCost = parseFloat(p.laborCost || 0);
+      var matPct = totalCost > 0 ? (matCost / totalCost) * 100 : 0;
+      var pkgPct = totalCost > 0 ? (pkgCost / totalCost) * 100 : 0;
+      var labPct = totalCost > 0 ? (labCost / totalCost) * 100 : 0;
+
+      var supplyListHTML = '';
+      if (p.supplies && p.supplies.length) {
+        supplyListHTML = '<div class="pc-supply-list">' +
+          p.supplies.slice(0, 4).map(function(s) {
+            return '<div class="pc-supply-item">' +
+              escHtml(s.name || 'Supply') + ' x' + (s.qtyUsed || 1) +
+              '<span>' + fmt(s.cost) + '</span>' +
+              '</div>';
+          }).join('') +
+          (p.supplies.length > 4 ? '<div class="pc-supply-item" style="font-style:italic">+' + (p.supplies.length - 4) + ' more…</div>' : '') +
+          '</div>';
+      }
+
+      return '<div class="product-cost-card ' + cCls + '">' +
+        '<div class="pc-header">' +
+          '<div class="pc-name">' + escHtml(p.name || 'Product') + '</div>' +
+          '<span class="margin-badge ' + mCls + '">' + fmtPct(margin) + '</span>' +
+        '</div>' +
+        '<div class="pc-stats-row">' +
+          '<div class="pc-stat"><div class="pc-stat-value">' + fmt(sellPrice) + '</div><div class="pc-stat-label">Sell Price</div></div>' +
+          '<div class="pc-stat"><div class="pc-stat-value">' + fmt(totalCost) + '</div><div class="pc-stat-label">Total Cost</div></div>' +
+          '<div class="pc-stat"><div class="pc-stat-value" style="color:' + (margin >= 20 ? 'var(--success)' : 'var(--danger)') + '">' + fmt(p.profitPerPiece) + '</div><div class="pc-stat-label">Profit</div></div>' +
+        '</div>' +
+        (totalCost > 0 ? '<div class="cost-bar-wrap">' +
+          '<div class="cost-bar-track">' +
+            '<div class="cost-bar-seg materials" style="width:' + matPct + '%"></div>' +
+            '<div class="cost-bar-seg packaging" style="width:' + pkgPct + '%"></div>' +
+            '<div class="cost-bar-seg labor" style="width:' + labPct + '%"></div>' +
+          '</div>' +
+          '<div class="cost-bar-legend">' +
+            '<span><span class="legend-dot" style="background:var(--brand)"></span>Materials ' + fmtPct(matPct) + '</span>' +
+            '<span><span class="legend-dot" style="background:#10B981"></span>Packaging ' + fmtPct(pkgPct) + '</span>' +
+            '<span><span class="legend-dot" style="background:#F59E0B"></span>Labor ' + fmtPct(labPct) + '</span>' +
+          '</div>' +
+        '</div>' : '') +
+        supplyListHTML +
+        '<div class="pc-actions">' +
+          '<button class="pc-btn" onclick="editProduct(' + idx + ')">Edit</button>' +
+          '<button class="pc-btn danger" onclick="deleteProduct(' + idx + ')">Delete</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Global actions ─────────────────────────────────────────────────────
+  window.deleteProduct = function(idx) {
+    if (!confirm('Delete this product?')) return;
+    var arr = loadProducts();
+    arr.splice(idx, 1);
+    saveProducts(arr);
+    renderProducts();
+  };
+
+  window.editProduct = function(idx) {
+    var arr = loadProducts();
+    var p = arr[idx];
+    if (!p) return;
+    document.getElementById('modal-title').textContent = 'Edit Product';
+    document.getElementById('edit-idx').value = idx;
+    document.getElementById('product-name').value = p.name || '';
+    document.getElementById('product-price').value = p.sellPrice || '';
+    document.getElementById('product-packaging').value = p.packagingCost || '';
+    document.getElementById('product-labor').value = p.laborCost || '';
+
+    // Rebuild supply rows
+    var rowsEl = document.getElementById('supply-rows');
+    rowsEl.innerHTML = '';
+    (p.supplies || []).forEach(function(s) {
+      addSupplyRow(s.name, s.qtyUsed);
+    });
+
+    updateCostPreview();
+    document.getElementById('product-modal').classList.add('open');
+  };
+
+  // ── Supply rows ────────────────────────────────────────────────────────
+  function buildSupplyOptions(selectedName) {
+    var supplies = loadSupplies();
+    var opts = '<option value="">-- Select Supply --</option>';
+    supplies.forEach(function(s) {
+      var sel = s.name === selectedName ? ' selected' : '';
+      opts += '<option value="' + escHtml(s.name) + '"' + sel + '>' + escHtml(s.name) + ' (' + escHtml(s.unit) + ')</option>';
+    });
+    if (!supplies.length) {
+      opts = '<option value="">No supplies yet — add in Supplies page</option>';
+    }
+    return opts;
+  }
+
+  function addSupplyRow(selectedName, qty) {
+    var rowsEl = document.getElementById('supply-rows');
+    var row = document.createElement('div');
+    row.className = 'supply-row-item';
+    row.innerHTML =
+      '<select class="row-supply-select">' + buildSupplyOptions(selectedName || '') + '</select>' +
+      '<input type="number" class="row-qty" placeholder="Qty" min="0.001" step="any" value="' + (qty || 1) + '" style="width:65px">' +
+      '<div class="row-cost">$0.00</div>' +
+      '<button type="button" class="remove-row" title="Remove">×</button>';
+
+    row.querySelector('.row-supply-select').addEventListener('change', updateCostPreview);
+    row.querySelector('.row-qty').addEventListener('input', updateCostPreview);
+    row.querySelector('.remove-row').addEventListener('click', function() {
+      row.remove();
+      updateCostPreview();
+    });
+    rowsEl.appendChild(row);
+    updateCostPreview();
+  }
+
+  document.getElementById('add-supply-row').addEventListener('click', function() {
+    addSupplyRow('', 1);
+  });
+
+  // ── Live cost preview ──────────────────────────────────────────────────
+  function updateCostPreview() {
+    var supplies = loadSupplies();
+    var sellPrice = parseFloat(document.getElementById('product-price').value) || 0;
+    var packaging = parseFloat(document.getElementById('product-packaging').value) || 0;
+    var labor = parseFloat(document.getElementById('product-labor').value) || 0;
+
+    var materialCost = 0;
+    document.querySelectorAll('.supply-row-item').forEach(function(row) {
+      var name = row.querySelector('.row-supply-select').value;
+      var qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+      var supply = supplies.find(function(s) { return s.name === name; });
+      var uc = supply ? supplyUnitCost(supply) : 0;
+      var rowCost = uc * qty;
+      materialCost += rowCost;
+      row.querySelector('.row-cost').textContent = fmt(rowCost);
+    });
+
+    var totalCost = materialCost + packaging + labor;
+    var profit = sellPrice - totalCost;
+    var margin = sellPrice > 0 ? (profit / sellPrice) * 100 : 0;
+
+    document.getElementById('cp-total-cost').textContent = fmt(totalCost);
+    document.getElementById('cp-profit').textContent = fmt(profit);
+    document.getElementById('cp-sell').textContent = fmt(sellPrice);
+    var marginEl = document.getElementById('cp-margin');
+    marginEl.textContent = fmtPct(margin);
+    marginEl.className = 'cp-value cp-margin ' + marginClass(margin);
+  }
+
+  // Wire up inputs
+  ['product-price','product-packaging','product-labor'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', updateCostPreview);
+  });
+
+  // ── Modal open/close ───────────────────────────────────────────────────
+  function openModal() {
+    document.getElementById('modal-title').textContent = 'Add Product';
+    document.getElementById('edit-idx').value = '';
+    document.getElementById('product-name').value = '';
+    document.getElementById('product-price').value = '';
+    document.getElementById('product-packaging').value = '';
+    document.getElementById('product-labor').value = '';
+    document.getElementById('supply-rows').innerHTML = '';
+    updateCostPreview();
+    document.getElementById('product-modal').classList.add('open');
+  }
+  document.getElementById('open-product-modal').addEventListener('click', openModal);
+  document.getElementById('close-product-modal').addEventListener('click', function() {
+    document.getElementById('product-modal').classList.remove('open');
+  });
+  document.getElementById('product-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  // ── Save product ───────────────────────────────────────────────────────
+  document.getElementById('save-product').addEventListener('click', function() {
+    var name = document.getElementById('product-name').value.trim();
+    if (!name) { alert('Please enter a product name.'); return; }
+
+    var supplies = loadSupplies();
+    var sellPrice = parseFloat(document.getElementById('product-price').value) || 0;
+    var packaging = parseFloat(document.getElementById('product-packaging').value) || 0;
+    var labor = parseFloat(document.getElementById('product-labor').value) || 0;
+
+    var supplyRows = [];
+    var materialCost = 0;
+    document.querySelectorAll('.supply-row-item').forEach(function(row) {
+      var supName = row.querySelector('.row-supply-select').value;
+      var qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+      if (!supName) return;
+      var supply = supplies.find(function(s) { return s.name === supName; });
+      var uc = supply ? supplyUnitCost(supply) : 0;
+      var rowCost = uc * qty;
+      materialCost += rowCost;
+      supplyRows.push({ name: supName, qtyUsed: qty, cost: rowCost });
+    });
+
+    var totalCost = materialCost + packaging + labor;
+    var profit = sellPrice - totalCost;
+    var margin = sellPrice > 0 ? (profit / sellPrice) * 100 : 0;
+
+    var entry = {
+      name: name,
+      sellPrice: sellPrice,
+      packagingCost: packaging,
+      laborCost: labor,
+      materialCost: materialCost,
+      totalCost: totalCost,
+      profitPerPiece: profit,
+      margin: margin,
+      supplies: supplyRows
+    };
+
+    var arr = loadProducts();
+    var editIdx = document.getElementById('edit-idx').value;
+    if (editIdx !== '') {
+      arr[parseInt(editIdx)] = entry;
+    } else {
+      arr.push(entry);
+    }
+    saveProducts(arr);
+    document.getElementById('product-modal').classList.remove('open');
+    renderProducts();
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  renderProducts();
+})();
+</script>
+</body>
+</html>

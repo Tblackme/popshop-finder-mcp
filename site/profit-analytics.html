@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profit Analytics | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    /* ── Sub-nav ───────────────────────────────────────────────────────── */
+    .profit-subnav {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      padding: .75rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .profit-subnav a {
+      text-decoration: none;
+      padding: .35rem .85rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1.5px solid transparent;
+      transition: all .15s;
+    }
+    .profit-subnav a:hover { background: var(--surface-alt); color: var(--brand); }
+    .profit-subnav a.active { background: var(--brand); color: #fff; }
+
+    /* ── Section card ──────────────────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    .section-header h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+    .section-badge {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .18rem .55rem;
+      border-radius: 99px;
+      background: var(--surface-alt);
+      color: var(--brand);
+    }
+
+    /* ── Two-column grid ───────────────────────────────────────────────── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 760px) { .analytics-grid { grid-template-columns: 1fr; } }
+
+    /* ── Revenue vs Expenses bar chart ─────────────────────────────────── */
+    .chart-wrap { width: 100%; overflow-x: auto; }
+    .rev-exp-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: .5rem;
+      height: 180px;
+      padding-bottom: 2rem;
+      position: relative;
+      min-width: 0;
+    }
+    .rev-exp-chart::after {
+      content: '';
+      position: absolute;
+      bottom: 2rem;
+      left: 0; right: 0;
+      height: 1px;
+      background: var(--border);
+    }
+    .rebar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 32px;
+      gap: .2rem;
+    }
+    .rebar-pair {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      width: 100%;
+    }
+    .rebar {
+      flex: 1;
+      border-radius: 4px 4px 0 0;
+      min-height: 3px;
+    }
+    .rebar.rev { background: var(--brand); opacity: .8; }
+    .rebar.exp { background: #EF4444; opacity: .65; }
+    .rebar-label { font-size: .63rem; color: var(--muted); text-align: center; white-space: nowrap; }
+
+    /* ── Horizontal bar chart (top products) ───────────────────────────── */
+    .hbar-list { display: flex; flex-direction: column; gap: .6rem; }
+    .hbar-row { display: flex; flex-direction: column; gap: .2rem; }
+    .hbar-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .hbar-name { font-size: .82rem; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .hbar-value { font-size: .78rem; font-weight: 700; color: var(--brand); }
+    .hbar-track {
+      background: var(--surface-alt);
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .hbar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--brand), #60A5FA);
+      transition: width .4s;
+      min-width: 3px;
+    }
+    .hbar-fill.loss { background: linear-gradient(90deg, #EF4444, #FCA5A5); }
+
+    /* ── Margin breakdown list ─────────────────────────────────────────── */
+    .margin-list { display: flex; flex-direction: column; gap: .45rem; }
+    .margin-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .5rem .7rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .margin-row-name { flex: 1; font-size: .85rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .margin-swatch {
+      width: 10px; height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .margin-pct-pill {
+      font-size: .72rem;
+      font-weight: 800;
+      padding: .18rem .55rem;
+      border-radius: 99px;
+    }
+    .margin-pct-pill.green { background: #dcfce7; color: #166534; }
+    .margin-pct-pill.amber { background: #fef3c7; color: #92400e; }
+    .margin-pct-pill.red   { background: #fee2e2; color: #991b1b; }
+
+    /* ── Monthly summary table ─────────────────────────────────────────── */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem;
+    }
+    .summary-table th {
+      text-align: left;
+      font-size: .68rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+      padding: .5rem .75rem .5rem 0;
+      border-bottom: 1.5px solid var(--border);
+    }
+    .summary-table th.num, .summary-table td.num { text-align: right; }
+    .summary-table td {
+      padding: .65rem .75rem .65rem 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .summary-table tr:last-child td { border-bottom: none; }
+    .summary-table tfoot td {
+      font-weight: 700;
+      color: var(--text);
+      border-top: 2px solid var(--border);
+      padding-top: .75rem;
+    }
+
+    /* ── Event performance ─────────────────────────────────────────────── */
+    .event-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .65rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .event-name { flex: 1; font-size: .88rem; font-weight: 600; color: var(--text); }
+    .event-cat { font-size: .74rem; color: var(--muted); }
+    .event-profit {
+      font-size: .88rem;
+      font-weight: 700;
+    }
+    .event-profit.pos { color: var(--success); }
+    .event-profit.neg { color: var(--danger); }
+
+    /* ── Empty states ──────────────────────────────────────────────────── */
+    .empty-chart {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    /* ── Chart legend ──────────────────────────────────────────────────── */
+    .chart-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: .5rem;
+      font-size: .73rem;
+      color: var(--muted);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border-radius: 2px;
+      margin-right: .3rem;
+      vertical-align: middle;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .page-hero { margin-bottom: 1.5rem; }
+    .page-hero .eyebrow { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+    .page-hero h1 { margin: .2rem 0 .3rem; font-size: 1.5rem; font-weight: 800; }
+    .page-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/">
+        <span class="dash-sidebar-mark">VA</span>
+        <span class="dash-sidebar-title">Vendor Atlas</span>
+      </a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title">Profit Analytics</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- Hero -->
+      <div class="page-hero">
+        <span class="eyebrow">Analytics</span>
+        <h1>Profit Analytics</h1>
+        <p>Visual breakdowns of your revenue, expenses, and product profitability.</p>
+      </div>
+
+      <!-- Sub-navigation -->
+      <nav class="profit-subnav" aria-label="Profit section navigation">
+        <a href="/profit">Profit Overview</a>
+        <a href="/supplies">Supplies</a>
+        <a href="/product-costs">Product Costs</a>
+        <a href="/profit-analytics" class="active">Analytics</a>
+        <a href="/ai-insights">AI Insights</a>
+      </nav>
+
+      <!-- Row 1: Revenue vs Expenses | Top Products -->
+      <div class="analytics-grid">
+
+        <!-- Revenue vs Expenses -->
+        <div class="section-card" style="margin-bottom:0">
+          <div class="section-header">
+            <h2>Revenue vs Expenses</h2>
+            <span class="section-badge">Monthly</span>
+          </div>
+          <div class="chart-wrap">
+            <div class="rev-exp-chart" id="rev-exp-chart">
+              <div class="empty-chart">Add profit entries to see chart.</div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:var(--brand);opacity:.8"></span>Revenue</span>
+            <span><span class="legend-dot" style="background:#EF4444;opacity:.65"></span>Expenses</span>
+          </div>
+        </div>
+
+        <!-- Top 5 Products by Profit -->
+        <div class="section-card" style="margin-bottom:0">
+          <div class="section-header">
+            <h2>Top Products by Profit</h2>
+            <span class="section-badge">Per Piece</span>
+          </div>
+          <div class="hbar-list" id="top-products-chart">
+            <div class="empty-chart">Add products in Product Costs to see chart.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Margin Breakdown -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Margin Breakdown</h2>
+          <a href="/product-costs" style="font-size:.8rem;color:var(--brand);font-weight:600;text-decoration:none">Manage Products</a>
+        </div>
+        <div class="margin-list" id="margin-list">
+          <div class="empty-chart" style="min-height:80px">Add products to see margin breakdown.</div>
+        </div>
+      </div>
+
+      <!-- Monthly Summary Table -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Monthly Summary</h2>
+          <span class="section-badge">All Time</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="summary-table" id="monthly-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th class="num">Revenue</th>
+                <th class="num">Expenses</th>
+                <th class="num">Net Profit</th>
+                <th class="num">Margin</th>
+                <th class="num">Events</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-tbody">
+              <tr><td colspan="6" style="padding:2rem;text-align:center;color:var(--muted)">No entries yet.</td></tr>
+            </tbody>
+            <tfoot id="monthly-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Event/Market Performance -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Event Performance</h2>
+          <a href="/profit" style="font-size:.8rem;color:var(--brand);font-weight:600;text-decoration:none">Add Entries</a>
+        </div>
+        <div id="event-list">
+          <div class="empty-chart" style="min-height:80px">No profit entries yet.</div>
+        </div>
+      </div>
+
+    </div><!-- /.dash-content -->
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items"></ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var ENTRY_KEY   = 'va_profit_entries';
+  var PRODUCT_KEY = 'va_products';
+
+  function loadEntries()  { try { return JSON.parse(localStorage.getItem(ENTRY_KEY) || '[]');  } catch(e){ return []; } }
+  function loadProducts() { try { return JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]'); } catch(e){ return []; } }
+
+  function fmt(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  function fmtPct(n) { return parseFloat(n||0).toFixed(1) + '%'; }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function marginClass(m) { return m >= 40 ? 'green' : m >= 20 ? 'amber' : 'red'; }
+  function marginColor(m) { return m >= 40 ? '#10B981' : m >= 20 ? '#F59E0B' : '#EF4444'; }
+
+  // ── Revenue vs Expenses chart ──────────────────────────────────────────
+  function renderRevExpChart(entries) {
+    var chartEl = document.getElementById('rev-exp-chart');
+    if (!entries.length) {
+      chartEl.innerHTML = '<div class="empty-chart">Add profit entries to see chart.</div>';
+      return;
+    }
+
+    var months = {};
+    entries.forEach(function(e) {
+      var d = e.date ? new Date(e.date) : new Date();
+      var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      if (!months[key]) months[key] = { rev: 0, exp: 0 };
+      months[key].rev += parseFloat(e.revenue || 0);
+      months[key].exp += parseFloat(e.expenses || 0);
+      var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      months[key].label = mo[d.getMonth()] + " '" + String(d.getFullYear()).slice(2);
+    });
+
+    var keys = Object.keys(months).sort().slice(-10);
+    var maxVal = 1;
+    keys.forEach(function(k) { maxVal = Math.max(maxVal, months[k].rev, months[k].exp); });
+
+    chartEl.innerHTML = keys.map(function(k) {
+      var m = months[k];
+      var rH = Math.max(3, Math.round((m.rev / maxVal) * 155));
+      var eH = Math.max(3, Math.round((m.exp / maxVal) * 155));
+      return '<div class="rebar-col">' +
+        '<div class="rebar-pair">' +
+        '<div class="rebar rev" style="height:' + rH + 'px" title="Revenue: ' + fmt(m.rev) + '"></div>' +
+        '<div class="rebar exp" style="height:' + eH + 'px" title="Expenses: ' + fmt(m.exp) + '"></div>' +
+        '</div>' +
+        '<div class="rebar-label">' + m.label + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Top 5 products horizontal bar chart ───────────────────────────────
+  function renderTopProductsChart(products) {
+    var el = document.getElementById('top-products-chart');
+    if (!products.length) {
+      el.innerHTML = '<div class="empty-chart">Add products to see chart.</div>';
+      return;
+    }
+
+    var sorted = products.slice().sort(function(a,b){ return (b.profitPerPiece||0)-(a.profitPerPiece||0); }).slice(0,5);
+    var maxProfit = Math.max(1, Math.max.apply(null, sorted.map(function(p){ return Math.abs(parseFloat(p.profitPerPiece||0)); })));
+
+    el.innerHTML = sorted.map(function(p) {
+      var profit = parseFloat(p.profitPerPiece || 0);
+      var pct = Math.max(3, Math.round((Math.abs(profit) / maxProfit) * 100));
+      var isLoss = profit < 0;
+      return '<div class="hbar-row">' +
+        '<div class="hbar-header">' +
+          '<div class="hbar-name">' + escHtml(p.name||'Product') + '</div>' +
+          '<div class="hbar-value" style="color:' + (isLoss ? 'var(--danger)' : 'var(--brand)') + '">' + fmt(profit) + '</div>' +
+        '</div>' +
+        '<div class="hbar-track"><div class="hbar-fill' + (isLoss ? ' loss' : '') + '" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Margin breakdown ───────────────────────────────────────────────────
+  function renderMarginBreakdown(products) {
+    var el = document.getElementById('margin-list');
+    if (!products.length) {
+      el.innerHTML = '<div class="empty-chart" style="min-height:80px">Add products to see margin breakdown.</div>';
+      return;
+    }
+
+    var sorted = products.slice().sort(function(a,b){ return (b.margin||0)-(a.margin||0); });
+    el.innerHTML = sorted.map(function(p) {
+      var margin = parseFloat(p.margin || 0);
+      var mCls = marginClass(margin);
+      var mColor = marginColor(margin);
+      return '<div class="margin-row">' +
+        '<div class="margin-swatch" style="background:' + mColor + '"></div>' +
+        '<div class="margin-row-name">' + escHtml(p.name||'Product') + '</div>' +
+        '<div style="font-size:.78rem;color:var(--muted)">' + fmt(p.totalCost) + ' cost</div>' +
+        '<div style="font-size:.78rem;color:var(--muted)">' + fmt(p.sellPrice) + ' sell</div>' +
+        '<span class="margin-pct-pill ' + mCls + '">' + fmtPct(margin) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Monthly summary table ──────────────────────────────────────────────
+  function renderMonthlySummary(entries) {
+    var tbody = document.getElementById('monthly-tbody');
+    var tfoot = document.getElementById('monthly-tfoot');
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:var(--muted)">No entries yet.</td></tr>';
+      tfoot.innerHTML = '';
+      return;
+    }
+
+    var months = {};
+    entries.forEach(function(e) {
+      var d = e.date ? new Date(e.date) : new Date();
+      var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      if (!months[key]) months[key] = { rev: 0, exp: 0, count: 0 };
+      months[key].rev += parseFloat(e.revenue || 0);
+      months[key].exp += parseFloat(e.expenses || 0);
+      months[key].count++;
+      var mo = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      months[key].label = mo[d.getMonth()] + ' ' + d.getFullYear();
+    });
+
+    var keys = Object.keys(months).sort().reverse();
+    var totalRev = 0, totalExp = 0;
+    tbody.innerHTML = keys.map(function(k) {
+      var m = months[k];
+      var profit = m.rev - m.exp;
+      var margin = m.rev > 0 ? (profit / m.rev) * 100 : 0;
+      totalRev += m.rev;
+      totalExp += m.exp;
+      var profitColor = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+      return '<tr>' +
+        '<td>' + m.label + '</td>' +
+        '<td class="num">' + fmt(m.rev) + '</td>' +
+        '<td class="num">' + fmt(m.exp) + '</td>' +
+        '<td class="num" style="font-weight:700;color:' + profitColor + '">' + fmt(profit) + '</td>' +
+        '<td class="num">' + fmtPct(margin) + '</td>' +
+        '<td class="num">' + m.count + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var totalProfit = totalRev - totalExp;
+    var totalMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
+    tfoot.innerHTML = '<tr>' +
+      '<td>Total</td>' +
+      '<td class="num">' + fmt(totalRev) + '</td>' +
+      '<td class="num">' + fmt(totalExp) + '</td>' +
+      '<td class="num" style="color:' + (totalProfit >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmt(totalProfit) + '</td>' +
+      '<td class="num">' + fmtPct(totalMargin) + '</td>' +
+      '<td class="num">' + entries.length + '</td>' +
+      '</tr>';
+  }
+
+  // ── Event performance ──────────────────────────────────────────────────
+  function renderEventPerformance(entries) {
+    var el = document.getElementById('event-list');
+    if (!entries.length) {
+      el.innerHTML = '<div class="empty-chart" style="min-height:80px">No profit entries yet.</div>';
+      return;
+    }
+
+    var sorted = entries.slice().sort(function(a,b) {
+      var pa = parseFloat(a.revenue||0) - parseFloat(a.expenses||0);
+      var pb = parseFloat(b.revenue||0) - parseFloat(b.expenses||0);
+      return pb - pa;
+    });
+
+    var catColors = {
+      market: '#2563EB',
+      online: '#10B981',
+      wholesale: '#F59E0B',
+      other: '#94A3B8'
+    };
+
+    el.innerHTML = sorted.map(function(e) {
+      var profit = parseFloat(e.revenue||0) - parseFloat(e.expenses||0);
+      var isPos = profit >= 0;
+      var color = catColors[e.category] || '#94A3B8';
+      return '<div class="event-row">' +
+        '<div class="event-dot" style="background:' + color + '"></div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="event-name">' + escHtml(e.name||'Entry') + '</div>' +
+          '<div class="event-cat">' + escHtml(e.category||'') + (e.date ? ' · ' + e.date : '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div class="event-profit ' + (isPos ? 'pos' : 'neg') + '">' + fmt(profit) + '</div>' +
+          '<div style="font-size:.72rem;color:var(--muted)">' + fmt(e.revenue) + ' rev</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  function render() {
+    var entries  = loadEntries();
+    var products = loadProducts();
+    renderRevExpChart(entries);
+    renderTopProductsChart(products);
+    renderMarginBreakdown(products);
+    renderMonthlySummary(entries);
+    renderEventPerformance(entries);
+  }
+
+  render();
+  // Re-render when storage changes (e.g. user adds entry on another tab)
+  window.addEventListener('storage', render);
+})();
+</script>
+</body>
+</html>

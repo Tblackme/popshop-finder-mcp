@@ -304,6 +304,10 @@ PUBLIC_PAGE_ROUTES = {
     "/coming-soon": "coming-soon.html",
     "/calendar-settings": "calendar-settings.html",
     "/materials": "materials.html",
+    "/supplies": "supplies.html",
+    "/product-costs": "product-costs.html",
+    "/profit-analytics": "profit-analytics.html",
+    "/ai-insights": "ai-insights.html",
 }
 
 # Feature flag required for each page route (None = always accessible)

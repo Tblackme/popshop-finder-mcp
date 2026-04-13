@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Insights | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    /* ── Sub-nav ───────────────────────────────────────────────────────── */
+    .profit-subnav {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      padding: .75rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .profit-subnav a {
+      text-decoration: none;
+      padding: .35rem .85rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1.5px solid transparent;
+      transition: all .15s;
+    }
+    .profit-subnav a:hover { background: var(--surface-alt); color: var(--brand); }
+    .profit-subnav a.active { background: var(--brand); color: #fff; }
+
+    /* ── AI Hero banner ────────────────────────────────────────────────── */
+    .ai-hero-banner {
+      background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 55%, #3B82F6 100%);
+      border-radius: var(--radius-lg);
+      padding: 2rem 2rem;
+      margin-bottom: 1.5rem;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .ai-hero-banner::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .ai-hero-banner::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; left: 30%;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+    }
+    .ai-hero-inner { position: relative; z-index: 1; }
+    .ai-hero-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .ai-hero-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+    .ai-hero-text h1 { margin: 0 0 .3rem; font-size: 1.5rem; font-weight: 800; color: #fff; }
+    .ai-hero-text p { margin: 0; opacity: .85; font-size: .88rem; }
+    .ai-hero-meta {
+      margin-top: 1rem;
+      font-size: .78rem;
+      opacity: .7;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    /* ── Badge AI ──────────────────────────────────────────────────────── */
+    .badge-ai {
+      display: inline-block;
+      background: rgba(255,255,255,.25);
+      color: #fff;
+      font-size: .62rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-radius: 99px;
+      padding: .13rem .5rem;
+      border: 1px solid rgba(255,255,255,.3);
+    }
+    .badge-ai.dark {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    .badge-ai.warning {
+      background: #FEF3C7;
+      color: #92400E;
+      border-color: #FDE68A;
+    }
+    .badge-ai.success {
+      background: #D1FAE5;
+      color: #065F46;
+      border-color: #A7F3D0;
+    }
+    .badge-ai.danger {
+      background: #FEE2E2;
+      color: #991B1B;
+      border-color: #FECACA;
+    }
+
+    /* ── Section card ──────────────────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    .section-header h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+
+    /* ── Insight feed ──────────────────────────────────────────────────── */
+    .insights-feed {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .insight-card {
+      border-radius: var(--radius-md);
+      padding: 1.15rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .55rem;
+      border: 1.5px solid;
+      position: relative;
+      overflow: hidden;
+    }
+    .insight-card.positive {
+      background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+      border-color: #BBF7D0;
+    }
+    .insight-card.warning {
+      background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+      border-color: #FDE68A;
+    }
+    .insight-card.negative {
+      background: linear-gradient(135deg, #FFF1F2 0%, #FEE2E2 100%);
+      border-color: #FECACA;
+    }
+    .insight-card.info {
+      background: linear-gradient(135deg, #EEF4FF 0%, #DBEAFE 100%);
+      border-color: #BFDBFE;
+    }
+    .insight-card.neutral {
+      background: var(--bg);
+      border-color: var(--border);
+    }
+
+    .ic-icon { font-size: 1.4rem; line-height: 1; }
+    .ic-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+    .ic-title {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      flex: 1;
+    }
+    .ic-detail {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .ic-action {
+      margin-top: .3rem;
+      display: inline-block;
+      background: var(--brand);
+      color: #fff;
+      font-size: .76rem;
+      font-weight: 700;
+      padding: .32rem .85rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background .13s;
+      border: none;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .ic-action:hover { background: var(--brand-deep); }
+    .ic-action.secondary {
+      background: transparent;
+      color: var(--brand);
+      border: 1.5px solid var(--brand);
+    }
+    .ic-action.secondary:hover { background: var(--surface-alt); }
+
+    /* ── Empty state ───────────────────────────────────────────────────── */
+    .ai-empty {
+      text-align: center;
+      padding: 3.5rem 1.5rem;
+      color: var(--muted);
+    }
+    .ai-empty .ai-empty-icon { font-size: 3rem; margin-bottom: .75rem; }
+    .ai-empty strong { display: block; font-size: 1rem; color: var(--text); margin-bottom: .4rem; }
+    .ai-empty p { font-size: .875rem; margin: 0 0 1.25rem; max-width: 360px; margin-left: auto; margin-right: auto; }
+    .ai-empty-actions { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
+    .btn-outline {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .42rem 1rem;
+      font-size: .85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--brand);
+      transition: border-color .13s, background .13s;
+    }
+    .btn-outline:hover { border-color: var(--brand); background: var(--surface-alt); }
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: .42rem 1rem;
+      font-size: .85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: var(--brand-deep); }
+
+    /* ── Data checklist ────────────────────────────────────────────────── */
+    .data-check-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .6rem;
+    }
+    .data-check-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .6rem .85rem;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid;
+      font-size: .83rem;
+      font-weight: 600;
+    }
+    .data-check-item.has { border-color: #BBF7D0; background: #F0FDF4; color: #166534; }
+    .data-check-item.missing { border-color: var(--border); background: var(--bg); color: var(--muted); }
+    .check-icon { font-size: 1rem; flex-shrink: 0; }
+
+    /* ── Score ring ────────────────────────────────────────────────────── */
+    .score-section {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .score-ring-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 90px; height: 90px;
+    }
+    .score-ring {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: conic-gradient(var(--ring-color, var(--brand)) var(--ring-pct, 0%), var(--surface-alt) 0%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .score-ring::before {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      background: var(--surface);
+      border-radius: 50%;
+    }
+    .score-ring-value {
+      position: absolute;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text);
+      z-index: 1;
+    }
+    .score-info { flex: 1; min-width: 0; }
+    .score-info h3 { margin: 0 0 .3rem; font-size: .95rem; }
+    .score-info p { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .page-hero { margin-bottom: 1.5rem; }
+    .page-hero .eyebrow { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+    .page-hero h1 { margin: .2rem 0 .3rem; font-size: 1.5rem; font-weight: 800; }
+    .page-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/">
+        <span class="dash-sidebar-mark">VA</span>
+        <span class="dash-sidebar-title">Vendor Atlas</span>
+      </a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title">AI Insights</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- AI Hero Banner -->
+      <div class="ai-hero-banner">
+        <div class="ai-hero-inner">
+          <div class="ai-hero-row">
+            <div class="ai-hero-icon">🤖</div>
+            <div class="ai-hero-text">
+              <h1>AI Profit Coach <span class="badge-ai">AI</span></h1>
+              <p>Automated analysis of your product costs, margins, and profit data. Updated every time you visit.</p>
+            </div>
+          </div>
+          <div class="ai-hero-meta">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Last analyzed: <span id="last-analyzed">Just now</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-navigation -->
+      <nav class="profit-subnav" aria-label="Profit section navigation">
+        <a href="/profit">Profit Overview</a>
+        <a href="/supplies">Supplies</a>
+        <a href="/product-costs">Product Costs</a>
+        <a href="/profit-analytics">Analytics</a>
+        <a href="/ai-insights" class="active">AI Insights</a>
+      </nav>
+
+      <!-- Data readiness check -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Data Readiness</h2>
+        </div>
+        <div class="data-check-list" id="data-checks"></div>
+      </div>
+
+      <!-- Health Score -->
+      <div class="section-card" id="score-section" style="display:none">
+        <div class="section-header">
+          <h2>Business Health Score</h2>
+          <span class="badge-ai dark">AI</span>
+        </div>
+        <div class="score-section">
+          <div class="score-ring-wrap">
+            <div class="score-ring" id="score-ring">
+              <div class="score-ring-value" id="score-value">—</div>
+            </div>
+          </div>
+          <div class="score-info">
+            <h3 id="score-label">Calculating…</h3>
+            <p id="score-desc">Score based on average margin, low-margin product count, and supply cost efficiency.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main insights feed -->
+      <div class="section-card">
+        <div class="section-header">
+          <h2>Insights <span class="badge-ai dark">AI</span></h2>
+          <span id="insight-count" style="font-size:.8rem;color:var(--muted)"></span>
+        </div>
+        <div class="insights-feed" id="insights-feed">
+          <div class="ai-empty">
+            <div class="ai-empty-icon">🧠</div>
+            <strong>No insights yet</strong>
+            <p>Add at least one product with cost data to unlock AI-powered analysis and recommendations.</p>
+            <div class="ai-empty-actions">
+              <a href="/supplies" class="btn-outline">Add Supplies</a>
+              <a href="/product-costs" class="btn-primary">Add Products</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.dash-content -->
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items"></ul>
+</nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var PRODUCT_KEY = 'va_products';
+  var SUPPLY_KEY  = 'va_supplies';
+  var ENTRY_KEY   = 'va_profit_entries';
+
+  function loadProducts() { try { return JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]'); } catch(e){ return []; } }
+  function loadSupplies() { try { return JSON.parse(localStorage.getItem(SUPPLY_KEY)  || '[]'); } catch(e){ return []; } }
+  function loadEntries()  { try { return JSON.parse(localStorage.getItem(ENTRY_KEY)   || '[]'); } catch(e){ return []; } }
+
+  function fmt(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  function fmtPct(n) { return parseFloat(n||0).toFixed(1) + '%'; }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Data readiness ─────────────────────────────────────────────────────
+  function renderDataChecks(products, supplies, entries) {
+    var checks = [
+      { label: 'Supplies added',    has: supplies.length > 0, count: supplies.length + ' item' + (supplies.length === 1 ? '' : 's') },
+      { label: 'Products with costs', has: products.length > 0, count: products.length + ' product' + (products.length === 1 ? '' : 's') },
+      { label: 'Profit entries',    has: entries.length > 0, count: entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') },
+      { label: 'Sell prices set',   has: products.some(function(p){ return p.sellPrice > 0; }), count: 'for margin calc' },
+      { label: 'Material costs',    has: products.some(function(p){ return p.materialCost > 0; }), count: 'for supply analysis' },
+    ];
+
+    document.getElementById('data-checks').innerHTML = checks.map(function(c) {
+      return '<div class="data-check-item ' + (c.has ? 'has' : 'missing') + '">' +
+        '<span class="check-icon">' + (c.has ? '✓' : '○') + '</span>' +
+        '<div><div>' + c.label + '</div><div style="font-size:.72rem;font-weight:400;opacity:.7">' + c.count + '</div></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Health score ───────────────────────────────────────────────────────
+  function renderHealthScore(products) {
+    var scoreSection = document.getElementById('score-section');
+    if (!products.length) { scoreSection.style.display = 'none'; return; }
+    scoreSection.style.display = '';
+
+    var avgMargin = products.reduce(function(s,p){ return s + parseFloat(p.margin||0); }, 0) / products.length;
+    var lowMarginCount = products.filter(function(p){ return parseFloat(p.margin||0) < 20; }).length;
+    var highMarginCount = products.filter(function(p){ return parseFloat(p.margin||0) >= 40; }).length;
+
+    // Score 0–100
+    var score = Math.round(
+      Math.min(100, Math.max(0,
+        (avgMargin * 1.2) +                          // up to ~60 pts from avg margin
+        (highMarginCount / products.length) * 25 -   // up to 25 pts bonus
+        (lowMarginCount / products.length) * 20       // penalty for low-margin products
+      ))
+    );
+
+    var color = score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444';
+    var label = score >= 70 ? 'Healthy Business' : score >= 40 ? 'Room to Improve' : 'Needs Attention';
+    var desc  = score >= 70
+      ? 'Your product mix has solid margins and good cost efficiency.'
+      : score >= 40
+      ? 'Some products are dragging your average margin down. Review low-margin items.'
+      : 'Several products have low margins. Consider price adjustments or cost reductions.';
+
+    var pct = score + '%';
+    document.getElementById('score-ring').style.cssText = '--ring-pct:' + pct + ';--ring-color:' + color;
+    document.getElementById('score-value').textContent = score;
+    document.getElementById('score-label').textContent = label;
+    document.getElementById('score-desc').textContent = desc;
+  }
+
+  // ── Generate insights ──────────────────────────────────────────────────
+  function generateInsights(products, supplies, entries) {
+    var insights = [];
+
+    if (!products.length) return insights;
+
+    var sorted = products.slice().sort(function(a,b){ return (b.margin||0)-(a.margin||0); });
+    var topProduct = sorted[0];
+    var bottomProduct = sorted[sorted.length - 1];
+
+    // 1. Highest margin product
+    insights.push({
+      type: 'positive',
+      icon: '🏆',
+      badge: { text: 'Best Performer', cls: 'success' },
+      title: 'Your most profitable product is "' + escHtml(topProduct.name || 'Unknown') + '"',
+      detail: 'It has a margin of ' + fmtPct(topProduct.margin) + ' — earning you ' + fmt(topProduct.profitPerPiece) + ' profit per piece. Focus marketing efforts here.',
+      action: null
+    });
+
+    // 2. Lowest margin product (only flag if < 20%)
+    var lowMargin = parseFloat(bottomProduct.margin || 0);
+    if (lowMargin < 20) {
+      var priceIncrease = parseFloat(bottomProduct.sellPrice || 0) * 1.10;
+      var newProfit = priceIncrease - parseFloat(bottomProduct.totalCost || 0);
+      var newMargin = priceIncrease > 0 ? (newProfit / priceIncrease) * 100 : 0;
+      insights.push({
+        type: 'negative',
+        icon: '⚠️',
+        badge: { text: 'Low Margin', cls: 'danger' },
+        title: '"' + escHtml(bottomProduct.name || 'Product') + '" has a dangerously low margin',
+        detail: 'At ' + fmtPct(lowMargin) + ' margin, this product barely covers costs. If you raised the price 10% to ' + fmt(priceIncrease) + ', margin would jump to ' + fmtPct(newMargin) + '.',
+        action: { text: 'Edit Product Costs', href: '/product-costs' }
+      });
+    }
+
+    // 3. Products where material cost > 40% of sell price
+    var highMaterialCost = products.filter(function(p) {
+      return p.sellPrice > 0 && p.materialCost > 0 && (p.materialCost / p.sellPrice) > 0.4;
+    });
+    if (highMaterialCost.length) {
+      insights.push({
+        type: 'warning',
+        icon: '🧵',
+        badge: { text: 'Cost Warning', cls: 'warning' },
+        title: highMaterialCost.length + ' product' + (highMaterialCost.length > 1 ? 's' : '') + ' with high material cost',
+        detail: 'Material costs exceed 40% of sell price on: ' + highMaterialCost.map(function(p){ return escHtml(p.name||''); }).join(', ') + '. Consider sourcing alternatives or bulk buying.',
+        action: { text: 'Review Supplies', href: '/supplies' }
+      });
+    }
+
+    // 4. Products where packaging cost > 15% of sell price
+    var highPackaging = products.filter(function(p) {
+      return p.sellPrice > 0 && p.packagingCost > 0 && (p.packagingCost / p.sellPrice) > 0.15;
+    });
+    if (highPackaging.length) {
+      insights.push({
+        type: 'warning',
+        icon: '📦',
+        badge: { text: 'Packaging', cls: 'warning' },
+        title: 'Packaging is eating margin on ' + highPackaging.length + ' product' + (highPackaging.length > 1 ? 's' : ''),
+        detail: highPackaging.map(function(p){
+          return escHtml(p.name||'') + ' (' + fmtPct((p.packagingCost/p.sellPrice)*100) + ' of price)';
+        }).join(', ') + '. Explore bulk packaging deals to reduce this cost.',
+        action: null
+      });
+    }
+
+    // 5. Estimated revenue boost (raise lowest-margin price 10%)
+    var lowestPriced = products.slice().sort(function(a,b){ return (a.margin||0)-(b.margin||0); })[0];
+    if (lowestPriced && entries.length) {
+      var totalEntryRevenue = entries.reduce(function(s,e){ return s + parseFloat(e.revenue||0); }, 0);
+      var estimatedBoost = totalEntryRevenue * 0.05; // conservative 5% uplift estimate
+      insights.push({
+        type: 'info',
+        icon: '💰',
+        badge: { text: 'Opportunity', cls: 'dark' },
+        title: 'Raise "' + escHtml(lowestPriced.name || 'Lowest Margin Product') + '" price by 10%',
+        detail: 'Based on your revenue history of ' + fmt(totalEntryRevenue) + ', a 10% price increase on your lowest-margin item could add an estimated ' + fmt(estimatedBoost) + ' to annual revenue.',
+        action: { text: 'Adjust Pricing', href: '/product-costs' }
+      });
+    }
+
+    // 6. Most efficient product (highest profit / total supplies used)
+    var efficient = products.filter(function(p){ return p.supplies && p.supplies.length > 0; })
+      .map(function(p) {
+        var totalQty = p.supplies.reduce(function(s,r){ return s + (parseFloat(r.qtyUsed)||0); }, 0);
+        return { p: p, efficiency: totalQty > 0 ? parseFloat(p.profitPerPiece||0) / totalQty : 0 };
+      })
+      .sort(function(a,b){ return b.efficiency - a.efficiency; })[0];
+    if (efficient && efficient.efficiency > 0) {
+      insights.push({
+        type: 'positive',
+        icon: '🚀',
+        badge: { text: 'Most Efficient', cls: 'success' },
+        title: '"' + escHtml(efficient.p.name || 'Product') + '" is your most supply-efficient product',
+        detail: 'It earns ' + fmt(efficient.p.profitPerPiece) + ' profit while using the fewest supply units per piece — excellent ROI on raw materials.',
+        action: null
+      });
+    }
+
+    // 7. Low stock supplies warning
+    var lowStock = supplies.filter(function(s){ return parseFloat(s.qty||0) < 5; });
+    if (lowStock.length) {
+      insights.push({
+        type: 'warning',
+        icon: '📉',
+        badge: { text: 'Stock Alert', cls: 'warning' },
+        title: lowStock.length + ' suppl' + (lowStock.length === 1 ? 'y is' : 'ies are') + ' running low',
+        detail: 'Low stock: ' + lowStock.slice(0,4).map(function(s){ return escHtml(s.name||''); }).join(', ') + (lowStock.length > 4 ? ' and ' + (lowStock.length-4) + ' more.' : '.') + ' Restocking soon will prevent production delays.',
+        action: { text: 'View Supplies', href: '/supplies' }
+      });
+    }
+
+    // 8. If all products have healthy margins
+    var avgMargin = products.reduce(function(s,p){ return s + parseFloat(p.margin||0); }, 0) / products.length;
+    if (avgMargin >= 40) {
+      insights.push({
+        type: 'positive',
+        icon: '🌟',
+        badge: { text: 'Strong Portfolio', cls: 'success' },
+        title: 'Excellent overall margin: ' + fmtPct(avgMargin) + ' average',
+        detail: 'Your product portfolio is performing above the healthy threshold of 40%. Keep optimizing and consider expanding your highest-margin product line.',
+        action: null
+      });
+    }
+
+    return insights;
+  }
+
+  // ── Render insights feed ───────────────────────────────────────────────
+  function renderInsights(products, supplies, entries) {
+    var feed = document.getElementById('insights-feed');
+    var insights = generateInsights(products, supplies, entries);
+
+    document.getElementById('insight-count').textContent = insights.length
+      ? insights.length + ' insight' + (insights.length === 1 ? '' : 's') + ' generated'
+      : '';
+
+    if (!insights.length) {
+      feed.innerHTML = '<div class="ai-empty">' +
+        '<div class="ai-empty-icon">🧠</div>' +
+        '<strong>No insights yet</strong>' +
+        '<p>Add at least one product with cost data to unlock AI-powered analysis.</p>' +
+        '<div class="ai-empty-actions">' +
+          '<a href="/supplies" class="btn-outline">Add Supplies</a>' +
+          '<a href="/product-costs" class="btn-primary">Add Products</a>' +
+        '</div>' +
+        '</div>';
+      return;
+    }
+
+    feed.innerHTML = insights.map(function(ins) {
+      var actionHTML = ins.action
+        ? '<a href="' + ins.action.href + '" class="ic-action">' + ins.action.text + '</a>'
+        : '';
+      return '<div class="insight-card ' + ins.type + '">' +
+        '<div class="ic-top">' +
+          '<div class="ic-icon">' + ins.icon + '</div>' +
+          '<span class="badge-ai ' + ins.badge.cls + '">' + ins.badge.text + '</span>' +
+        '</div>' +
+        '<div class="ic-title">' + ins.title + '</div>' +
+        '<div class="ic-detail">' + ins.detail + '</div>' +
+        actionHTML +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Last analyzed timestamp ────────────────────────────────────────────
+  function setTimestamp() {
+    var now = new Date();
+    var opts = { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+    document.getElementById('last-analyzed').textContent = now.toLocaleDateString('en-US', opts);
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  function render() {
+    var products = loadProducts();
+    var supplies = loadSupplies();
+    var entries  = loadEntries();
+    renderDataChecks(products, supplies, entries);
+    renderHealthScore(products);
+    renderInsights(products, supplies, entries);
+    setTimestamp();
+  }
+
+  render();
+  window.addEventListener('storage', render);
+})();
+</script>
+</body>
+</html>

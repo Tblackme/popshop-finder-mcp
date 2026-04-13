@@ -3,43 +3,108 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Profit | Vendor Atlas</title>
+  <title>Profit Overview | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/dash-layout.css">
   <style>
-    /* ── Profit page styles ──────────────────────────────────────────────── */
-    .profit-cards {
+    /* ── KPI Cards ─────────────────────────────────────────────────────── */
+    .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
-    .profit-card {
+    @media (max-width: 900px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 480px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+
+    .kpi-card {
       background: var(--surface);
       border-radius: var(--radius-lg);
       padding: 1.25rem 1.4rem;
-      box-shadow: 0 2px 12px rgba(12,31,29,.06);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
     }
-    .profit-card .pc-label {
-      font-size: .72rem;
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--kpi-accent, var(--brand));
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .kpi-card.revenue  { --kpi-accent: #2563EB; }
+    .kpi-card.expenses { --kpi-accent: #EF4444; }
+    .kpi-card.profit   { --kpi-accent: #10B981; }
+    .kpi-card.margin   { --kpi-accent: #F59E0B; }
+
+    .kpi-label {
+      font-size: .7rem;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: .4rem;
     }
-    .profit-card .pc-value {
-      font-size: 1.75rem;
+    .kpi-value {
+      font-size: 1.8rem;
       font-weight: 800;
-      color: var(--heading);
+      color: var(--text);
       line-height: 1.1;
     }
-    .profit-card .pc-value.profit { color: var(--success, #027a48); }
-    .profit-card .pc-sub {
-      font-size: .78rem;
+    .kpi-value.positive { color: #10B981; }
+    .kpi-value.negative { color: #EF4444; }
+    .kpi-sub {
+      font-size: .75rem;
       color: var(--muted);
-      margin-top: .2rem;
+      margin-top: .3rem;
+      display: flex;
+      align-items: center;
+      gap: .3rem;
     }
+    .kpi-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: .2rem;
+      font-size: .73rem;
+      font-weight: 700;
+      padding: .15rem .45rem;
+      border-radius: 99px;
+    }
+    .kpi-trend.up   { background: #dcfce7; color: #166534; }
+    .kpi-trend.down { background: #fee2e2; color: #991b1b; }
+    .kpi-trend.flat { background: var(--surface-alt); color: var(--muted); }
+
+    /* ── Sub-nav ───────────────────────────────────────────────────────── */
+    .profit-subnav {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      padding: .75rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .profit-subnav a {
+      text-decoration: none;
+      padding: .35rem .85rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1.5px solid transparent;
+      transition: all .15s;
+    }
+    .profit-subnav a:hover { background: var(--surface-alt); color: var(--brand); }
+    .profit-subnav a.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    /* ── Period tabs ───────────────────────────────────────────────────── */
     .period-tabs {
       display: flex;
       gap: .4rem;
@@ -47,7 +112,7 @@
       margin-bottom: 1.25rem;
     }
     .period-tab {
-      border: 1.5px solid var(--line);
+      border: 1.5px solid var(--border);
       background: var(--surface);
       border-radius: 9px;
       padding: .35rem .85rem;
@@ -55,26 +120,53 @@
       font-weight: 600;
       cursor: pointer;
       color: var(--text);
+      transition: all .15s;
     }
     .period-tab.active {
       background: var(--brand);
       border-color: var(--brand);
       color: #fff;
     }
+
+    /* ── Profit section cards ──────────────────────────────────────────── */
     .profit-section {
       background: var(--surface);
       border-radius: var(--radius-lg);
       padding: 1.5rem;
-      box-shadow: 0 2px 12px rgba(12,31,29,.06);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
       margin-bottom: 1.5rem;
     }
-    .profit-section h2 { font-size: 1.05rem; margin: 0 0 1rem; }
+    .profit-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .profit-section-header h2 {
+      font-size: 1rem;
+      margin: 0;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-badge {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .18rem .55rem;
+      border-radius: 99px;
+      background: var(--surface-alt);
+      color: var(--brand);
+    }
+
+    /* ── Trend chart ───────────────────────────────────────────────────── */
     .chart-wrap { width: 100%; overflow-x: auto; }
     .chart-bars {
       display: flex;
       align-items: flex-end;
-      gap: .5rem;
-      height: 140px;
+      gap: .4rem;
+      height: 160px;
       padding-bottom: 2rem;
       position: relative;
     }
@@ -84,7 +176,7 @@
       bottom: 2rem;
       left: 0; right: 0;
       height: 1px;
-      background: var(--line);
+      background: var(--border);
     }
     .chart-bar-col {
       display: flex;
@@ -92,59 +184,87 @@
       align-items: center;
       flex: 1;
       min-width: 40px;
+      gap: .25rem;
+    }
+    .chart-bar-pair {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      width: 100%;
     }
     .chart-bar {
-      width: 100%;
-      background: var(--brand);
+      flex: 1;
       border-radius: 4px 4px 0 0;
       min-height: 3px;
-      opacity: .85;
       transition: opacity .15s;
     }
-    .chart-bar:hover { opacity: 1; }
+    .chart-bar:hover { opacity: .8; }
+    .chart-bar.rev { background: var(--brand); opacity: .75; }
+    .chart-bar.exp { background: #EF4444; opacity: .6; }
     .chart-bar-label {
-      font-size: .66rem;
+      font-size: .65rem;
       color: var(--muted);
-      margin-top: .4rem;
       text-align: center;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 70px;
     }
-    .chart-empty { color: var(--muted); font-size: .9rem; padding: 1.5rem 0; text-align: center; }
+    .chart-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: .5rem;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .chart-legend-dot {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border-radius: 2px;
+      margin-right: .3rem;
+      vertical-align: middle;
+    }
+    .chart-empty { color: var(--muted); font-size: .9rem; padding: 2rem 0; text-align: center; }
+
+    /* ── Top Products table ────────────────────────────────────────────── */
     .profit-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: .88rem;
+      font-size: .875rem;
     }
     .profit-table th {
       text-align: left;
-      font-size: .72rem;
-      letter-spacing: .06em;
+      font-size: .68rem;
+      letter-spacing: .07em;
       text-transform: uppercase;
       color: var(--muted);
-      font-weight: 600;
-      padding: .55rem .75rem .55rem 0;
-      border-bottom: 1.5px solid var(--line);
+      font-weight: 700;
+      padding: .5rem .75rem .5rem 0;
+      border-bottom: 1.5px solid var(--border);
     }
     .profit-table th.num, .profit-table td.num { text-align: right; }
     .profit-table td {
-      padding: .7rem .75rem .7rem 0;
-      border-bottom: 1px solid var(--line);
+      padding: .75rem .75rem .75rem 0;
+      border-bottom: 1px solid var(--border);
       color: var(--text);
+      vertical-align: middle;
     }
     .profit-table tr:last-child td { border-bottom: none; }
-    .profit-table .profit-green { color: var(--success, #027a48); font-weight: 700; }
-    .profit-table .profit-red { color: #e11d48; font-weight: 700; }
+    .margin-pill {
+      display: inline-block;
+      padding: .2rem .6rem;
+      border-radius: 99px;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+    .margin-pill.green  { background: #dcfce7; color: #166534; }
+    .margin-pill.amber  { background: #fef3c7; color: #92400e; }
+    .margin-pill.red    { background: #fee2e2; color: #991b1b; }
     .table-sort-bar {
       display: flex;
-      gap: .5rem;
+      gap: .4rem;
       margin-bottom: .75rem;
       flex-wrap: wrap;
     }
     .sort-btn {
-      border: 1.5px solid var(--line);
+      border: 1.5px solid var(--border);
       background: transparent;
       border-radius: 8px;
       padding: .25rem .7rem;
@@ -152,57 +272,166 @@
       font-weight: 600;
       cursor: pointer;
       color: var(--muted);
+      transition: all .12s;
     }
-    .sort-btn.active { border-color: var(--brand); color: var(--brand); }
+    .sort-btn.active { border-color: var(--brand); color: var(--brand); background: var(--surface-alt); }
+
+    /* ── AI Insights strip ─────────────────────────────────────────────── */
+    .ai-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .ai-insight-card {
+      background: linear-gradient(135deg, #EEF4FF 0%, #DBEAFE 100%);
+      border: 1px solid #BFDBFE;
+      border-radius: var(--radius-md);
+      padding: 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+    }
+    .ai-insight-card .ai-icon {
+      font-size: 1.3rem;
+      line-height: 1;
+    }
+    .ai-insight-card .ai-title {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--brand-deep);
+    }
+    .ai-insight-card .ai-detail {
+      font-size: .78rem;
+      color: #1E40AF;
+      line-height: 1.5;
+    }
+    .badge-ai {
+      display: inline-block;
+      background: var(--brand);
+      color: #fff;
+      font-size: .62rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      border-radius: 99px;
+      padding: .13rem .45rem;
+    }
+
+    /* ── Insight list ──────────────────────────────────────────────────── */
     .insight-list { list-style: none; padding: 0; margin: 0; }
     .insight-list li {
       display: flex;
       gap: .75rem;
       align-items: flex-start;
       padding: .65rem 0;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--border);
       font-size: .9rem;
     }
     .insight-list li:last-child { border-bottom: none; }
     .insight-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
-    .insight-text strong { display: block; font-size: .9rem; }
-    .insight-text span { color: var(--muted); font-size: .82rem; }
-    .cat-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
-    .cat-pill {
-      background: rgba(15,118,110,.08);
-      color: var(--brand);
-      border-radius: 99px;
-      padding: .2rem .7rem;
-      font-size: .78rem;
+    .insight-text strong { display: block; font-size: .88rem; }
+    .insight-text span { color: var(--muted); font-size: .8rem; }
+
+    /* ── Entry log ─────────────────────────────────────────────────────── */
+    .entry-actions {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-add {
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: .45rem 1rem;
+      font-size: .85rem;
       font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
     }
-    @media (max-width: 600px) {
-      .profit-cards { grid-template-columns: 1fr 1fr; }
+    .btn-add:hover { background: var(--brand-deep); }
+    .btn-sm {
+      background: transparent;
+      color: var(--brand);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .35rem .75rem;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
     }
+
+    /* ── Modal ─────────────────────────────────────────────────────────── */
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,.4);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-bg.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: 0 24px 60px rgba(15,23,42,.18);
+    }
+    .modal-box h3 { margin: 0 0 1.25rem; font-size: 1.05rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: .75rem; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; }
+    .form-group label { font-size: .76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .form-group input, .form-group select {
+      padding: .5rem .75rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--brand); }
+    .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.25rem; }
+    .btn-cancel { background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: .45rem 1rem; font-size: .85rem; cursor: pointer; color: var(--muted); }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .page-hero {
+      margin-bottom: 1.5rem;
+    }
+    .page-hero .eyebrow {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .page-hero h1 {
+      margin: .2rem 0 .3rem;
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+    .page-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
   </style>
 </head>
 <body>
 
-<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
 <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
 <nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
   <div class="mobile-drawer-header">
-    <a class="mobile-drawer-logo" href="/">
-      <span>VA</span><span>Vendor Atlas</span>
-    </a>
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
     <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
       <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
-  <div class="mobile-drawer-nav dash-nav">
-    <!-- Populated by dash-layout.js based on role -->
-  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
 </nav>
 
-<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
 <div class="dash-shell">
-
-  <!-- ── Sidebar (desktop) ─────────────────────────────────────────────── -->
   <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
     <div class="dash-sidebar-header">
       <a class="dash-sidebar-logo" href="/">
@@ -213,50 +442,556 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
-
-    <nav class="dash-nav">
-      <!-- Populated by dash-layout.js based on role -->
-    </nav>
-
-    <div class="dash-sidebar-footer">
-      <div data-auth-nav></div>
-    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
   </aside>
 
-  <!-- ── Main body ─────────────────────────────────────────────────────── -->
   <div class="dash-body">
-
-    <!-- Top bar -->
     <header class="dash-topbar">
       <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
         <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <span class="dash-topbar-title" id="dash-page-title">Profit</span>
+      <span class="dash-topbar-title">Profit Overview</span>
       <div class="dash-topbar-actions" data-auth-nav></div>
     </header>
 
-    <!-- Page content -->
     <div class="dash-content">
-      <div class="dash-page-hero">
-        <span class="eyebrow" id="profit-eyebrow">Analytics</span>
-        <h1 id="profit-title">Loading your profit data…</h1>
-        <p id="profit-subtitle"></p>
+
+      <!-- Hero -->
+      <div class="page-hero">
+        <span class="eyebrow">Analytics</span>
+        <h1>Profit Overview</h1>
+        <p>Track your revenue, expenses, and margins across all products and events.</p>
       </div>
-      <div id="profit-app" data-profit-app>
-        <div class="empty-state"><strong>Loading profit data…</strong></div>
+
+      <!-- Sub-navigation -->
+      <nav class="profit-subnav" aria-label="Profit section navigation">
+        <a href="/profit" class="active">Profit Overview</a>
+        <a href="/supplies">Supplies</a>
+        <a href="/product-costs">Product Costs</a>
+        <a href="/profit-analytics">Analytics</a>
+        <a href="/ai-insights">AI Insights</a>
+      </nav>
+
+      <!-- Period filter -->
+      <div class="period-tabs" id="period-tabs">
+        <button class="period-tab active" data-period="all">All Time</button>
+        <button class="period-tab" data-period="month">This Month</button>
+        <button class="period-tab" data-period="quarter">This Quarter</button>
+        <button class="period-tab" data-period="year">This Year</button>
       </div>
+
+      <!-- KPI Row -->
+      <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card revenue">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value" id="kpi-revenue">$0</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend flat" id="kpi-revenue-trend">— no data</span>
+          </div>
+        </div>
+        <div class="kpi-card expenses">
+          <div class="kpi-label">Total Expenses</div>
+          <div class="kpi-value" id="kpi-expenses">$0</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend flat" id="kpi-expenses-trend">— no data</span>
+          </div>
+        </div>
+        <div class="kpi-card profit">
+          <div class="kpi-label">Net Profit</div>
+          <div class="kpi-value" id="kpi-profit">$0</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend flat" id="kpi-profit-trend">— no data</span>
+          </div>
+        </div>
+        <div class="kpi-card margin">
+          <div class="kpi-label">Avg Margin</div>
+          <div class="kpi-value" id="kpi-margin">0%</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend flat" id="kpi-margin-trend">— no data</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profit Trend Chart -->
+      <div class="profit-section">
+        <div class="profit-section-header">
+          <h2>Profit Trend</h2>
+          <span class="section-badge">Monthly</span>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-bars" id="trend-chart">
+            <div class="chart-empty">Add profit entries below to see your trend chart.</div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <span><span class="chart-legend-dot" style="background:#2563EB;opacity:.75"></span>Revenue</span>
+          <span><span class="chart-legend-dot" style="background:#EF4444;opacity:.6"></span>Expenses</span>
+        </div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="profit-section">
+        <div class="profit-section-header">
+          <h2>Top Products</h2>
+          <a href="/product-costs" class="btn-sm">Manage Products</a>
+        </div>
+        <div class="table-sort-bar">
+          <button class="sort-btn active" data-sort="profit">By Profit</button>
+          <button class="sort-btn" data-sort="margin">By Margin</button>
+          <button class="sort-btn" data-sort="revenue">By Revenue</button>
+          <button class="sort-btn" data-sort="name">A–Z</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="profit-table" id="products-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th class="num">Sell Price</th>
+                <th class="num">Total Cost</th>
+                <th class="num">Profit/Piece</th>
+                <th class="num">Margin</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr><td colspan="5" class="chart-empty">No products yet. <a href="/product-costs" style="color:var(--brand)">Add products</a> to see them here.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Entry Log -->
+      <div class="profit-section">
+        <div class="profit-section-header">
+          <h2>Profit Entries</h2>
+          <div class="entry-actions">
+            <button class="btn-add" id="open-entry-modal">+ Add Entry</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="profit-table" id="entries-table">
+            <thead>
+              <tr>
+                <th>Event / Name</th>
+                <th>Category</th>
+                <th class="num">Revenue</th>
+                <th class="num">Expenses</th>
+                <th class="num">Net Profit</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="entries-tbody">
+              <tr><td colspan="6" class="chart-empty">No entries yet. Click "Add Entry" to track your first event profit.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AI Insights Strip -->
+      <div class="profit-section">
+        <div class="profit-section-header">
+          <h2>AI Insights <span class="badge-ai">AI</span></h2>
+          <a href="/ai-insights" class="btn-sm">Full Analysis</a>
+        </div>
+        <div class="ai-strip" id="ai-strip">
+          <div class="ai-insight-card">
+            <div class="ai-icon">📊</div>
+            <div class="ai-title">Get Started</div>
+            <div class="ai-detail">Add product costs and profit entries to unlock AI-powered insights about your business.</div>
+          </div>
+          <div class="ai-insight-card">
+            <div class="ai-icon">💡</div>
+            <div class="ai-title">Margin Intelligence</div>
+            <div class="ai-detail">AI will flag products with margins below 20% and suggest pricing adjustments.</div>
+          </div>
+          <div class="ai-insight-card">
+            <div class="ai-icon">🚀</div>
+            <div class="ai-title">Revenue Opportunities</div>
+            <div class="ai-detail">Identify your highest-ROI products and discover where to focus your production effort.</div>
+          </div>
+          <div class="ai-insight-card">
+            <div class="ai-icon">⚠️</div>
+            <div class="ai-title">Cost Warnings</div>
+            <div class="ai-detail">Spot products where material or packaging costs are eating into your margins.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.dash-content -->
+  </div><!-- /.dash-body -->
+</div><!-- /.dash-shell -->
+
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <ul class="bottom-nav-items"></ul>
+</nav>
+
+<!-- Add Entry Modal -->
+<div class="modal-bg" id="entry-modal">
+  <div class="modal-box">
+    <h3>Add Profit Entry</h3>
+    <div class="form-row full">
+      <div class="form-group">
+        <label>Event / Name</label>
+        <input type="text" id="entry-name" placeholder="e.g. Spring Market, Etsy sale">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="entry-category">
+          <option value="market">Market</option>
+          <option value="online">Online</option>
+          <option value="wholesale">Wholesale</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="entry-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Revenue ($)</label>
+        <input type="number" id="entry-revenue" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Expenses ($)</label>
+        <input type="number" id="entry-expenses" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="close-entry-modal">Cancel</button>
+      <button class="btn-add" id="save-entry">Save Entry</button>
     </div>
   </div>
 </div>
 
-<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
-<nav class="bottom-nav" aria-label="Mobile navigation">
-  <ul class="bottom-nav-items">
-    <!-- Populated by dash-layout.js based on role -->
-  </ul>
-</nav>
-
 <script src="/assets/app.js"></script>
 <script src="/assets/dash-layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'va_profit_entries';
+  var productKey = 'va_products';
+  var currentPeriod = 'all';
+  var currentSort = 'profit';
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function loadEntries() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { return []; }
+  }
+  function saveEntries(arr) {
+    localStorage.setItem(KEY, JSON.stringify(arr));
+  }
+  function loadProducts() {
+    try { return JSON.parse(localStorage.getItem(productKey) || '[]'); } catch(e) { return []; }
+  }
+  function fmt(n) {
+    return '$' + parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function fmtPct(n) {
+    return parseFloat(n || 0).toFixed(1) + '%';
+  }
+
+  // ── Filter entries by period ───────────────────────────────────────────
+  function filterByPeriod(entries, period) {
+    if (period === 'all') return entries;
+    var now = new Date();
+    return entries.filter(function(e) {
+      if (!e.date) return true;
+      var d = new Date(e.date);
+      if (period === 'month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }
+      if (period === 'quarter') {
+        var q = Math.floor(now.getMonth() / 3);
+        return Math.floor(d.getMonth() / 3) === q && d.getFullYear() === now.getFullYear();
+      }
+      if (period === 'year') {
+        return d.getFullYear() === now.getFullYear();
+      }
+      return true;
+    });
+  }
+
+  // ── Compute KPIs ───────────────────────────────────────────────────────
+  function computeKPIs(entries) {
+    var rev = entries.reduce(function(s, e) { return s + parseFloat(e.revenue || 0); }, 0);
+    var exp = entries.reduce(function(s, e) { return s + parseFloat(e.expenses || 0); }, 0);
+    var profit = rev - exp;
+    var margin = rev > 0 ? (profit / rev) * 100 : 0;
+    return { rev: rev, exp: exp, profit: profit, margin: margin };
+  }
+
+  // ── Render KPIs ────────────────────────────────────────────────────────
+  function renderKPIs(entries) {
+    var kpi = computeKPIs(entries);
+    document.getElementById('kpi-revenue').textContent = fmt(kpi.rev);
+    document.getElementById('kpi-expenses').textContent = fmt(kpi.exp);
+
+    var profitEl = document.getElementById('kpi-profit');
+    profitEl.textContent = fmt(kpi.profit);
+    profitEl.className = 'kpi-value ' + (kpi.profit >= 0 ? 'positive' : 'negative');
+
+    var marginEl = document.getElementById('kpi-margin');
+    marginEl.textContent = fmtPct(kpi.margin);
+    marginEl.className = 'kpi-value ' + (kpi.margin >= 20 ? 'positive' : kpi.margin < 0 ? 'negative' : '');
+
+    // Trend labels
+    var count = entries.length;
+    document.getElementById('kpi-revenue-trend').textContent = count + ' entr' + (count === 1 ? 'y' : 'ies');
+    document.getElementById('kpi-revenue-trend').className = 'kpi-trend flat';
+    document.getElementById('kpi-expenses-trend').textContent = count + ' entr' + (count === 1 ? 'y' : 'ies');
+    document.getElementById('kpi-expenses-trend').className = 'kpi-trend flat';
+    var profTrend = document.getElementById('kpi-profit-trend');
+    profTrend.textContent = kpi.profit >= 0 ? 'Profitable' : 'Net loss';
+    profTrend.className = 'kpi-trend ' + (kpi.profit >= 0 ? 'up' : 'down');
+    var mrgTrend = document.getElementById('kpi-margin-trend');
+    mrgTrend.textContent = kpi.margin >= 40 ? 'Healthy' : kpi.margin >= 20 ? 'Fair' : 'Low';
+    mrgTrend.className = 'kpi-trend ' + (kpi.margin >= 40 ? 'up' : kpi.margin >= 20 ? 'flat' : 'down');
+  }
+
+  // ── Render trend chart ─────────────────────────────────────────────────
+  function renderChart(entries) {
+    var chartEl = document.getElementById('trend-chart');
+    if (!entries.length) {
+      chartEl.innerHTML = '<div class="chart-empty">Add profit entries to see your trend chart.</div>';
+      return;
+    }
+
+    // Group by month
+    var months = {};
+    entries.forEach(function(e) {
+      var d = e.date ? new Date(e.date) : new Date();
+      var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!months[key]) months[key] = { rev: 0, exp: 0, label: '' };
+      months[key].rev += parseFloat(e.revenue || 0);
+      months[key].exp += parseFloat(e.expenses || 0);
+      var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      months[key].label = mo[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2);
+    });
+
+    var keys = Object.keys(months).sort().slice(-12);
+    var maxVal = 0;
+    keys.forEach(function(k) {
+      maxVal = Math.max(maxVal, months[k].rev, months[k].exp);
+    });
+    if (maxVal === 0) maxVal = 1;
+
+    var html = '';
+    keys.forEach(function(k) {
+      var m = months[k];
+      var revH = Math.max(3, Math.round((m.rev / maxVal) * 130));
+      var expH = Math.max(3, Math.round((m.exp / maxVal) * 130));
+      html += '<div class="chart-bar-col">';
+      html += '<div class="chart-bar-pair">';
+      html += '<div class="chart-bar rev" style="height:' + revH + 'px" title="Revenue: ' + fmt(m.rev) + '"></div>';
+      html += '<div class="chart-bar exp" style="height:' + expH + 'px" title="Expenses: ' + fmt(m.exp) + '"></div>';
+      html += '</div>';
+      html += '<div class="chart-bar-label">' + m.label + '</div>';
+      html += '</div>';
+    });
+    chartEl.innerHTML = html;
+  }
+
+  // ── Render products table ──────────────────────────────────────────────
+  function renderProducts() {
+    var products = loadProducts();
+    var tbody = document.getElementById('products-tbody');
+    if (!products.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="chart-empty">No products yet. <a href="/product-costs" style="color:var(--brand)">Add products</a> to see them here.</td></tr>';
+      return;
+    }
+
+    // Sort
+    var sorted = products.slice().sort(function(a, b) {
+      if (currentSort === 'profit') return (b.profitPerPiece || 0) - (a.profitPerPiece || 0);
+      if (currentSort === 'margin') return (b.margin || 0) - (a.margin || 0);
+      if (currentSort === 'revenue') return (b.sellPrice || 0) - (a.sellPrice || 0);
+      if (currentSort === 'name') return (a.name || '').localeCompare(b.name || '');
+      return 0;
+    });
+
+    tbody.innerHTML = sorted.map(function(p) {
+      var margin = parseFloat(p.margin || 0);
+      var pillCls = margin >= 40 ? 'green' : margin >= 20 ? 'amber' : 'red';
+      return '<tr>' +
+        '<td><strong>' + escHtml(p.name || 'Untitled') + '</strong></td>' +
+        '<td class="num">' + fmt(p.sellPrice) + '</td>' +
+        '<td class="num">' + fmt(p.totalCost) + '</td>' +
+        '<td class="num"><strong>' + fmt(p.profitPerPiece) + '</strong></td>' +
+        '<td class="num"><span class="margin-pill ' + pillCls + '">' + fmtPct(margin) + '</span></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ── Render entries table ───────────────────────────────────────────────
+  function renderEntries(entries) {
+    var allEntries = loadEntries();
+    var tbody = document.getElementById('entries-tbody');
+    if (!allEntries.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="chart-empty">No entries yet. Click "Add Entry" to track your first event profit.</td></tr>';
+      return;
+    }
+    // Show all entries, newest first
+    var sorted = allEntries.slice().reverse();
+    tbody.innerHTML = sorted.map(function(e, i) {
+      var netProfit = parseFloat(e.revenue || 0) - parseFloat(e.expenses || 0);
+      var cls = netProfit >= 0 ? 'positive' : 'negative';
+      var realIdx = allEntries.length - 1 - i;
+      return '<tr>' +
+        '<td><strong>' + escHtml(e.name || 'Entry') + '</strong><br><small style="color:var(--muted)">' + (e.date || '') + '</small></td>' +
+        '<td><span style="text-transform:capitalize;font-size:.8rem;color:var(--muted)">' + escHtml(e.category || '') + '</span></td>' +
+        '<td class="num">' + fmt(e.revenue) + '</td>' +
+        '<td class="num">' + fmt(e.expenses) + '</td>' +
+        '<td class="num" style="font-weight:700;color:' + (netProfit >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + fmt(netProfit) + '</td>' +
+        '<td><button class="btn-cancel" style="font-size:.72rem;padding:.2rem .5rem" onclick="deleteEntry(' + realIdx + ')">Delete</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ── Render AI insights strip ───────────────────────────────────────────
+  function renderAIStrip() {
+    var products = loadProducts();
+    var entries = loadEntries();
+    if (!products.length && !entries.length) return; // keep defaults
+
+    var strip = document.getElementById('ai-strip');
+    var insights = [];
+
+    if (products.length) {
+      var sorted = products.slice().sort(function(a,b) { return (b.margin||0)-(a.margin||0); });
+      var top = sorted[0];
+      var bottom = sorted[sorted.length - 1];
+      insights.push({
+        icon: '🏆',
+        title: 'Best Performer: ' + escHtml(top.name || 'Top Product'),
+        detail: fmtPct(top.margin || 0) + ' margin — ' + fmt(top.profitPerPiece) + ' profit per piece.'
+      });
+      if (parseFloat(bottom.margin || 0) < 20) {
+        insights.push({
+          icon: '⚠️',
+          title: 'Low Margin Alert: ' + escHtml(bottom.name || 'Product'),
+          detail: 'Margin is only ' + fmtPct(bottom.margin || 0) + '. Consider raising the price or reducing costs.'
+        });
+      }
+      var highCost = products.filter(function(p) {
+        return p.sellPrice > 0 && (p.materialCost / p.sellPrice) > 0.4;
+      });
+      if (highCost.length) {
+        insights.push({
+          icon: '📦',
+          title: highCost.length + ' product' + (highCost.length > 1 ? 's' : '') + ' with high material cost',
+          detail: 'Material cost exceeds 40% of sell price on ' + highCost.map(function(p){return escHtml(p.name||'');}).join(', ') + '.'
+        });
+      }
+    }
+
+    if (entries.length) {
+      var kpi = computeKPIs(entries);
+      insights.push({
+        icon: '💰',
+        title: 'Total Net Profit: ' + fmt(kpi.profit),
+        detail: 'Across ' + entries.length + ' event' + (entries.length === 1 ? '' : 's') + ' with ' + fmtPct(kpi.margin) + ' average margin.'
+      });
+    }
+
+    if (!insights.length) return;
+
+    strip.innerHTML = insights.map(function(ins) {
+      return '<div class="ai-insight-card">' +
+        '<div class="ai-icon">' + ins.icon + '</div>' +
+        '<div class="ai-title">' + ins.title + '</div>' +
+        '<div class="ai-detail">' + ins.detail + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ── Full render ────────────────────────────────────────────────────────
+  function render() {
+    var all = loadEntries();
+    var filtered = filterByPeriod(all, currentPeriod);
+    renderKPIs(filtered);
+    renderChart(filtered);
+    renderProducts();
+    renderEntries(all);
+    renderAIStrip();
+  }
+
+  // ── Delete entry ───────────────────────────────────────────────────────
+  window.deleteEntry = function(idx) {
+    var entries = loadEntries();
+    entries.splice(idx, 1);
+    saveEntries(entries);
+    render();
+  };
+
+  // ── Period tabs ────────────────────────────────────────────────────────
+  document.getElementById('period-tabs').addEventListener('click', function(e) {
+    var btn = e.target.closest('.period-tab');
+    if (!btn) return;
+    document.querySelectorAll('.period-tab').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentPeriod = btn.dataset.period;
+    render();
+  });
+
+  // ── Sort buttons ───────────────────────────────────────────────────────
+  document.querySelector('.table-sort-bar').addEventListener('click', function(e) {
+    var btn = e.target.closest('.sort-btn');
+    if (!btn) return;
+    document.querySelectorAll('.sort-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentSort = btn.dataset.sort;
+    renderProducts();
+  });
+
+  // ── Modal open/close ───────────────────────────────────────────────────
+  document.getElementById('open-entry-modal').addEventListener('click', function() {
+    // Set today as default date
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('entry-date').value = today;
+    document.getElementById('entry-modal').classList.add('open');
+  });
+  document.getElementById('close-entry-modal').addEventListener('click', function() {
+    document.getElementById('entry-modal').classList.remove('open');
+  });
+  document.getElementById('entry-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  // ── Save entry ─────────────────────────────────────────────────────────
+  document.getElementById('save-entry').addEventListener('click', function() {
+    var name = document.getElementById('entry-name').value.trim();
+    var category = document.getElementById('entry-category').value;
+    var date = document.getElementById('entry-date').value;
+    var revenue = parseFloat(document.getElementById('entry-revenue').value) || 0;
+    var expenses = parseFloat(document.getElementById('entry-expenses').value) || 0;
+
+    if (!name) { alert('Please enter a name for this entry.'); return; }
+
+    var entries = loadEntries();
+    entries.push({ name: name, category: category, date: date, revenue: revenue, expenses: expenses });
+    saveEntries(entries);
+
+    // Reset form
+    document.getElementById('entry-name').value = '';
+    document.getElementById('entry-revenue').value = '';
+    document.getElementById('entry-expenses').value = '';
+    document.getElementById('entry-modal').classList.remove('open');
+    render();
+  });
+
+  // ── Escape HTML ────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  render();
+})();
+</script>
 </body>
 </html>
