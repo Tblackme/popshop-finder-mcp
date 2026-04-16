@@ -7,48 +7,126 @@
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/dash-layout.css">
   <style>
-    .tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--line); margin-bottom: 2rem; }
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--line); margin-bottom: 2rem; flex-wrap: wrap; }
     .tab-btn {
       background: none; border: none; border-bottom: 2px solid transparent;
-      padding: .65rem 1.1rem; font-size: .93rem; font-weight: 600;
-      color: var(--muted); cursor: pointer; margin-bottom: -2px; border-radius: 4px 4px 0 0;
-      transition: color .15s;
+      padding: .65rem 1.2rem; font-size: .92rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; margin-bottom: -2px;
+      border-radius: 4px 4px 0 0; transition: color .15s; white-space: nowrap;
     }
     .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .form-section { margin-bottom: 2rem; }
-    .form-section h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin: 0 0 1rem; }
+    /* ── Setup section cards ── */
+    .setup-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .setup-card-header {
+      display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .setup-card-icon {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      background: var(--primary-soft); color: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem; flex-shrink: 0;
+    }
+    .setup-card-label h3 { margin: 0; font-size: .95rem; font-weight: 700; color: var(--text); }
+    .setup-card-label p { margin: .2rem 0 0; font-size: .8rem; color: var(--muted); }
+
+    /* ── Form elements ── */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
     .form-group { display: flex; flex-direction: column; gap: .35rem; }
     .form-group.full { grid-column: 1 / -1; }
     .form-group label { font-size: .83rem; font-weight: 600; color: var(--text); }
     .form-group input, .form-group select, .form-group textarea {
-      padding: .55rem .8rem; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+      padding: .6rem .9rem; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
       font-size: .93rem; background: var(--bg); color: var(--text);
       transition: border-color .15s;
     }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-      outline: none; border-color: var(--brand);
+      outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.08);
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-hint { font-size: .75rem; color: var(--muted); margin-top: .15rem; }
-    .save-bar { display: flex; align-items: center; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
-    .save-status { font-size: .85rem; color: var(--muted); }
-    .save-status.ok { color: var(--success, #15803d); }
-    .save-status.err { color: var(--error, #dc2626); }
 
+    /* ── Tags chip input ── */
+    .tags-input-wrap {
+      border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+      padding: .45rem .7rem; background: var(--bg); min-height: 46px;
+      display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
+      cursor: text; transition: border-color .15s;
+    }
+    .tags-input-wrap:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: var(--primary-soft); color: var(--brand);
+      font-size: .78rem; font-weight: 600; padding: .22rem .65rem;
+      border-radius: 99px; white-space: nowrap;
+    }
+    .tag-chip-remove {
+      background: none; border: none; cursor: pointer; color: var(--brand);
+      padding: 0; font-size: .9rem; line-height: 1; opacity: .65;
+      display: flex; align-items: center;
+    }
+    .tag-chip-remove:hover { opacity: 1; }
+    .tag-chip-input {
+      border: none; background: transparent; font-size: .88rem;
+      color: var(--text); outline: none; min-width: 100px; flex: 1; padding: .1rem 0;
+    }
+    .tag-suggestions { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+    .tag-suggestion {
+      font-size: .75rem; font-weight: 600; color: var(--muted);
+      background: var(--surface-alt); border: 1px solid var(--line);
+      padding: .2rem .65rem; border-radius: 99px; cursor: pointer; transition: all .15s;
+    }
+    .tag-suggestion:hover { border-color: var(--brand); color: var(--brand); background: var(--primary-soft); }
+
+    /* ── Banner color picker ── */
+    .color-swatches { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+    .color-swatch {
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      cursor: pointer; border: 3px solid transparent;
+      transition: transform .15s, border-color .15s; flex-shrink: 0;
+    }
+    .color-swatch:hover { transform: scale(1.1); }
+    .color-swatch.active { border-color: var(--text); transform: scale(1.1); }
+    .color-custom-wrap { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
+    input[type="color"] { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1.5px solid var(--line); cursor: pointer; padding: 2px; background: var(--bg); }
+    .banner-preview-strip {
+      width: 100%; height: 48px; border-radius: var(--radius-sm);
+      margin-top: .75rem; transition: background .3s;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; color: rgba(255,255,255,.7); font-weight: 600; letter-spacing: .08em;
+    }
+
+    /* ── Save bar ── */
+    .save-bar {
+      display: flex; align-items: center; gap: 1rem; padding-top: 1.25rem;
+      border-top: 1px solid var(--line); margin-top: .25rem;
+    }
+    .save-status { font-size: .85rem; color: var(--muted); }
+    .save-status.ok { color: var(--success); }
+    .save-status.err { color: var(--danger); }
+
+    /* ── Product list (editor) ── */
     .product-list { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.5rem; }
     .product-row {
-      background: var(--surface); border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
       padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem;
-      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+      box-shadow: var(--shadow-sm); transition: box-shadow .15s;
     }
+    .product-row:hover { box-shadow: 0 4px 18px rgba(37,99,235,.1); }
     .product-thumb {
       width: 56px; height: 56px; border-radius: var(--radius-sm);
-      object-fit: cover; background: #e8e2d8; flex-shrink: 0;
+      background: var(--surface-alt); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.4rem; overflow: hidden;
     }
@@ -60,32 +138,92 @@
     .product-actions { display: flex; gap: .4rem; flex-shrink: 0; }
     .stock-badge {
       font-size: .72rem; padding: .15rem .55rem; border-radius: 99px; font-weight: 600;
-      background: rgba(2,122,72,.1); color: var(--brand);
+      background: rgba(16,185,129,.1); color: var(--success);
     }
-    .stock-badge.out { background: rgba(220,38,38,.08); color: #dc2626; }
+    .stock-badge.out { background: rgba(239,68,68,.08); color: var(--danger); }
 
-    .add-product-form {
-      background: var(--surface); border-radius: var(--radius-lg);
-      padding: 1.5rem; margin-top: 1rem;
-      box-shadow: 0 2px 12px rgba(12,31,29,.07);
-    }
-    .add-product-form h4 { margin: 0 0 1rem; font-size: 1rem; }
+    /* ── Empty states ── */
+    .empty-products { text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
+    .empty-products .icon { font-size: 2.5rem; margin-bottom: .5rem; }
 
+    /* ── Product modal ── */
     .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5);
       z-index: 1000; align-items: center; justify-content: center; padding: 1rem;
     }
     .modal-overlay.open { display: flex; }
     .modal {
-      background: var(--bg); border-radius: var(--radius-lg); padding: 2rem;
+      background: var(--surface); border-radius: var(--radius-lg); padding: 2rem;
       width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 8px 40px rgba(12,31,29,.18);
+      box-shadow: 0 8px 48px rgba(15,23,42,.2);
     }
-    .modal h4 { margin: 0 0 1.25rem; }
+    .modal h4 { margin: 0 0 1.25rem; font-size: 1.1rem; }
     .modal-footer { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
 
-    .empty-products { text-align: center; padding: 3rem 1rem; color: var(--muted); }
-    .empty-products .icon { font-size: 2.5rem; margin-bottom: .5rem; }
+    /* ── Preview tab ── */
+    .preview-toolbar {
+      display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem;
+      padding: .75rem 1rem; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+    }
+    .preview-label { font-size: .83rem; color: var(--muted); flex: 1; }
+    .preview-mode-btns { display: flex; gap: .3rem; }
+    .preview-mode-btn {
+      background: none; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+      padding: .3rem .7rem; font-size: .78rem; font-weight: 600; color: var(--muted); cursor: pointer;
+      transition: all .15s;
+    }
+    .preview-mode-btn.active { border-color: var(--brand); color: var(--brand); background: var(--primary-soft); }
+
+    .preview-frame {
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      overflow: hidden; box-shadow: var(--shadow-sm); margin: 0 auto;
+      transition: max-width .3s; background: var(--bg);
+    }
+    .preview-frame.mobile { max-width: 390px; }
+    .preview-frame.desktop { max-width: 100%; }
+
+    .preview-banner { height: 140px; position: relative; overflow: hidden; }
+    .preview-banner-bg { position: absolute; inset: 0; }
+    .preview-banner-text {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; font-weight: 900; color: rgba(255,255,255,.12); letter-spacing: .15em;
+    }
+    .preview-profile { padding: 0 1.5rem 1.25rem; border-bottom: 1px solid var(--line); }
+    .preview-avatar-row { display: flex; align-items: flex-end; gap: 1rem; margin-top: -30px; margin-bottom: .85rem; }
+    .preview-avatar {
+      width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 800; color: #fff; flex-shrink: 0;
+      box-shadow: 0 2px 12px rgba(15,23,42,.15);
+    }
+    .preview-shop-name { font-size: 1.15rem; font-weight: 800; margin: 0 0 .2rem; color: var(--text); }
+    .preview-shop-handle { font-size: .8rem; color: var(--muted); margin: 0 0 .45rem; }
+    .preview-shop-bio { font-size: .85rem; color: var(--text); line-height: 1.55; margin: 0 0 .6rem; }
+    .preview-tags-row { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .preview-tag {
+      font-size: .72rem; font-weight: 600; color: var(--brand);
+      background: var(--primary-soft); padding: .18rem .6rem; border-radius: 99px;
+    }
+    .preview-products-section { padding: 1.25rem 1.5rem; }
+    .preview-products-section h4 {
+      margin: 0 0 .85rem; font-size: .78rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .07em;
+    }
+    .preview-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .75rem; }
+    .preview-product-card {
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+      overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+    .preview-product-img {
+      width: 100%; aspect-ratio: 1; background: var(--surface-alt);
+      display: flex; align-items: center; justify-content: center; font-size: 1.75rem;
+    }
+    .preview-product-body { padding: .5rem .65rem .65rem; }
+    .preview-product-name { font-size: .78rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .preview-product-price { font-size: .82rem; font-weight: 800; color: var(--brand); margin-top: .15rem; }
+    .preview-empty { text-align: center; padding: 2.5rem 1.5rem; color: var(--muted); }
+    .preview-empty .icon { font-size: 1.75rem; margin-bottom: .4rem; }
 
     .public-shop-link {
       display: inline-flex; align-items: center; gap: .4rem;
@@ -96,7 +234,7 @@
 </head>
 <body>
 
-<!-- ── Mobile overlay + slide drawer ──────────────────────────────────── -->
+<!-- ── Mobile overlay + slide drawer ─────────────────────────────────────── -->
 <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
 <nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
   <div class="mobile-drawer-header">
@@ -112,7 +250,7 @@
   </div>
 </nav>
 
-<!-- ── Dashboard shell ─────────────────────────────────────────────────── -->
+<!-- ── Dashboard shell ──────────────────────────────────────────────────── -->
 <div class="dash-shell">
 
   <!-- ── Sidebar (desktop) ─────────────────────────────────────────────── -->
@@ -126,17 +264,15 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
-
     <nav class="dash-nav">
       <!-- Populated by dash-layout.js based on role -->
     </nav>
-
     <div class="dash-sidebar-footer">
       <div data-auth-nav></div>
     </div>
   </aside>
 
-  <!-- ── Main body ─────────────────────────────────────────────────────── -->
+  <!-- ── Main body ──────────────────────────────────────────────────────── -->
   <div class="dash-body">
 
     <!-- Top bar -->
@@ -156,618 +292,912 @@
       <div class="dash-page-hero">
         <span class="eyebrow">Vendor setup</span>
         <h1>My shop</h1>
-        <p id="shop-subtitle">Manage your vendor profile and product listings.</p>
+        <p id="shop-subtitle">Set up your vendor profile, products, and shop page.</p>
       </div>
 
+      <!-- ── Tabs ── -->
       <div class="tabs">
-          <button class="tab-btn active" data-tab="profile">Vendor profile</button>
-          <button class="tab-btn" data-tab="products">Products <span id="product-count-badge"></span></button>
-        </div>
+        <button class="tab-btn active" data-tab="setup">Shop Setup</button>
+        <button class="tab-btn" data-tab="products">Products <span id="product-count-badge"></span></button>
+        <button class="tab-btn" data-tab="preview">Preview</button>
+      </div>
 
-        <!-- PROFILE TAB -->
-        <div class="tab-panel active" id="tab-profile">
-          <form id="profile-form" autocomplete="off">
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <!-- SETUP TAB                                                        -->
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <div class="tab-panel active" id="tab-setup">
+        <form id="profile-form" autocomplete="off">
 
-            <div class="form-section">
-              <h3>Basic info</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="f-name">Display name *</label>
-                  <input id="f-name" name="name" type="text" placeholder="Jane Smith" required>
-                </div>
-                <div class="form-group">
-                  <label for="f-business">Business name</label>
-                  <input id="f-business" name="business_name" type="text" placeholder="Sunlit Clay Studio">
-                </div>
-                <div class="form-group full">
-                  <label for="f-bio">Bio / tagline <span id="ai-bio-btn" style="display:none;margin-left:.5rem;"><button type="button" class="btn btn-ghost" id="generate-bio-btn" style="font-size:.75rem;padding:.2rem .6rem;">✨ Generate</button></span></label>
-                  <textarea id="f-bio" name="bio" rows="2" placeholder="Hand-thrown ceramics made in Austin, TX."></textarea>
-                  <div id="bio-suggestions" style="display:none;margin-top:.5rem;"></div>
-                </div>
-                <div class="form-group">
-                  <label for="f-location">City / location</label>
-                  <input id="f-location" name="location" type="text" placeholder="Austin, TX">
-                </div>
-                <div class="form-group">
-                  <label for="f-category">Category</label>
-                  <select id="f-category" name="category">
-                    <option value="">— Select —</option>
-                    <option value="Handmade Jewelry">Handmade Jewelry</option>
-                    <option value="Ceramics">Ceramics</option>
-                    <option value="Art & Prints">Art & Prints</option>
-                    <option value="Apparel">Apparel</option>
-                    <option value="Vintage & Thrift">Vintage & Thrift</option>
-                    <option value="Food & Treats">Food & Treats</option>
-                    <option value="Home & Body">Home & Body</option>
-                    <option value="Candles & Soap">Candles & Soap</option>
-                    <option value="Plants & Flowers">Plants & Flowers</option>
-                    <option value="Photography">Photography</option>
-                    <option value="Woodworking">Woodworking</option>
-                    <option value="Leather Goods">Leather Goods</option>
-                    <option value="Stickers & Paper">Stickers & Paper</option>
-                    <option value="Other Handmade">Other Handmade</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f-subcategory">Subcategory / specialty</label>
-                  <input id="f-subcategory" name="subcategory" type="text" placeholder="e.g. Layered gold necklaces">
-                </div>
+          <!-- Shop Basics -->
+          <div class="setup-card">
+            <div class="setup-card-header">
+              <div class="setup-card-icon">🏪</div>
+              <div class="setup-card-label">
+                <h3>Shop Basics</h3>
+                <p>Your name, description, and location</p>
               </div>
             </div>
-
-            <div class="form-section">
-              <h3>Selling style</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="f-price-range">Price range</label>
-                  <select id="f-price-range" name="price_range">
-                    <option value="">— Select —</option>
-                    <option value="low">Budget-friendly (under $25)</option>
-                    <option value="mid">Mid-range ($25–$100)</option>
-                    <option value="high">Premium ($100+)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f-max-booth">Max booth fee ($)</label>
-                  <input id="f-max-booth" name="max_booth_price" type="number" min="0" step="5" placeholder="150">
-                </div>
-                <div class="form-group">
-                  <label for="f-goal">Main goal</label>
-                  <select id="f-goal" name="main_goal">
-                    <option value="">— Select —</option>
-                    <option value="sell_out">Sell out inventory</option>
-                    <option value="grow_audience">Grow my audience</option>
-                    <option value="test_ideas">Test new products</option>
-                    <option value="community">Connect with community</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f-env">Preferred environment</label>
-                  <select id="f-env" name="preferred_env">
-                    <option value="">— Select —</option>
-                    <option value="indoor">Indoor only</option>
-                    <option value="outdoor">Outdoor only</option>
-                    <option value="either">Either works</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f-experience">Experience level</label>
-                  <select id="f-experience" name="experience_level">
-                    <option value="">— Select —</option>
-                    <option value="early_stage">Just getting started</option>
-                    <option value="experienced">Experienced vendor</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f-risk">Risk tolerance</label>
-                  <select id="f-risk" name="risk_tolerance">
-                    <option value="">— Select —</option>
-                    <option value="low">Low — want sure things</option>
-                    <option value="medium">Medium — willing to experiment</option>
-                    <option value="high">High — growth over safety</option>
-                  </select>
-                </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="f-name">Display name *</label>
+                <input id="f-name" name="name" type="text" placeholder="Jane Smith" required>
+              </div>
+              <div class="form-group">
+                <label for="f-business">Business name</label>
+                <input id="f-business" name="business_name" type="text" placeholder="Sunlit Clay Studio">
+              </div>
+              <div class="form-group full">
+                <label for="f-bio">
+                  Shop bio / tagline
+                  <span id="ai-bio-btn" style="display:none;margin-left:.5rem;">
+                    <button type="button" class="btn btn-ghost" id="generate-bio-btn" style="font-size:.75rem;padding:.2rem .6rem;">✨ Generate</button>
+                  </span>
+                </label>
+                <textarea id="f-bio" name="bio" rows="2" placeholder="Hand-thrown ceramics made in Austin, TX."></textarea>
+                <div id="bio-suggestions" style="display:none;margin-top:.5rem;"></div>
+              </div>
+              <div class="form-group">
+                <label for="f-location">City / location</label>
+                <input id="f-location" name="location" type="text" placeholder="Austin, TX">
               </div>
             </div>
-
-            <div class="form-section">
-              <h3>Links & social</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="f-instagram">Instagram URL</label>
-                  <input id="f-instagram" name="instagram_url" type="url" placeholder="https://instagram.com/yourhandle">
-                </div>
-                <div class="form-group">
-                  <label for="f-tiktok">TikTok URL</label>
-                  <input id="f-tiktok" name="tiktok_url" type="url" placeholder="https://tiktok.com/@yourhandle">
-                </div>
-                <div class="form-group full">
-                  <label for="f-website">Website</label>
-                  <input id="f-website" name="website_url" type="url" placeholder="https://yoursite.com">
-                </div>
-              </div>
-            </div>
-
-            <div class="save-bar">
-              <button type="submit" class="btn btn-primary">Save profile</button>
-              <span class="save-status" id="profile-save-status"></span>
-            </div>
-          </form>
-        </div>
-
-        <!-- PRODUCTS TAB -->
-        <div class="tab-panel" id="tab-products">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-            <div>
-              <h2 style="margin:0;font-size:1.15rem;">Your products</h2>
-              <p style="margin:.2rem 0 0;font-size:.85rem;color:var(--muted);">Add products manually — no Shopify required.</p>
-            </div>
-            <button class="btn btn-primary" id="add-product-btn">+ Add product</button>
           </div>
 
-          <div id="product-list" class="product-list"></div>
-
-          <div id="empty-products" class="empty-products" style="display:none;">
-            <div class="icon">📦</div>
-            <strong>No products yet</strong>
-            <p style="margin:.4rem 0 1rem;font-size:.9rem;">Add your first product to show shoppers what you sell.</p>
-            <button class="btn btn-primary" id="empty-add-btn">+ Add your first product</button>
+          <!-- Branding -->
+          <div class="setup-card">
+            <div class="setup-card-header">
+              <div class="setup-card-icon">🎨</div>
+              <div class="setup-card-label">
+                <h3>Branding</h3>
+                <p>Choose a banner color to personalize your shop</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Banner color</label>
+              <div class="color-swatches" id="color-swatches">
+                <div class="color-swatch" data-color="#2563EB" style="background:#2563EB;" title="Atlas Blue"></div>
+                <div class="color-swatch" data-color="#7C3AED" style="background:#7C3AED;" title="Violet"></div>
+                <div class="color-swatch" data-color="#DB2777" style="background:#DB2777;" title="Rose"></div>
+                <div class="color-swatch" data-color="#DC2626" style="background:#DC2626;" title="Red"></div>
+                <div class="color-swatch" data-color="#D97706" style="background:#D97706;" title="Amber"></div>
+                <div class="color-swatch" data-color="#16A34A" style="background:#16A34A;" title="Green"></div>
+                <div class="color-swatch" data-color="#0891B2" style="background:#0891B2;" title="Cyan"></div>
+                <div class="color-swatch" data-color="#0F172A" style="background:#0F172A;" title="Navy"></div>
+              </div>
+              <div class="color-custom-wrap">
+                <input type="color" id="f-banner-color-picker" title="Custom color" value="#2563EB">
+                <span class="form-hint" style="margin:0;">Custom color</span>
+              </div>
+              <div class="banner-preview-strip" id="banner-preview-strip" style="background: linear-gradient(135deg, #2563EB, #1D4ED8);">
+                BANNER PREVIEW
+              </div>
+            </div>
+            <input type="hidden" id="f-banner-color" name="banner_color" value="#2563EB">
           </div>
+
+          <!-- Tags & Categories -->
+          <div class="setup-card">
+            <div class="setup-card-header">
+              <div class="setup-card-icon">🏷️</div>
+              <div class="setup-card-label">
+                <h3>Tags &amp; Categories</h3>
+                <p>Help shoppers find your shop — add up to 10 tags</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="f-category">Category</label>
+                <select id="f-category" name="category">
+                  <option value="">— Select —</option>
+                  <option value="Handmade Jewelry">Handmade Jewelry</option>
+                  <option value="Ceramics">Ceramics</option>
+                  <option value="Art & Prints">Art &amp; Prints</option>
+                  <option value="Apparel">Apparel</option>
+                  <option value="Vintage & Thrift">Vintage &amp; Thrift</option>
+                  <option value="Food & Treats">Food &amp; Treats</option>
+                  <option value="Home & Body">Home &amp; Body</option>
+                  <option value="Candles & Soap">Candles &amp; Soap</option>
+                  <option value="Plants & Flowers">Plants &amp; Flowers</option>
+                  <option value="Photography">Photography</option>
+                  <option value="Woodworking">Woodworking</option>
+                  <option value="Leather Goods">Leather Goods</option>
+                  <option value="Stickers & Paper">Stickers &amp; Paper</option>
+                  <option value="Other Handmade">Other Handmade</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="f-subcategory">Specialty / subcategory</label>
+                <input id="f-subcategory" name="subcategory" type="text" placeholder="e.g. Layered gold necklaces">
+              </div>
+              <div class="form-group full">
+                <label>Tags <span style="font-weight:400;color:var(--muted);font-size:.78rem;">— type and press Enter or comma to add</span></label>
+                <div class="tags-input-wrap" id="tags-input-wrap">
+                  <input class="tag-chip-input" id="tag-chip-input" type="text" placeholder="handmade, jewelry, local…" maxlength="30" autocomplete="off">
+                </div>
+                <div class="tag-suggestions" id="tag-suggestions">
+                  <!-- populated by JS -->
+                </div>
+                <div class="form-hint">Tags appear on your public shop page and help shoppers discover you.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selling Style -->
+          <div class="setup-card">
+            <div class="setup-card-header">
+              <div class="setup-card-icon">💼</div>
+              <div class="setup-card-label">
+                <h3>Selling Style</h3>
+                <p>Helps us match you with the right markets and events</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="f-price-range">Price range</label>
+                <select id="f-price-range" name="price_range">
+                  <option value="">— Select —</option>
+                  <option value="low">Budget-friendly (under $25)</option>
+                  <option value="mid">Mid-range ($25–$100)</option>
+                  <option value="high">Premium ($100+)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="f-max-booth">Max booth fee ($)</label>
+                <input id="f-max-booth" name="max_booth_price" type="number" min="0" step="5" placeholder="150">
+              </div>
+              <div class="form-group">
+                <label for="f-goal">Main goal</label>
+                <select id="f-goal" name="main_goal">
+                  <option value="">— Select —</option>
+                  <option value="sell_out">Sell out inventory</option>
+                  <option value="grow_audience">Grow my audience</option>
+                  <option value="test_ideas">Test new products</option>
+                  <option value="community">Connect with community</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="f-env">Preferred environment</label>
+                <select id="f-env" name="preferred_env">
+                  <option value="">— Select —</option>
+                  <option value="indoor">Indoor only</option>
+                  <option value="outdoor">Outdoor only</option>
+                  <option value="either">Either works</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="f-experience">Experience level</label>
+                <select id="f-experience" name="experience_level">
+                  <option value="">— Select —</option>
+                  <option value="early_stage">Just getting started</option>
+                  <option value="experienced">Experienced vendor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="f-risk">Risk tolerance</label>
+                <select id="f-risk" name="risk_tolerance">
+                  <option value="">— Select —</option>
+                  <option value="low">Low — want sure things</option>
+                  <option value="medium">Medium — willing to experiment</option>
+                  <option value="high">High — growth over safety</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Links & Social -->
+          <div class="setup-card">
+            <div class="setup-card-header">
+              <div class="setup-card-icon">🔗</div>
+              <div class="setup-card-label">
+                <h3>Links &amp; Social</h3>
+                <p>Connect your Instagram, TikTok, and website</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="f-instagram">Instagram URL</label>
+                <input id="f-instagram" name="instagram_url" type="url" placeholder="https://instagram.com/yourhandle">
+              </div>
+              <div class="form-group">
+                <label for="f-tiktok">TikTok URL</label>
+                <input id="f-tiktok" name="tiktok_url" type="url" placeholder="https://tiktok.com/@yourhandle">
+              </div>
+              <div class="form-group full">
+                <label for="f-website">Website</label>
+                <input id="f-website" name="website_url" type="url" placeholder="https://yoursite.com">
+              </div>
+            </div>
+          </div>
+
+          <div class="save-bar">
+            <button type="submit" class="btn btn-primary">Save shop profile</button>
+            <span class="save-status" id="profile-save-status"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <!-- PRODUCTS TAB                                                     -->
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-products">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <h2 style="margin:0;font-size:1.15rem;font-weight:700;">Your products</h2>
+            <p style="margin:.2rem 0 0;font-size:.85rem;color:var(--muted);">Add products manually — no Shopify required.</p>
+          </div>
+          <button class="btn btn-primary" id="add-product-btn">+ Add product</button>
+        </div>
+
+        <div id="product-list" class="product-list"></div>
+
+        <div id="empty-products" class="empty-products" style="display:none;">
+          <div class="icon">📦</div>
+          <strong>No products yet</strong>
+          <p style="margin:.4rem 0 1rem;font-size:.9rem;">Add your first product to show shoppers what you sell.</p>
+          <button class="btn btn-primary" id="empty-add-btn">+ Add your first product</button>
         </div>
       </div>
+
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <!-- PREVIEW TAB                                                      -->
+      <!-- ──────────────────────────────────────────────────────────────── -->
+      <div class="tab-panel" id="tab-preview">
+        <div class="preview-toolbar">
+          <span class="preview-label">What shoppers will see on your public shop page</span>
+          <div class="preview-mode-btns">
+            <button class="preview-mode-btn active" data-mode="desktop">Desktop</button>
+            <button class="preview-mode-btn" data-mode="mobile">Mobile</button>
+          </div>
+        </div>
+        <div class="preview-frame desktop" id="preview-frame">
+          <div id="preview-content">
+            <div class="preview-empty">
+              <div class="icon">🔎</div>
+              <p style="margin:0;font-size:.88rem;">Save your profile to see a preview.</p>
+            </div>
+          </div>
+        </div>
+        <p style="text-align:center;margin-top:1.25rem;font-size:.82rem;color:var(--muted);">
+          Preview updates when you save your profile. <a id="preview-public-link" href="#" style="color:var(--brand);font-weight:600;display:none;">Open public page ↗</a>
+        </p>
+      </div>
+
     </div><!-- /.dash-content -->
   </div><!-- /.dash-body -->
 </div><!-- /.dash-shell -->
 
-<!-- ── Mobile bottom nav ───────────────────────────────────────────────── -->
+<!-- ── Mobile bottom nav ─────────────────────────────────────────────────── -->
 <nav class="bottom-nav" aria-label="Mobile navigation">
   <ul class="bottom-nav-items">
     <!-- Populated by dash-layout.js based on role -->
   </ul>
 </nav>
 
-  <!-- Product modal -->
-  <div class="modal-overlay" id="product-modal">
-    <div class="modal">
-      <h4 id="modal-title">Add product</h4>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label for="p-name">Product name *</label>
-          <input id="p-name" type="text" placeholder="e.g. Ceramic mug – speckled blue">
-        </div>
-        <div class="form-group full">
-          <label for="p-description">Description</label>
-          <textarea id="p-description" rows="2" placeholder="Short description for shoppers…"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="p-price">Price ($)</label>
-          <input id="p-price" type="number" min="0" step="0.01" placeholder="28.00">
-        </div>
-        <div class="form-group">
-          <label for="p-category">Category</label>
-          <input id="p-category" type="text" placeholder="e.g. Ceramics">
-        </div>
-        <div class="form-group full">
-          <label for="p-image">Image URL</label>
-          <input id="p-image" type="url" placeholder="https://…/photo.jpg">
-          <span class="form-hint">Link to a hosted image (Instagram, your website, etc.)</span>
-        </div>
-        <div class="form-group full">
-          <label for="p-link">Buy link</label>
-          <input id="p-link" type="url" placeholder="https://yoursite.com/product">
-          <span class="form-hint">Where shoppers can buy this product</span>
-        </div>
-        <div class="form-group full" id="p-tags-group" style="display:none;">
-          <label>Suggested tags <span style="font-weight:400;font-size:.8rem;color:#6b7280;">(click to select)</span></label>
-          <div id="p-tags-container" style="min-height:28px;"></div>
-        </div>
-        <div class="form-group">
-          <label>
-            <input id="p-in-stock" type="checkbox" checked style="margin-right:.4rem;">
-            In stock
-          </label>
-        </div>
+<!-- ── Product modal ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <h4 id="modal-title">Add product</h4>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label for="p-name">Product name *</label>
+        <input id="p-name" type="text" placeholder="e.g. Ceramic mug – speckled blue">
       </div>
-      <!-- AI Tag Suggester button injected here by ai-features.js -->
-      <div id="ai-tag-btn-slot" style="margin-bottom:.75rem;"></div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="modal-save">Save product</button>
+      <div class="form-group full">
+        <label for="p-description">Description</label>
+        <textarea id="p-description" rows="2" placeholder="Short description for shoppers…"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="p-price">Price ($)</label>
+        <input id="p-price" type="number" min="0" step="0.01" placeholder="28.00">
+      </div>
+      <div class="form-group">
+        <label for="p-category">Category</label>
+        <input id="p-category" type="text" placeholder="e.g. Ceramics">
+      </div>
+      <div class="form-group full">
+        <label for="p-image">Image URL</label>
+        <input id="p-image" type="url" placeholder="https://…/photo.jpg">
+        <span class="form-hint">Link to a hosted image (Instagram, your website, etc.)</span>
+      </div>
+      <div class="form-group full">
+        <label for="p-link">Buy link</label>
+        <input id="p-link" type="url" placeholder="https://yoursite.com/product">
+        <span class="form-hint">Where shoppers can buy this product</span>
+      </div>
+      <div class="form-group full" id="p-tags-group" style="display:none;">
+        <label>Suggested tags <span style="font-weight:400;font-size:.8rem;color:var(--muted);">(click to select)</span></label>
+        <div id="p-tags-container" style="min-height:28px;"></div>
+      </div>
+      <div class="form-group">
+        <label>
+          <input id="p-in-stock" type="checkbox" checked style="margin-right:.4rem;">
+          In stock
+        </label>
       </div>
     </div>
+    <div id="ai-tag-btn-slot" style="margin-bottom:.75rem;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save product</button>
+    </div>
   </div>
+</div>
 
-  <script src="/assets/app.js"></script>
-  <script src="/assets/ai-features.js"></script>
-  <script src="/assets/dash-layout.js"></script>
-  <script>
-  (async function () {
-    // Auth check
-    let me = null;
-    try {
-      const r = await fetch("/api/auth/me", { credentials: "include" });
-      if (!r.ok) { window.location.href = "/signin"; return; }
-      const res = await r.json();
-      if (!res.authenticated) { window.location.href = "/signin"; return; }
-      me = res.user || res;
-      if (me.role && me.role !== "vendor") {
-        window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
-        return;
-      }
-    } catch (_) { window.location.href = "/signin"; return; }
-
-    if (me.username) {
-      const link = document.getElementById("public-shop-link");
-      link.href = "/shop/" + encodeURIComponent(me.username);
-      link.style.display = "";
+<script src="/assets/app.js"></script>
+<script src="/assets/ai-features.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+(async function () {
+  // ── Auth check ──
+  let me = null;
+  try {
+    const r = await fetch("/api/auth/me", { credentials: "include" });
+    if (!r.ok) { window.location.href = "/signin"; return; }
+    const res = await r.json();
+    if (!res.authenticated) { window.location.href = "/signin"; return; }
+    me = res.user || res;
+    if (me.role && me.role !== "vendor") {
+      window.location.href = me.role === "market" ? "/market-dashboard" : "/shopper-dashboard";
+      return;
     }
+  } catch (_) { window.location.href = "/signin"; return; }
 
-    // --- Tabs ---
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-      });
+  if (me.username) {
+    const shopUrl = "/shop/" + encodeURIComponent(me.username);
+    const link = document.getElementById("public-shop-link");
+    link.href = shopUrl;
+    link.style.display = "";
+    const previewLink = document.getElementById("preview-public-link");
+    if (previewLink) { previewLink.href = shopUrl; previewLink.style.display = ""; }
+  }
+
+  // ── Tabs ──
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      if (btn.dataset.tab === "preview") renderPreview();
     });
+  });
 
-    // --- Load and render profile ---
-    let profileData = null;
-    try {
-      const r = await fetch("/api/vendor/shop-profile", { credentials: "include" });
-      if (r.ok) profileData = await r.json();
-    } catch (_) {}
+  // ── Banner color picker ──
+  const BANNER_SWATCHES = document.querySelectorAll(".color-swatch");
+  const bannerHiddenInput = document.getElementById("f-banner-color");
+  const bannerColorPicker = document.getElementById("f-banner-color-picker");
+  const bannerPreview = document.getElementById("banner-preview-strip");
 
-    if (profileData) {
-      const u = profileData.user || {};
-      const p = profileData.profile || {};
-      setVal("f-name", u.name || "");
-      setVal("f-bio", u.bio || "");
-      setVal("f-business", p.business_name || "");
-      setVal("f-location", p.location || "");
-      setVal("f-category", p.category || "");
-      setVal("f-subcategory", p.subcategory || "");
-      setVal("f-price-range", p.price_range || "");
-      setVal("f-max-booth", p.max_booth_price ?? "");
-      setVal("f-goal", p.main_goal || "");
-      setVal("f-env", p.preferred_env || "");
-      setVal("f-experience", p.experience_level || "");
-      setVal("f-risk", p.risk_tolerance || "");
-      setVal("f-instagram", p.instagram_url || "");
-      setVal("f-tiktok", p.tiktok_url || "");
-      setVal("f-website", p.website_url || "");
-    }
+  function setBannerColor(hex) {
+    bannerHiddenInput.value = hex;
+    bannerColorPicker.value = hex;
+    const dark = shadeColor(hex, -20);
+    bannerPreview.style.background = `linear-gradient(135deg, ${hex}, ${dark})`;
+    BANNER_SWATCHES.forEach(sw => {
+      sw.classList.toggle("active", sw.dataset.color === hex);
+    });
+  }
 
-    // --- Profile save ---
-    document.getElementById("profile-form").addEventListener("submit", async e => {
+  BANNER_SWATCHES.forEach(sw => {
+    sw.addEventListener("click", () => setBannerColor(sw.dataset.color));
+  });
+  bannerColorPicker.addEventListener("input", () => {
+    setBannerColor(bannerColorPicker.value);
+    BANNER_SWATCHES.forEach(sw => sw.classList.remove("active"));
+  });
+
+  // ── Tags chip input ──
+  const SUGGESTED_TAGS = [
+    "handmade","jewelry","candles","art","prints","crochet","vintage",
+    "custom gifts","home decor","local","eco friendly","ceramics",
+    "leather","woodworking","plants","clothing","food","soap","photography"
+  ];
+  let shopTags = [];
+
+  function renderTagSuggestions() {
+    const container = document.getElementById("tag-suggestions");
+    const remaining = SUGGESTED_TAGS.filter(t => !shopTags.includes(t)).slice(0, 12);
+    container.innerHTML = remaining.map(t =>
+      `<button type="button" class="tag-suggestion" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`
+    ).join("");
+    container.querySelectorAll(".tag-suggestion").forEach(btn => {
+      btn.addEventListener("click", () => addTag(btn.dataset.tag));
+    });
+  }
+
+  function renderTagChips() {
+    const wrap = document.getElementById("tags-input-wrap");
+    const input = document.getElementById("tag-chip-input");
+    // Remove all chips (keep input)
+    wrap.querySelectorAll(".tag-chip").forEach(c => c.remove());
+    // Prepend chips before the input
+    shopTags.forEach(tag => {
+      const chip = document.createElement("span");
+      chip.className = "tag-chip";
+      chip.innerHTML = escapeHtml(tag) + `<button type="button" class="tag-chip-remove" data-tag="${escapeHtml(tag)}" aria-label="Remove tag">×</button>`;
+      chip.querySelector(".tag-chip-remove").addEventListener("click", () => removeTag(tag));
+      wrap.insertBefore(chip, input);
+    });
+    renderTagSuggestions();
+  }
+
+  function addTag(raw) {
+    const tag = raw.trim().toLowerCase().replace(/[^a-z0-9 &]/g, "").trim();
+    if (!tag || shopTags.includes(tag) || shopTags.length >= 10) return;
+    shopTags.push(tag);
+    renderTagChips();
+  }
+
+  function removeTag(tag) {
+    shopTags = shopTags.filter(t => t !== tag);
+    renderTagChips();
+  }
+
+  const tagInput = document.getElementById("tag-chip-input");
+  tagInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      const status = document.getElementById("profile-save-status");
-      const btn = e.target.querySelector("[type=submit]");
-      btn.disabled = true;
-      status.textContent = "Saving…";
-      status.className = "save-status";
-      try {
-        const payload = {
-          name: getVal("f-name"),
-          bio: getVal("f-bio"),
-          business_name: getVal("f-business"),
-          location: getVal("f-location"),
-          category: getVal("f-category"),
-          subcategory: getVal("f-subcategory"),
-          price_range: getVal("f-price-range"),
-          max_booth_price: getVal("f-max-booth") ? parseFloat(getVal("f-max-booth")) : null,
-          main_goal: getVal("f-goal"),
-          preferred_env: getVal("f-env"),
-          experience_level: getVal("f-experience"),
-          risk_tolerance: getVal("f-risk"),
-          instagram_url: getVal("f-instagram"),
-          tiktok_url: getVal("f-tiktok"),
-          website_url: getVal("f-website"),
-        };
-        const r = await fetch("/api/vendor/shop-profile", {
+      const val = tagInput.value.replace(/,$/, "").trim();
+      if (val) addTag(val);
+      tagInput.value = "";
+    } else if (e.key === "Backspace" && !tagInput.value && shopTags.length) {
+      removeTag(shopTags[shopTags.length - 1]);
+    }
+  });
+  tagInput.addEventListener("blur", () => {
+    const val = tagInput.value.trim();
+    if (val) { addTag(val); tagInput.value = ""; }
+  });
+  document.getElementById("tags-input-wrap").addEventListener("click", () => tagInput.focus());
+  renderTagSuggestions();
+
+  // ── Load profile ──
+  let profileData = null;
+  try {
+    const r = await fetch("/api/vendor/shop-profile", { credentials: "include" });
+    if (r.ok) profileData = await r.json();
+  } catch (_) {}
+
+  if (profileData) {
+    const u = profileData.user || {};
+    const p = profileData.profile || {};
+    setVal("f-name", u.name || "");
+    setVal("f-bio", u.bio || "");
+    setVal("f-business", p.business_name || "");
+    setVal("f-location", p.location || "");
+    setVal("f-category", p.category || "");
+    setVal("f-subcategory", p.subcategory || "");
+    setVal("f-price-range", p.price_range || "");
+    setVal("f-max-booth", p.max_booth_price ?? "");
+    setVal("f-goal", p.main_goal || "");
+    setVal("f-env", p.preferred_env || "");
+    setVal("f-experience", p.experience_level || "");
+    setVal("f-risk", p.risk_tolerance || "");
+    setVal("f-instagram", p.instagram_url || "");
+    setVal("f-tiktok", p.tiktok_url || "");
+    setVal("f-website", p.website_url || "");
+
+    // Banner color
+    const color = p.banner_color || "#2563EB";
+    setBannerColor(color);
+
+    // Tags
+    if (Array.isArray(p.tags)) {
+      shopTags = p.tags.slice(0, 10);
+    } else if (typeof p.tags === "string" && p.tags) {
+      shopTags = p.tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 10);
+    }
+    renderTagChips();
+  }
+
+  // ── Profile save ──
+  document.getElementById("profile-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const status = document.getElementById("profile-save-status");
+    const btn = e.target.querySelector("[type=submit]");
+    btn.disabled = true;
+    status.textContent = "Saving…";
+    status.className = "save-status";
+    try {
+      const payload = {
+        name: getVal("f-name"),
+        bio: getVal("f-bio"),
+        business_name: getVal("f-business"),
+        location: getVal("f-location"),
+        category: getVal("f-category"),
+        subcategory: getVal("f-subcategory"),
+        price_range: getVal("f-price-range"),
+        max_booth_price: getVal("f-max-booth") ? parseFloat(getVal("f-max-booth")) : null,
+        main_goal: getVal("f-goal"),
+        preferred_env: getVal("f-env"),
+        experience_level: getVal("f-experience"),
+        risk_tolerance: getVal("f-risk"),
+        instagram_url: getVal("f-instagram"),
+        tiktok_url: getVal("f-tiktok"),
+        website_url: getVal("f-website"),
+        banner_color: bannerHiddenInput.value || "#2563EB",
+        tags: shopTags,
+      };
+      const r = await fetch("/api/vendor/shop-profile", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) {
+        status.textContent = "Saved ✓";
+        status.className = "save-status ok";
+      } else {
+        throw new Error("Server error");
+      }
+    } catch (_) {
+      status.textContent = "Save failed — try again.";
+      status.className = "save-status err";
+    }
+    btn.disabled = false;
+    setTimeout(() => { status.textContent = ""; }, 3500);
+  });
+
+  // ── Preview renderer ──
+  function renderPreview() {
+    const name = getVal("f-name") || me.username || "Your Shop";
+    const username = me.username || "";
+    const bio = getVal("f-bio");
+    const location = getVal("f-location");
+    const category = getVal("f-category");
+    const color = bannerHiddenInput.value || "#2563EB";
+    const dark = shadeColor(color, -20);
+    const initial = (name || "V")[0].toUpperCase();
+
+    const allTags = [...new Set([
+      ...shopTags,
+      category || "",
+      getVal("f-subcategory") || "",
+    ].filter(Boolean))].slice(0, 8);
+
+    const previewProducts = products.slice(0, 4);
+
+    document.getElementById("preview-content").innerHTML = `
+      <div class="preview-banner">
+        <div class="preview-banner-bg" style="background: linear-gradient(135deg, ${escapeHtml(color)}, ${escapeHtml(dark)});"></div>
+        <div class="preview-banner-text">${escapeHtml(initial)}${escapeHtml(initial)}</div>
+      </div>
+      <div class="preview-profile">
+        <div class="preview-avatar-row">
+          <div class="preview-avatar" style="background: linear-gradient(135deg, ${escapeHtml(color)}, ${escapeHtml(dark)});">${escapeHtml(initial)}</div>
+        </div>
+        <div class="preview-shop-name">${escapeHtml(name)}</div>
+        ${username ? `<div class="preview-shop-handle">@${escapeHtml(username)}${location ? " · " + escapeHtml(location) : ""}</div>` : ""}
+        ${bio ? `<div class="preview-shop-bio">${escapeHtml(bio)}</div>` : ""}
+        ${allTags.length ? `<div class="preview-tags-row">${allTags.map(t => `<span class="preview-tag">${escapeHtml(t)}</span>`).join("")}</div>` : ""}
+      </div>
+      <div class="preview-products-section">
+        <h4>Products${previewProducts.length ? ` (${products.length})` : ""}</h4>
+        ${previewProducts.length ? `
+          <div class="preview-products-grid">
+            ${previewProducts.map(p => `
+              <div class="preview-product-card">
+                <div class="preview-product-img">
+                  ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display='none'">` : "🛍️"}
+                </div>
+                <div class="preview-product-body">
+                  <div class="preview-product-name">${escapeHtml(p.name)}</div>
+                  ${p.price !== null && p.price !== undefined ? `<div class="preview-product-price">$${Number(p.price).toFixed(2)}</div>` : ""}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+          ${products.length > 4 ? `<p style="margin:.75rem 0 0;font-size:.78rem;color:var(--muted);">+ ${products.length - 4} more products on your public page</p>` : ""}
+        ` : `
+          <div class="preview-empty">
+            <div class="icon">📦</div>
+            <p style="margin:0;font-size:.82rem;">No products yet — add some in the Products tab.</p>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  // ── Products ──
+  let products = [];
+  let editingId = null;
+
+  async function loadProducts() {
+    try {
+      const r = await fetch("/api/vendor/products", { credentials: "include" });
+      if (r.ok) {
+        const d = await r.json();
+        products = d.products || [];
+      }
+    } catch (_) {}
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const list = document.getElementById("product-list");
+    const empty = document.getElementById("empty-products");
+    const badge = document.getElementById("product-count-badge");
+    badge.textContent = products.length ? `(${products.length})` : "";
+
+    if (!products.length) {
+      list.innerHTML = "";
+      empty.style.display = "";
+      return;
+    }
+    empty.style.display = "none";
+    list.innerHTML = products.map(p => `
+      <div class="product-row" data-id="${p.id}">
+        <div class="product-thumb">
+          ${p.image_url
+            ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none'">`
+            : "🛍️"
+          }
+        </div>
+        <div class="product-info">
+          <strong>${escapeHtml(p.name)}</strong>
+          <div class="product-meta">
+            ${p.category ? escapeHtml(p.category) + " · " : ""}
+            <span class="stock-badge ${p.in_stock ? "" : "out"}">${p.in_stock ? "In stock" : "Out of stock"}</span>
+          </div>
+        </div>
+        <div class="product-price-tag">${p.price !== null && p.price !== undefined ? "$" + Number(p.price).toFixed(2) : "—"}</div>
+        <div class="product-actions">
+          <button class="btn btn-secondary edit-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;">Edit</button>
+          <button class="btn btn-ghost delete-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;color:var(--danger);">Delete</button>
+        </div>
+      </div>
+    `).join("");
+
+    list.querySelectorAll(".edit-btn").forEach(btn => {
+      btn.addEventListener("click", () => openModal(parseInt(btn.dataset.id)));
+    });
+    list.querySelectorAll(".delete-btn").forEach(btn => {
+      btn.addEventListener("click", () => confirmDelete(parseInt(btn.dataset.id)));
+    });
+  }
+
+  function openModal(id = null) {
+    editingId = id;
+    document.getElementById("modal-title").textContent = id ? "Edit product" : "Add product";
+    if (id) {
+      const p = products.find(x => x.id === id);
+      if (p) {
+        setVal("p-name", p.name);
+        setVal("p-description", p.description);
+        setVal("p-price", p.price !== null ? p.price : "");
+        setVal("p-category", p.category);
+        setVal("p-image", p.image_url);
+        setVal("p-link", p.product_url);
+        document.getElementById("p-in-stock").checked = p.in_stock;
+      }
+    } else {
+      ["p-name","p-description","p-price","p-category","p-image","p-link"].forEach(id => setVal(id, ""));
+      document.getElementById("p-in-stock").checked = true;
+    }
+    document.getElementById("product-modal").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("product-modal").classList.remove("open");
+    editingId = null;
+  }
+
+  // Inject AI product tagger (Feature 7)
+  if (typeof AI !== "undefined") {
+    AI.injectProductTagger(
+      "#ai-tag-btn-slot",
+      () => ({
+        product_name: getVal("p-name"),
+        category: getVal("p-category"),
+        description: getVal("p-description"),
+      }),
+      "#p-tags-container"
+    );
+    const observer = new MutationObserver(() => {
+      const tagsGroup = document.getElementById("p-tags-group");
+      const tagsContainer = document.getElementById("p-tags-container");
+      if (tagsGroup && tagsContainer) {
+        tagsGroup.style.display = tagsContainer.children.length ? "" : "none";
+      }
+    });
+    const tc = document.getElementById("p-tags-container");
+    if (tc) observer.observe(tc, { childList: true });
+  }
+
+  document.getElementById("add-product-btn").addEventListener("click", () => openModal());
+  document.getElementById("empty-add-btn").addEventListener("click", () => openModal());
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  document.getElementById("product-modal").addEventListener("click", e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  document.getElementById("modal-save").addEventListener("click", async () => {
+    const name = getVal("p-name").trim();
+    if (!name) { alert("Product name is required."); return; }
+    const btn = document.getElementById("modal-save");
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+    const payload = {
+      name,
+      description: getVal("p-description"),
+      price: getVal("p-price") !== "" ? parseFloat(getVal("p-price")) : null,
+      category: getVal("p-category"),
+      image_url: getVal("p-image"),
+      product_url: getVal("p-link"),
+      in_stock: document.getElementById("p-in-stock").checked,
+    };
+    try {
+      let r;
+      if (editingId) {
+        r = await fetch(`/api/vendor/products/${editingId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        r = await fetch("/api/vendor/products", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (r.ok) {
-          status.textContent = "Saved ✓";
-          status.className = "save-status ok";
-        } else {
-          throw new Error("Server error");
-        }
-      } catch (_) {
-        status.textContent = "Save failed — try again.";
-        status.className = "save-status err";
       }
-      btn.disabled = false;
-      setTimeout(() => { status.textContent = ""; }, 3500);
-    });
+      if (r.ok) {
+        closeModal();
+        await loadProducts();
+      } else {
+        alert("Could not save product. Try again.");
+      }
+    } catch (_) {
+      alert("Network error. Try again.");
+    }
+    btn.disabled = false;
+    btn.textContent = "Save product";
+  });
 
-    // --- Products ---
-    let products = [];
-    let editingId = null;
+  async function confirmDelete(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+    try {
+      const r = await fetch(`/api/vendor/products/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (r.ok) await loadProducts();
+    } catch (_) {}
+  }
 
-    async function loadProducts() {
+  await loadProducts();
+
+  // ── AI features ──
+  let aiContentEnabled = false;
+  try {
+    const r = await fetch("/api/config");
+    if (r.ok) {
+      const cfg = await r.json();
+      aiContentEnabled = !!(cfg.ai_content);
+    }
+  } catch (_) {}
+
+  if (aiContentEnabled) {
+    document.getElementById("ai-bio-btn").style.display = "";
+
+    document.getElementById("generate-bio-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("generate-bio-btn");
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+      const sugBox = document.getElementById("bio-suggestions");
+      sugBox.style.display = "none";
+      sugBox.innerHTML = "";
       try {
-        const r = await fetch("/api/vendor/products", { credentials: "include" });
+        const r = await fetch("/api/ai/content/bio", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category: getVal("f-category"),
+            location: getVal("f-location"),
+            style: "friendly",
+          }),
+        });
         if (r.ok) {
           const d = await r.json();
-          products = d.products || [];
+          const suggestions = d.suggestions || [];
+          if (suggestions.length) {
+            sugBox.style.display = "";
+            sugBox.innerHTML = suggestions.map((s, i) =>
+              `<button type="button" class="bio-chip" data-idx="${i}" style="display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:.55rem .8rem;font-size:.88rem;cursor:pointer;margin-bottom:.4rem;color:var(--text);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--line)'">${escapeHtml(s)}</button>`
+            ).join("");
+            sugBox.querySelectorAll(".bio-chip").forEach(chip => {
+              chip.addEventListener("click", () => {
+                setVal("f-bio", chip.textContent.trim());
+                sugBox.style.display = "none";
+              });
+            });
+          }
         }
       } catch (_) {}
-      renderProducts();
-    }
-
-    function renderProducts() {
-      const list = document.getElementById("product-list");
-      const empty = document.getElementById("empty-products");
-      const badge = document.getElementById("product-count-badge");
-      badge.textContent = products.length ? `(${products.length})` : "";
-
-      if (!products.length) {
-        list.innerHTML = "";
-        empty.style.display = "";
-        return;
-      }
-      empty.style.display = "none";
-      list.innerHTML = products.map(p => `
-        <div class="product-row" data-id="${p.id}">
-          <div class="product-thumb">
-            ${p.image_url
-              ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none'">`
-              : "🛍️"
-            }
-          </div>
-          <div class="product-info">
-            <strong>${escapeHtml(p.name)}</strong>
-            <div class="product-meta">
-              ${p.category ? escapeHtml(p.category) + " · " : ""}
-              <span class="stock-badge ${p.in_stock ? "" : "out"}">${p.in_stock ? "In stock" : "Out of stock"}</span>
-            </div>
-          </div>
-          <div class="product-price-tag">${p.price !== null && p.price !== undefined ? "$" + Number(p.price).toFixed(2) : "—"}</div>
-          <div class="product-actions">
-            <button class="btn btn-secondary edit-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;">Edit</button>
-            <button class="btn btn-ghost delete-btn" data-id="${p.id}" style="font-size:.8rem;padding:.3rem .7rem;color:var(--error,#dc2626);">Delete</button>
-          </div>
-        </div>
-      `).join("");
-
-      list.querySelectorAll(".edit-btn").forEach(btn => {
-        btn.addEventListener("click", () => openModal(parseInt(btn.dataset.id)));
-      });
-      list.querySelectorAll(".delete-btn").forEach(btn => {
-        btn.addEventListener("click", () => confirmDelete(parseInt(btn.dataset.id)));
-      });
-    }
-
-    function openModal(id = null) {
-      editingId = id;
-      const modal = document.getElementById("product-modal");
-      document.getElementById("modal-title").textContent = id ? "Edit product" : "Add product";
-      if (id) {
-        const p = products.find(x => x.id === id);
-        if (p) {
-          setVal("p-name", p.name);
-          setVal("p-description", p.description);
-          setVal("p-price", p.price !== null ? p.price : "");
-          setVal("p-category", p.category);
-          setVal("p-image", p.image_url);
-          setVal("p-link", p.product_url);
-          document.getElementById("p-in-stock").checked = p.in_stock;
-        }
-      } else {
-        ["p-name","p-description","p-price","p-category","p-image","p-link"].forEach(id => setVal(id, ""));
-        document.getElementById("p-in-stock").checked = true;
-      }
-      modal.classList.add("open");
-    }
-
-    function closeModal() {
-      document.getElementById("product-modal").classList.remove("open");
-      editingId = null;
-    }
-
-    // Inject AI product tagger once (Feature 7)
-    if (typeof AI !== "undefined") {
-      AI.injectProductTagger(
-        "#ai-tag-btn-slot",
-        () => ({
-          product_name: getVal("p-name"),
-          category: getVal("p-category"),
-          description: getVal("p-description"),
-        }),
-        "#p-tags-container"
-      );
-      // Show/hide the tags group when tags container has content
-      const observer = new MutationObserver(() => {
-        const tagsGroup = document.getElementById("p-tags-group");
-        const tagsContainer = document.getElementById("p-tags-container");
-        if (tagsGroup && tagsContainer) {
-          tagsGroup.style.display = tagsContainer.children.length ? "" : "none";
-        }
-      });
-      const tc = document.getElementById("p-tags-container");
-      if (tc) observer.observe(tc, { childList: true });
-    }
-
-    document.getElementById("add-product-btn").addEventListener("click", () => openModal());
-    document.getElementById("empty-add-btn").addEventListener("click", () => openModal());
-    document.getElementById("modal-cancel").addEventListener("click", closeModal);
-    document.getElementById("product-modal").addEventListener("click", e => {
-      if (e.target === e.currentTarget) closeModal();
-    });
-
-    document.getElementById("modal-save").addEventListener("click", async () => {
-      const name = getVal("p-name").trim();
-      if (!name) { alert("Product name is required."); return; }
-      const btn = document.getElementById("modal-save");
-      btn.disabled = true;
-      btn.textContent = "Saving…";
-      const payload = {
-        name,
-        description: getVal("p-description"),
-        price: getVal("p-price") !== "" ? parseFloat(getVal("p-price")) : null,
-        category: getVal("p-category"),
-        image_url: getVal("p-image"),
-        product_url: getVal("p-link"),
-        in_stock: document.getElementById("p-in-stock").checked,
-      };
-      try {
-        let r;
-        if (editingId) {
-          r = await fetch(`/api/vendor/products/${editingId}`, {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        } else {
-          r = await fetch("/api/vendor/products", {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        }
-        if (r.ok) {
-          closeModal();
-          await loadProducts();
-        } else {
-          alert("Could not save product. Try again.");
-        }
-      } catch (_) {
-        alert("Network error. Try again.");
-      }
       btn.disabled = false;
-      btn.textContent = "Save product";
+      btn.textContent = "✨ Generate";
     });
+  }
 
-    async function confirmDelete(id) {
-      const p = products.find(x => x.id === id);
-      if (!p) return;
-      if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
-      try {
-        const r = await fetch(`/api/vendor/products/${id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-        if (r.ok) await loadProducts();
-      } catch (_) {}
-    }
-
-    await loadProducts();
-
-    // --- AI features (shown only when enabled) ---
-    let aiContentEnabled = false;
-    try {
-      const r = await fetch("/api/config");
-      if (r.ok) {
-        const cfg = await r.json();
-        aiContentEnabled = !!(cfg.ai_content);
-      }
-    } catch (_) {}
-
-    if (aiContentEnabled) {
-      document.getElementById("ai-bio-btn").style.display = "";
-
-      document.getElementById("generate-bio-btn").addEventListener("click", async () => {
-        const btn = document.getElementById("generate-bio-btn");
-        btn.disabled = true;
-        btn.textContent = "Generating…";
-        const sugBox = document.getElementById("bio-suggestions");
-        sugBox.style.display = "none";
-        sugBox.innerHTML = "";
+  if (aiContentEnabled) {
+    const descLabel = document.querySelector("label[for='p-description']");
+    if (descLabel) {
+      const genBtn = document.createElement("button");
+      genBtn.type = "button";
+      genBtn.style.cssText = "font-size:.72rem;padding:.15rem .5rem;margin-left:.5rem;";
+      genBtn.className = "btn btn-ghost";
+      genBtn.textContent = "✨ Generate";
+      descLabel.appendChild(genBtn);
+      genBtn.addEventListener("click", async () => {
+        const name = getVal("p-name").trim();
+        if (!name) { alert("Enter a product name first."); return; }
+        genBtn.disabled = true;
+        genBtn.textContent = "Generating…";
         try {
-          const r = await fetch("/api/ai/content/bio", {
+          const r = await fetch("/api/ai/content/product-description", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              category: getVal("f-category"),
-              location: getVal("f-location"),
-              style: "friendly",
+              name,
+              category: getVal("p-category"),
+              price: getVal("p-price") ? parseFloat(getVal("p-price")) : null,
             }),
           });
           if (r.ok) {
             const d = await r.json();
-            const suggestions = d.suggestions || [];
-            if (suggestions.length) {
-              sugBox.style.display = "";
-              sugBox.innerHTML = `<p style="font-size:.78rem;color:var(--muted);margin:0 0 .4rem;">Click a suggestion to use it:</p>` +
-                suggestions.map((s, i) =>
-                  `<button type="button" class="bio-chip" data-idx="${i}" style="display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:.55rem .8rem;font-size:.88rem;cursor:pointer;margin-bottom:.4rem;color:var(--text);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--line)'">${escapeHtml(s)}</button>`
-                ).join("");
-              sugBox.querySelectorAll(".bio-chip").forEach(chip => {
-                chip.addEventListener("click", () => {
-                  setVal("f-bio", chip.textContent.trim());
-                  sugBox.style.display = "none";
-                });
-              });
-            }
+            if (d.description) setVal("p-description", d.description);
           }
         } catch (_) {}
-        btn.disabled = false;
-        btn.textContent = "✨ Generate";
+        genBtn.disabled = false;
+        genBtn.textContent = "✨ Generate";
       });
     }
+  }
 
-    // --- AI product description in modal ---
-    if (aiContentEnabled) {
-      // Add generate button next to description label in modal
-      const descLabel = document.querySelector("label[for='p-description']");
-      if (descLabel) {
-        const genBtn = document.createElement("button");
-        genBtn.type = "button";
-        genBtn.id = "gen-desc-btn";
-        genBtn.style.cssText = "font-size:.72rem;padding:.15rem .5rem;margin-left:.5rem;";
-        genBtn.className = "btn btn-ghost";
-        genBtn.textContent = "✨ Generate";
-        descLabel.appendChild(genBtn);
+  // ── Helpers ──
+  function setVal(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val ?? "";
+  }
+  function getVal(id) {
+    return (document.getElementById(id)?.value || "");
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function shadeColor(hex, pct) {
+    try {
+      let n = parseInt(hex.replace("#",""), 16);
+      const amt = Math.round(2.55 * pct);
+      const r = Math.min(255, Math.max(0, (n >> 16) + amt));
+      const g = Math.min(255, Math.max(0, (n >> 8 & 0xff) + amt));
+      const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
+      return "#" + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+    } catch (_) { return hex; }
+  }
 
-        genBtn.addEventListener("click", async () => {
-          const name = getVal("p-name").trim();
-          if (!name) { alert("Enter a product name first."); return; }
-          genBtn.disabled = true;
-          genBtn.textContent = "Generating…";
-          try {
-            const r = await fetch("/api/ai/content/product-description", {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name,
-                category: getVal("p-category"),
-                price: getVal("p-price") ? parseFloat(getVal("p-price")) : null,
-              }),
-            });
-            if (r.ok) {
-              const d = await r.json();
-              if (d.description) setVal("p-description", d.description);
-            }
-          } catch (_) {}
-          genBtn.disabled = false;
-          genBtn.textContent = "✨ Generate";
-        });
+  // ── Preview mode toggle ──
+  document.querySelectorAll(".preview-mode-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".preview-mode-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const frame = document.getElementById("preview-frame");
+      if (btn.dataset.mode === "mobile") {
+        frame.classList.remove("desktop"); frame.classList.add("mobile");
+      } else {
+        frame.classList.remove("mobile"); frame.classList.add("desktop");
       }
-    }
+    });
+  });
 
-    // helpers
-    function setVal(id, val) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.value = val ?? "";
-    }
-    function getVal(id) {
-      return (document.getElementById(id)?.value || "");
-    }
-
-    function escapeHtml(str) {
-      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-    }
-  })();
-  </script>
+})();
+</script>
 </body>
 </html>

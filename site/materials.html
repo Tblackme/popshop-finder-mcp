@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Materials | Vendor Atlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/dash-layout.css">
+  <style>
+    :root {
+      --mat-ink: #152033;
+      --mat-accent: #2a7a4f;
+      --mat-accent-soft: #e8f5ee;
+      --mat-warn: #b45309;
+      --mat-warn-soft: #fef3c7;
+      --mat-crit: #dc2626;
+      --mat-crit-soft: #fee2e2;
+      --mat-sky: #f7fbff;
+      --mat-line: rgba(21,32,51,.10);
+    }
+    body { background: radial-gradient(circle at top left, rgba(42,122,79,.10), transparent 28rem), linear-gradient(180deg,#fffdf9 0%,var(--mat-sky) 100%); }
+    .mat-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0,1.2fr) minmax(300px,400px); }
+    .mat-metrics { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); margin-bottom: 1.25rem; }
+    .metric-card { border: 1px solid var(--mat-line); border-radius: 20px; padding: 1rem 1.05rem; background: rgba(255,255,255,.84); box-shadow: 0 16px 34px rgba(21,32,51,.06); }
+    .metric-card span { display: block; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .metric-card strong { display: block; margin-top: .35rem; font-size: 1.9rem; color: var(--mat-ink); }
+    .metric-card.warn strong { color: var(--mat-warn); }
+    .metric-card.crit strong { color: var(--mat-crit); }
+    .mat-panel { border: 1px solid var(--mat-line); border-radius: 24px; background: rgba(255,255,255,.9); box-shadow: 0 22px 48px rgba(21,32,51,.08); overflow: hidden; }
+    .panel-head { padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--mat-line); display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; }
+    .panel-head h2, .panel-head h3 { margin: 0; color: var(--mat-ink); }
+    .panel-body { padding: 1.15rem 1.25rem 1.25rem; }
+    .stack { display: grid; gap: .85rem; }
+    .form-grid { display: grid; gap: .8rem; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .field { display: grid; gap: .35rem; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { font-size: .8rem; color: var(--muted); font-weight: 700; }
+    .field input, .field select { border: 1px solid var(--mat-line); border-radius: 14px; padding: .82rem .9rem; background: #fff; font: inherit; }
+    .cta-row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+    .btn-green { background: linear-gradient(135deg,#2a7a4f,#3ea868); color: #fff; border: none; }
+    .mat-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .mat-table th, .mat-table td { text-align: left; padding: .85rem .65rem; border-bottom: 1px solid var(--mat-line); vertical-align: middle; }
+    .mat-table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .mat-table tr:last-child td { border-bottom: none; }
+    .qty-input { width: 90px; border: 1px solid var(--mat-line); border-radius: 10px; padding: .55rem .65rem; font: inherit; }
+    .chip { display: inline-flex; align-items: center; padding: .28rem .65rem; border-radius: 999px; font-size: .76rem; font-weight: 700; }
+    .chip-green { background: var(--mat-accent-soft); color: var(--mat-accent); }
+    .chip-warn  { background: var(--mat-warn-soft); color: var(--mat-warn); }
+    .chip-crit  { background: var(--mat-crit-soft); color: var(--mat-crit); }
+    .inline-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .empty-box { border: 1px dashed var(--mat-line); border-radius: 18px; padding: 1.25rem; text-align: center; color: var(--muted); background: rgba(247,251,255,.65); }
+    .alert-list { display: grid; gap: .75rem; }
+    .alert-item { border-radius: 16px; padding: .9rem 1rem; }
+    .alert-item.crit  { background: var(--mat-crit-soft); border: 1px solid rgba(220,38,38,.2); }
+    .alert-item.high  { background: var(--mat-warn-soft); border: 1px solid rgba(180,83,9,.2); }
+    .alert-item.low   { background: var(--mat-accent-soft); border: 1px solid rgba(42,122,79,.2); }
+    .alert-item strong { display: block; font-size: .9rem; margin-bottom: .25rem; }
+    .alert-item p { margin: 0; font-size: .83rem; color: #334; }
+    .alert-item a { font-size: .8rem; color: var(--mat-accent); font-weight: 600; }
+    .tab-row { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 999px; border: 1px solid var(--mat-line); background: #fff; font: inherit; font-size: .85rem; cursor: pointer; color: var(--mat-ink); }
+    .tab-btn.active { background: var(--mat-accent); color: #fff; border-color: var(--mat-accent); font-weight: 700; }
+    .section-hidden { display: none; }
+    .recipe-row { display: flex; gap: .75rem; align-items: center; padding: .65rem 0; border-bottom: 1px solid var(--mat-line); flex-wrap: wrap; }
+    .recipe-row:last-child { border-bottom: none; }
+    .recipe-label { flex: 1; font-size: .9rem; }
+    .recipe-qty { width: 80px; border: 1px solid var(--mat-line); border-radius: 10px; padding: .45rem .65rem; font: inherit; }
+    .inline-status { padding: .6rem .9rem; border-radius: 12px; font-size: .85rem; margin-top: .5rem; }
+    .inline-status.success { background: var(--mat-accent-soft); color: var(--mat-accent); }
+    .inline-status.error   { background: var(--mat-crit-soft);   color: var(--mat-crit); }
+    @media (max-width:980px) { .mat-grid { grid-template-columns: 1fr; } }
+    @media (max-width:680px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .mat-table thead { display: none; }
+      .mat-table, .mat-table tbody, .mat-table tr, .mat-table td { display: block; width: 100%; }
+      .mat-table tr { padding: .85rem 0; border-bottom: 1px solid var(--mat-line); }
+      .mat-table td { border-bottom: none; padding: .35rem 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+<nav class="mobile-slide-drawer" id="mobile-slide-drawer" aria-label="Navigation menu">
+  <div class="mobile-drawer-header">
+    <a class="mobile-drawer-logo" href="/"><span>VA</span><span>Vendor Atlas</span></a>
+    <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close menu">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-drawer-nav dash-nav"></div>
+</nav>
+
+<div class="dash-shell">
+  <aside class="dash-sidebar" id="dash-sidebar" aria-label="Sidebar navigation">
+    <div class="dash-sidebar-header">
+      <a class="dash-sidebar-logo" href="/"><span class="dash-sidebar-mark">VA</span><span class="dash-sidebar-title">Vendor Atlas</span></a>
+      <button class="dash-collapse-btn" id="dash-collapse-btn" aria-label="Collapse sidebar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="dash-nav"></nav>
+    <div class="dash-sidebar-footer"><div data-auth-nav></div></div>
+  </aside>
+
+  <div class="dash-body">
+    <header class="dash-topbar">
+      <button class="dash-mobile-menu-btn" id="dash-mobile-menu-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="dash-topbar-title" id="dash-page-title">Materials</span>
+      <div class="dash-topbar-actions" data-auth-nav></div>
+    </header>
+
+    <div class="dash-content">
+      <div class="dash-page-hero">
+        <span class="eyebrow">AI Production Planner</span>
+        <h1>Track raw materials. Never run out mid-production.</h1>
+        <p>Add the ingredients behind your products. Vendor Atlas will calculate exactly what to order — and when — before each market.</p>
+      </div>
+
+      <!-- Metrics -->
+      <div class="mat-metrics">
+        <div class="metric-card"><span>Materials tracked</span><strong id="metric-total">0</strong></div>
+        <div class="metric-card"><span>Total value tracked</span><strong id="metric-value">$0</strong></div>
+        <div class="metric-card warn"><span>Low stock</span><strong id="metric-low">0</strong></div>
+        <div class="metric-card crit"><span>Out of stock</span><strong id="metric-out">0</strong></div>
+      </div>
+
+      <!-- Alerts (only shown when there are issues) -->
+      <div id="alerts-section" class="mat-panel" style="display:none; margin-bottom:1.25rem;">
+        <div class="panel-head">
+          <div><span class="eyebrow">Production AI</span><h2>Material alerts</h2></div>
+          <span class="chip chip-crit" id="alert-count-chip">0 alerts</span>
+        </div>
+        <div class="panel-body">
+          <div id="alerts-slot" class="alert-list"></div>
+        </div>
+      </div>
+
+      <div class="mat-grid">
+        <!-- Left: Materials list + Recipes tabs -->
+        <section class="mat-panel">
+          <div class="panel-head">
+            <div><span class="eyebrow">Raw materials</span><h2>Material inventory</h2></div>
+            <span class="chip chip-green" id="mat-count-chip">0 materials</span>
+          </div>
+          <div class="panel-body">
+            <div class="tab-row">
+              <button class="tab-btn active" data-tab="materials">Materials</button>
+              <button class="tab-btn" data-tab="recipes">Product recipes</button>
+              <button class="tab-btn" data-tab="deals">Supplier deals</button>
+            </div>
+
+            <!-- Materials tab -->
+            <div id="tab-materials">
+              <div id="materials-table-slot" class="empty-box">Loading materials…</div>
+            </div>
+
+            <!-- Recipes tab -->
+            <div id="tab-recipes" class="section-hidden">
+              <p style="font-size:.88rem;color:var(--muted);margin:0 0 1rem;">Define which raw materials go into each of your products. The AI uses these recipes to calculate production requirements.</p>
+              <div id="recipes-slot" class="empty-box">Loading recipes…</div>
+            </div>
+
+            <!-- Deals tab -->
+            <div id="tab-deals" class="section-hidden">
+              <p style="font-size:.88rem;color:var(--muted);margin:0 0 1rem;">Supplier comparison based on price, shipping speed, and your reorder needs.</p>
+              <div id="deals-slot" class="empty-box">Loading supplier deals…</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Add / Edit form -->
+        <aside>
+          <section class="mat-panel" style="margin-bottom:1.25rem;">
+            <div class="panel-head">
+              <div><span class="eyebrow">Add material</span><h3>New material</h3></div>
+            </div>
+            <div class="panel-body">
+              <form id="material-form" class="stack">
+                <div class="form-grid">
+                  <div class="field full">
+                    <label for="mat-name">Material name</label>
+                    <input id="mat-name" name="material_name" required maxlength="120" placeholder="Soy wax">
+                  </div>
+                  <div class="field">
+                    <label for="mat-qty">Quantity on hand</label>
+                    <input id="mat-qty" name="quantity" type="number" min="0" step="0.01" value="0" required>
+                  </div>
+                  <div class="field">
+                    <label for="mat-unit">Unit</label>
+                    <input id="mat-unit" name="unit" maxlength="40" placeholder="lbs / oz / units / ml">
+                  </div>
+                  <div class="field">
+                    <label for="mat-price">Last price ($)</label>
+                    <input id="mat-price" name="last_price" type="number" min="0" step="0.01" value="0">
+                  </div>
+                  <div class="field">
+                    <label for="mat-ship">Shipping days</label>
+                    <input id="mat-ship" name="shipping_days" type="number" min="0" value="3">
+                  </div>
+                  <div class="field full">
+                    <label for="mat-threshold">Low stock alert (qty)</label>
+                    <input id="mat-threshold" name="low_stock_threshold" type="number" min="0" step="0.01" value="0" placeholder="Alert when below this amount">
+                  </div>
+                  <div class="field full">
+                    <label for="mat-url">Supplier URL</label>
+                    <input id="mat-url" name="supplier_url" type="url" maxlength="500" placeholder="https://supplier.com/product">
+                  </div>
+                </div>
+                <div class="cta-row">
+                  <button class="btn btn-green" type="submit">Add material</button>
+                </div>
+              </form>
+              <div id="material-status" class="inline-status" style="display:none;"></div>
+            </div>
+          </section>
+
+          <!-- Add recipe entry -->
+          <section class="mat-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">Product recipes</span><h3>Link material to product</h3></div>
+            </div>
+            <div class="panel-body">
+              <form id="recipe-form" class="stack">
+                <div class="form-grid">
+                  <div class="field full">
+                    <label for="recipe-product">Product</label>
+                    <select id="recipe-product" name="product_id" required>
+                      <option value="">Select product…</option>
+                    </select>
+                  </div>
+                  <div class="field full">
+                    <label for="recipe-material">Material</label>
+                    <select id="recipe-material" name="material_id" required>
+                      <option value="">Select material…</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="recipe-qty">Qty per unit</label>
+                    <input id="recipe-qty" name="quantity_required" type="number" min="0.001" step="0.001" value="1" required>
+                  </div>
+                </div>
+                <div class="cta-row">
+                  <button class="btn btn-green" type="submit">Save recipe</button>
+                </div>
+              </form>
+              <div id="recipe-status" class="inline-status" style="display:none;"></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav" aria-label="Mobile navigation"><ul class="bottom-nav-items"></ul></nav>
+
+<script src="/assets/app.js"></script>
+<script src="/assets/dash-layout.js"></script>
+<script>
+  /* ── Helpers ────────────────────────────────────────────────────────── */
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      credentials: 'include',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      ...opts,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  function setStatus(id, msg, tone) {
+    const el = document.getElementById(id);
+    if (!msg) { el.style.display = 'none'; el.textContent = ''; el.className = 'inline-status'; return; }
+    el.style.display = 'block';
+    el.textContent = msg;
+    el.className = 'inline-status ' + (tone || '');
+  }
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+  const state = { materials: [], products: [], recipes: [], alerts: [], deals: [] };
+
+  /* ── Metrics ────────────────────────────────────────────────────────── */
+  function updateMetrics() {
+    const { materials } = state;
+    document.getElementById('metric-total').textContent = materials.length;
+    const value = materials.reduce((s, m) => s + (m.quantity * m.last_price), 0);
+    document.getElementById('metric-value').textContent = '$' + value.toFixed(2);
+    const low = materials.filter(m => m.low_stock_threshold > 0 && m.quantity <= m.low_stock_threshold && m.quantity > 0).length;
+    const out = materials.filter(m => m.quantity === 0).length;
+    document.getElementById('metric-low').textContent = low;
+    document.getElementById('metric-out').textContent = out;
+    document.getElementById('mat-count-chip').textContent = materials.length + ' material' + (materials.length === 1 ? '' : 's');
+  }
+
+  /* ── Severity chip ──────────────────────────────────────────────────── */
+  function stockChip(m) {
+    if (m.quantity === 0) return '<span class="chip chip-crit">Out of stock</span>';
+    if (m.low_stock_threshold > 0 && m.quantity <= m.low_stock_threshold)
+      return '<span class="chip chip-warn">Low stock</span>';
+    return '<span class="chip chip-green">In stock</span>';
+  }
+
+  /* ── Materials table ────────────────────────────────────────────────── */
+  function renderMaterials() {
+    const slot = document.getElementById('materials-table-slot');
+    const mats = state.materials;
+    if (!mats.length) {
+      slot.className = 'empty-box';
+      slot.innerHTML = '<strong>No materials yet.</strong><div style="margin-top:.4rem">Add your first raw material to start tracking production inputs.</div>';
+      return;
+    }
+    slot.className = '';
+    slot.innerHTML = `
+      <table class="mat-table">
+        <thead><tr><th>Material</th><th>Stock</th><th>Unit</th><th>Price</th><th>Ships in</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${mats.map(m => `
+            <tr>
+              <td><strong>${escapeHtml(m.material_name)}</strong></td>
+              <td><input class="qty-input" type="number" min="0" step="0.01" value="${m.quantity}" data-mat-qty="${m.id}"></td>
+              <td>${escapeHtml(m.unit || '—')}</td>
+              <td>${m.last_price > 0 ? '$' + m.last_price.toFixed(2) : '—'}</td>
+              <td>${m.shipping_days > 0 ? m.shipping_days + 'd' : '—'}</td>
+              <td>${stockChip(m)}</td>
+              <td>
+                <div class="inline-actions">
+                  <button class="btn btn-secondary" type="button" data-mat-save="${m.id}">Save</button>
+                  <button class="btn btn-ghost" type="button" data-mat-delete="${m.id}">Delete</button>
+                  ${m.supplier_url ? `<a class="btn btn-secondary" href="${escapeHtml(m.supplier_url)}" target="_blank" rel="noopener">Order</a>` : ''}
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    slot.querySelectorAll('[data-mat-save]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-mat-save'));
+        const input = slot.querySelector(`[data-mat-qty="${id}"]`);
+        try {
+          await api('/api/materials/' + id, { method: 'PATCH', body: JSON.stringify({ quantity: Number(input.value) }) });
+          await loadAll();
+          setStatus('material-status', 'Quantity updated.', 'success');
+        } catch(e) { setStatus('material-status', e.message, 'error'); }
+      });
+    });
+
+    slot.querySelectorAll('[data-mat-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-mat-delete'));
+        if (!confirm('Delete this material?')) return;
+        try {
+          await api('/api/materials/' + id, { method: 'DELETE' });
+          await loadAll();
+          setStatus('material-status', 'Material removed.', 'success');
+        } catch(e) { setStatus('material-status', e.message, 'error'); }
+      });
+    });
+  }
+
+  /* ── Recipes tab ────────────────────────────────────────────────────── */
+  function renderRecipes() {
+    const slot = document.getElementById('recipes-slot');
+    const { recipes, products, materials } = state;
+    if (!recipes.length) {
+      slot.className = 'empty-box';
+      slot.innerHTML = '<strong>No recipes yet.</strong><div style="margin-top:.4rem">Use the form on the right to link materials to products.</div>';
+      return;
+    }
+    // Group by product_id
+    const byProduct = {};
+    recipes.forEach(r => { (byProduct[r.product_id] = byProduct[r.product_id] || []).push(r); });
+    slot.className = '';
+
+    const productMap = {};
+    products.forEach(p => productMap[p.id] = p.name || p.product_name || p.title || 'Product #' + p.id);
+
+    slot.innerHTML = Object.entries(byProduct).map(([pid, entries]) => `
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-weight:700;font-size:.92rem;color:var(--mat-ink);margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--mat-line)">
+          ${escapeHtml(productMap[pid] || 'Product #' + pid)}
+        </div>
+        ${entries.map(r => `
+          <div class="recipe-row">
+            <span class="recipe-label">${escapeHtml(r.material_name || 'Material #' + r.material_id)}</span>
+            <input class="recipe-qty" type="number" min="0.001" step="0.001" value="${r.quantity_required}" data-recipe-qty="${r.product_id}-${r.material_id}">
+            <span style="font-size:.8rem;color:var(--muted)">${escapeHtml(r.unit || '')}</span>
+            <button class="btn btn-secondary" type="button" data-recipe-save="${r.product_id}-${r.material_id}" data-pid="${r.product_id}" data-mid="${r.material_id}">Save</button>
+            <button class="btn btn-ghost" type="button" data-recipe-delete="${r.product_id}-${r.material_id}" data-pid="${r.product_id}" data-mid="${r.material_id}">Remove</button>
+          </div>`).join('')}
+      </div>`).join('');
+
+    slot.querySelectorAll('[data-recipe-save]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pid = btn.getAttribute('data-pid');
+        const mid = btn.getAttribute('data-mid');
+        const key = `${pid}-${mid}`;
+        const qty = Number(slot.querySelector(`[data-recipe-qty="${key}"]`).value);
+        try {
+          await api('/api/materials/recipes', { method: 'POST', body: JSON.stringify({ product_id: Number(pid), material_id: Number(mid), quantity_required: qty }) });
+          await loadAll();
+          setStatus('recipe-status', 'Recipe updated.', 'success');
+        } catch(e) { setStatus('recipe-status', e.message, 'error'); }
+      });
+    });
+
+    slot.querySelectorAll('[data-recipe-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pid = btn.getAttribute('data-pid');
+        const mid = btn.getAttribute('data-mid');
+        try {
+          await api('/api/materials/recipes', { method: 'DELETE', body: JSON.stringify({ product_id: Number(pid), material_id: Number(mid) }) });
+          await loadAll();
+          setStatus('recipe-status', 'Recipe entry removed.', 'success');
+        } catch(e) { setStatus('recipe-status', e.message, 'error'); }
+      });
+    });
+  }
+
+  /* ── Deals tab ──────────────────────────────────────────────────────── */
+  function renderDeals() {
+    const slot = document.getElementById('deals-slot');
+    const deals = state.deals;
+    if (!deals.length) {
+      slot.className = 'empty-box';
+      slot.innerHTML = '<strong>No supplier data yet.</strong><div style="margin-top:.4rem">Add supplier URLs and prices to your materials to enable comparison.</div>';
+      return;
+    }
+    slot.className = '';
+    slot.innerHTML = deals.map(d => `
+      <div style="border:1px solid var(--mat-line);border-radius:16px;padding:.9rem 1rem;margin-bottom:.75rem;">
+        <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.5rem;">
+          <strong style="font-size:.92rem">${escapeHtml(d.material_name)}</strong>
+          ${d.needs_reorder ? '<span class="chip chip-warn">Reorder needed</span>' : '<span class="chip chip-green">In stock</span>'}
+        </div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem;">
+          ${d.current_stock} ${escapeHtml(d.unit)} on hand
+          ${d.low_stock_threshold > 0 ? ' · Threshold: ' + d.low_stock_threshold : ''}
+          · ${d.supplier_count} supplier${d.supplier_count === 1 ? '' : 's'}
+        </div>
+        ${d.best_supplier ? `
+          <div style="font-size:.85rem;">
+            Best deal: <a href="${escapeHtml(d.best_supplier.supplier_url || '#')}" target="_blank" rel="noopener" style="color:var(--mat-accent);font-weight:600">${escapeHtml(d.best_supplier.supplier_url || '—')}</a>
+            — $${d.best_supplier.last_price.toFixed(2)}/${escapeHtml(d.best_supplier.unit)} · ships in ${d.best_supplier.shipping_days}d
+          </div>` : ''}
+        ${d.action ? `<div style="margin-top:.4rem;font-size:.82rem;color:var(--mat-warn);font-weight:600">${escapeHtml(d.action)}</div>` : ''}
+      </div>`).join('');
+  }
+
+  /* ── Alerts ─────────────────────────────────────────────────────────── */
+  function renderAlerts() {
+    const alerts = state.alerts;
+    const section = document.getElementById('alerts-section');
+    const slot = document.getElementById('alerts-slot');
+    if (!alerts.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    document.getElementById('alert-count-chip').textContent = alerts.length + ' alert' + (alerts.length === 1 ? '' : 's');
+    slot.innerHTML = alerts.map(a => `
+      <div class="alert-item ${a.severity}">
+        <strong>${escapeHtml(a.material_name)}</strong>
+        <p>${escapeHtml(a.message)}</p>
+        ${a.order_by_date ? `<p style="margin-top:.3rem;font-weight:600">Order by: ${a.order_by_date}</p>` : ''}
+        ${a.supplier_url ? `<a href="${escapeHtml(a.supplier_url)}" target="_blank" rel="noopener">Order from supplier →</a>` : ''}
+      </div>`).join('');
+  }
+
+  /* ── Populate selects ───────────────────────────────────────────────── */
+  function populateSelects() {
+    const productSel = document.getElementById('recipe-product');
+    const matSel = document.getElementById('recipe-material');
+    const currentProd = productSel.value;
+    const currentMat = matSel.value;
+
+    productSel.innerHTML = '<option value="">Select product…</option>' +
+      state.products.map(p => `<option value="${p.id}" ${p.id == currentProd ? 'selected' : ''}>${escapeHtml(p.name || p.product_name || 'Product #' + p.id)}</option>`).join('');
+    matSel.innerHTML = '<option value="">Select material…</option>' +
+      state.materials.map(m => `<option value="${m.id}" ${m.id == currentMat ? 'selected' : ''}>${escapeHtml(m.material_name)} (${m.quantity} ${escapeHtml(m.unit)})</option>`).join('');
+  }
+
+  /* ── Load all data ──────────────────────────────────────────────────── */
+  async function loadAll() {
+    const [matsData, productsData, recipesData, alertsData, dealsData] = await Promise.all([
+      api('/api/materials'),
+      api('/api/vendor/products').catch(() => ({ products: [] })),
+      api('/api/materials/recipes').catch(() => ({ recipes: [] })),
+      api('/api/materials/alerts').catch(() => ({ alerts: [] })),
+      api('/api/materials/deals').catch(() => ({ deals: [] })),
+    ]);
+    state.materials = matsData.materials || [];
+    state.products  = productsData.products || [];
+    state.recipes   = recipesData.recipes || [];
+    state.alerts    = alertsData.alerts || [];
+    state.deals     = dealsData.deals || [];
+
+    updateMetrics();
+    renderMaterials();
+    renderRecipes();
+    renderDeals();
+    renderAlerts();
+    populateSelects();
+  }
+
+  /* ── Tab switching ──────────────────────────────────────────────────── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['materials', 'recipes', 'deals'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        el.classList.toggle('section-hidden', t !== btn.getAttribute('data-tab'));
+      });
+    });
+  });
+
+  /* ── Add material form ──────────────────────────────────────────────── */
+  document.getElementById('material-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    try {
+      setStatus('material-status', 'Adding material…', '');
+      await api('/api/materials', {
+        method: 'POST',
+        body: JSON.stringify({
+          material_name: fd.get('material_name'),
+          quantity: Number(fd.get('quantity') || 0),
+          unit: fd.get('unit') || 'units',
+          last_price: Number(fd.get('last_price') || 0),
+          shipping_days: Number(fd.get('shipping_days') || 0),
+          low_stock_threshold: Number(fd.get('low_stock_threshold') || 0),
+          supplier_url: fd.get('supplier_url') || '',
+        }),
+      });
+      e.currentTarget.reset();
+      document.getElementById('mat-qty').value = '0';
+      document.getElementById('mat-price').value = '0';
+      document.getElementById('mat-ship').value = '3';
+      document.getElementById('mat-threshold').value = '0';
+      await loadAll();
+      setStatus('material-status', 'Material added.', 'success');
+    } catch(err) { setStatus('material-status', err.message, 'error'); }
+  });
+
+  /* ── Add recipe form ────────────────────────────────────────────────── */
+  document.getElementById('recipe-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    try {
+      setStatus('recipe-status', 'Saving recipe…', '');
+      await api('/api/materials/recipes', {
+        method: 'POST',
+        body: JSON.stringify({
+          product_id: Number(fd.get('product_id')),
+          material_id: Number(fd.get('material_id')),
+          quantity_required: Number(fd.get('quantity_required') || 1),
+        }),
+      });
+      e.currentTarget.reset();
+      // Switch to recipes tab
+      document.querySelector('[data-tab="recipes"]').click();
+      await loadAll();
+      setStatus('recipe-status', 'Recipe saved.', 'success');
+    } catch(err) { setStatus('recipe-status', err.message, 'error'); }
+  });
+
+  /* ── Boot ───────────────────────────────────────────────────────────── */
+  loadAll().catch(err => {
+    setStatus('material-status', err.message || 'Could not load materials.', 'error');
+    document.getElementById('materials-table-slot').innerHTML = '<div class="empty-box">Could not load materials.</div>';
+  });
+</script>
+</body>
+</html>

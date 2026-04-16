@@ -6,278 +6,295 @@
   <title>Vendor Shop | Vendor Atlas</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <style>
-    /* ── SHOP BANNER ── */
+    /* ── BANNER ── */
     .shop-banner {
       width: 100%;
-      height: 220px;
-      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 60%, #1E40AF 100%);
+      height: 240px;
       position: relative;
       overflow: hidden;
     }
-    .shop-banner-inner {
+    .shop-banner-bg { position: absolute; inset: 0; }
+    .shop-banner-text {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 5rem; opacity: .12; letter-spacing: .15em;
-      font-weight: 900; color: #fff; user-select: none;
+      font-size: 6rem; font-weight: 900; color: rgba(255,255,255,.1);
+      letter-spacing: .18em; user-select: none;
     }
-    @media (max-width: 600px) { .shop-banner { height: 140px; } }
+    @media (max-width: 600px) { .shop-banner { height: 160px; } .shop-banner-text { font-size: 3.5rem; } }
 
     /* ── PROFILE HEADER ── */
-    .shop-profile-wrap {
+    .shop-header-wrap {
+      background: var(--surface);
       border-bottom: 1px solid var(--line);
-      padding-bottom: 1.25rem;
+      padding-bottom: 0;
+    }
+    .shop-header-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 1.5rem 0;
     }
     .shop-profile {
       display: flex;
       align-items: flex-end;
-      gap: 1.25rem;
-      padding: 0 0 0;
+      gap: 1.5rem;
+      padding-top: 0;
       position: relative;
-      margin-top: -44px; /* overlap the banner */
+      margin-top: -52px;
       flex-wrap: wrap;
     }
     .shop-avatar {
-      width: 88px; height: 88px;
+      width: 96px; height: 96px;
       border-radius: 50%;
-      border: 4px solid var(--bg);
+      border: 4px solid var(--surface);
       display: flex; align-items: center; justify-content: center;
-      font-size: 2.2rem; font-weight: 800; color: #fff;
+      font-size: 2.4rem; font-weight: 800; color: #fff;
       flex-shrink: 0;
-      box-shadow: 0 4px 16px rgba(12,31,29,.18);
+      box-shadow: 0 4px 20px rgba(15,23,42,.18);
     }
     .shop-profile-info {
-      flex: 1; min-width: 0;
-      padding-top: 48px; /* push below banner overlap */
+      flex: 1; min-width: 200px;
+      padding-top: 56px;
     }
-    .shop-profile-info h1 { margin: 0 0 .15rem; font-size: 1.6rem; line-height: 1.2; }
-    .shop-handle { color: var(--muted); font-size: .88rem; margin: 0 0 .5rem; }
+    .shop-profile-info h1 {
+      margin: 0 0 .2rem;
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--text);
+    }
+    .shop-handle {
+      color: var(--muted); font-size: .88rem; margin: 0 0 .5rem;
+      display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+    }
+    .shop-handle-dot { color: var(--line); }
     .shop-stats {
-      display: flex; gap: 1.25rem; flex-wrap: wrap; margin: .5rem 0;
+      display: flex; gap: 1.25rem; flex-wrap: wrap; margin: .4rem 0;
     }
     .shop-stat { font-size: .82rem; color: var(--muted); }
-    .shop-stat strong { color: var(--text); font-weight: 700; margin-right: .25rem; }
-    .shop-bio { font-size: .9rem; color: var(--text); margin: .5rem 0 0; max-width: 560px; line-height: 1.5; }
-    .shop-tags { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .55rem; }
-    .shop-tag {
-      font-size: .75rem; background: rgba(15,118,110,.09);
-      color: var(--brand); padding: .18rem .6rem;
-      border-radius: 99px; font-weight: 600;
+    .shop-stat strong { color: var(--text); font-weight: 700; margin-right: .2rem; }
+    .shop-bio {
+      font-size: .92rem; color: var(--text); margin: .6rem 0 0;
+      max-width: 560px; line-height: 1.6;
     }
-    .shop-social { display: flex; gap: .75rem; margin-top: .55rem; flex-wrap: wrap; }
+    .shop-social { display: flex; gap: .75rem; margin-top: .6rem; flex-wrap: wrap; }
     .shop-social a {
-      font-size: .8rem; color: var(--muted); text-decoration: none;
-      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .82rem; color: var(--muted); text-decoration: none;
+      display: inline-flex; align-items: center; gap: .3rem;
       transition: color .15s;
     }
     .shop-social a:hover { color: var(--brand); }
 
     .shop-profile-actions {
-      display: flex; gap: .65rem; align-items: flex-start;
-      padding-top: 52px; flex-shrink: 0;
+      display: flex; gap: .6rem; align-items: flex-start;
+      padding-top: 56px; flex-shrink: 0; flex-wrap: wrap;
     }
-    @media (max-width: 680px) {
-      .shop-profile { flex-direction: column; align-items: flex-start; margin-top: -36px; }
+    @media (max-width: 700px) {
+      .shop-profile { flex-direction: column; align-items: flex-start; margin-top: -40px; }
       .shop-profile-info { padding-top: 0; }
       .shop-profile-actions { padding-top: 0; }
     }
 
-    /* ── SHOP SECTION TABS / FILTERS ── */
-    .shop-nav {
-      display: flex; gap: .25rem; padding: 1rem 0 0;
-      border-bottom: 2px solid var(--line); margin-bottom: 2rem;
+    /* ── TAGS ROW ── */
+    .shop-tags-row {
+      display: flex; gap: .4rem; flex-wrap: wrap; padding: .85rem 0 1rem;
     }
+    .shop-tag {
+      font-size: .75rem; font-weight: 600;
+      background: var(--primary-soft); color: var(--brand);
+      padding: .22rem .7rem; border-radius: 99px;
+      border: 1px solid rgba(37,99,235,.15);
+      transition: background .15s;
+    }
+    .shop-tag:hover { background: var(--primary-soft); }
+    .shop-tag.secondary {
+      background: var(--surface-alt); color: var(--muted);
+      border-color: var(--line);
+    }
+
+    /* ── VERIFIED BADGE ── */
+    .badge-verified {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; font-weight: 700; color: var(--success);
+      background: rgba(16,185,129,.09); padding: .15rem .6rem; border-radius: 99px;
+    }
+    .verified-badge-large {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .8rem; font-weight: 700; color: var(--success);
+      background: rgba(16,185,129,.09); padding: .25rem .85rem; border-radius: 99px;
+      border: 1.5px solid rgba(16,185,129,.2);
+    }
+
+    /* ── SHOP NAV TABS ── */
+    .shop-nav {
+      display: flex; gap: 0; margin-top: .5rem;
+      border-top: 1px solid var(--line);
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .shop-nav::-webkit-scrollbar { display: none; }
     .shop-nav-tab {
       background: none; border: none; border-bottom: 2px solid transparent;
-      padding: .6rem 1rem; font-size: .9rem; font-weight: 600;
-      color: var(--muted); cursor: pointer; margin-bottom: -2px;
-      border-radius: 4px 4px 0 0;
+      padding: .75rem 1.1rem; font-size: .9rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; white-space: nowrap;
+      transition: color .15s; margin-bottom: -1px;
     }
     .shop-nav-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
 
-    /* ── PRODUCTS GRID ── */
-    .products-section { padding-bottom: 4rem; }
+    /* ── MAIN CONTENT AREA ── */
+    .shop-content {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 2rem 1.5rem 5rem;
+    }
+
+    /* ── PRODUCTS SECTION ── */
     .products-filter-bar {
       display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap;
     }
     .filter-label { font-size: .8rem; color: var(--muted); font-weight: 600; }
     .filter-pills { display: flex; gap: .35rem; flex-wrap: wrap; }
     .filter-pill {
-      padding: .3rem .75rem; border-radius: 99px;
-      border: 1.5px solid var(--line); background: var(--bg);
+      padding: .3rem .8rem; border-radius: 99px;
+      border: 1.5px solid var(--line); background: var(--surface);
       font-size: .78rem; font-weight: 600; color: var(--muted);
       cursor: pointer; transition: all .15s;
     }
     .filter-pill:hover, .filter-pill.active {
-      border-color: var(--brand); background: rgba(15,118,110,.08); color: var(--brand);
+      border-color: var(--brand); background: var(--primary-soft); color: var(--brand);
     }
+
+    /* ── PRODUCT CARDS ── */
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 1.25rem;
     }
+    @media (max-width: 480px) { .products-grid { grid-template-columns: repeat(2, 1fr); gap: .85rem; } }
     .product-card {
       background: var(--surface);
-      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 2px 10px rgba(12,31,29,.07);
+      box-shadow: var(--shadow-sm);
       display: flex; flex-direction: column;
       transition: box-shadow .2s, transform .2s;
-      cursor: default;
     }
-    .product-card:hover { box-shadow: 0 6px 24px rgba(12,31,29,.12); transform: translateY(-2px); }
+    .product-card:hover { box-shadow: 0 8px 28px rgba(37,99,235,.12); transform: translateY(-2px); }
     .product-img {
       width: 100%; aspect-ratio: 1;
-      object-fit: cover; background: #e8e2d8;
+      object-fit: cover; background: var(--surface-alt);
       display: block;
     }
     .product-img-placeholder {
       width: 100%; aspect-ratio: 1;
-      background: linear-gradient(135deg, #e8e2d8, #d6cfc4);
+      background: linear-gradient(135deg, var(--surface-alt), var(--line));
       display: flex; align-items: center; justify-content: center;
       font-size: 3rem;
     }
     .product-body {
-      padding: .85rem 1rem 1rem;
-      flex: 1; display: flex; flex-direction: column; gap: .3rem;
+      padding: .9rem 1rem 1rem;
+      flex: 1; display: flex; flex-direction: column; gap: .25rem;
     }
     .product-name {
-      font-weight: 600; font-size: .93rem;
+      font-weight: 700; font-size: .93rem;
       line-height: 1.35; color: var(--text);
       display: -webkit-box; -webkit-line-clamp: 2;
       -webkit-box-orient: vertical; overflow: hidden;
     }
-    .product-category { font-size: .75rem; color: var(--muted); }
-    .product-price { font-weight: 800; font-size: 1.05rem; color: var(--brand); margin-top: .1rem; }
-    .product-stock {
-      font-size: .72rem; color: var(--muted);
+    .product-category { font-size: .72rem; color: var(--muted); font-weight: 500; }
+    .product-price { font-weight: 800; font-size: 1.05rem; color: var(--brand); margin-top: .15rem; }
+    .product-stock { font-size: .72rem; color: var(--muted); }
+    .product-stock.out { color: var(--danger); }
+    .product-desc {
+      font-size: .78rem; color: var(--muted); line-height: 1.45;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
-    .product-stock.out { color: var(--danger, #dc2626); }
-    .product-buy { margin-top: auto; padding-top: .6rem; }
+    .product-buy { margin-top: auto; padding-top: .65rem; }
     .product-buy a {
       display: block; text-align: center;
       background: var(--brand); color: #fff;
-      padding: .45rem .75rem; border-radius: var(--radius-sm);
+      padding: .48rem .75rem; border-radius: var(--radius-sm);
       font-size: .85rem; font-weight: 600; text-decoration: none;
-      transition: opacity .15s;
+      transition: background .15s;
     }
-    .product-buy a:hover { opacity: .88; }
+    .product-buy a:hover { background: var(--brand-deep); }
 
-    /* ── ABOUT TAB ── */
-    .about-section { max-width: 640px; }
-    .about-section h3 { font-size: 1rem; margin: 0 0 .75rem; }
+    /* ── ABOUT SECTION ── */
+    .about-section { max-width: 600px; }
+    .about-section h3 { font-size: 1rem; margin: 0 0 .75rem; font-weight: 700; }
     .about-section p { font-size: .92rem; line-height: 1.65; color: var(--text); margin: 0 0 1rem; }
-    .about-detail { display: flex; gap: .75rem; align-items: flex-start; margin-bottom: .6rem; }
+    .about-detail { display: flex; gap: .75rem; align-items: flex-start; margin-bottom: .7rem; }
     .about-detail .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
     .about-detail .detail-text { font-size: .88rem; color: var(--text); }
     .about-detail .detail-text span { color: var(--muted); font-size: .8rem; display: block; }
+    .about-divider { border: none; border-top: 1px solid var(--line); margin: 1.25rem 0; }
 
-    /* ── UPCOMING EVENTS TAB ── */
-    .events-list { max-width: 640px; }
+    /* ── EVENTS ── */
+    .events-list { max-width: 600px; }
     .event-item {
-      background: var(--surface); border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
       padding: 1rem 1.25rem; margin-bottom: .75rem;
       display: flex; align-items: center; gap: 1rem;
-      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+      box-shadow: var(--shadow-sm);
     }
     .event-date-block { text-align: center; flex-shrink: 0; width: 48px; }
-    .event-date-block .month { font-size: .65rem; font-weight: 700; text-transform: uppercase; color: var(--brand); letter-spacing: .05em; }
-    .event-date-block .day { font-size: 1.4rem; font-weight: 800; line-height: 1; color: var(--text); }
+    .event-date-block .month { font-size: .65rem; font-weight: 700; text-transform: uppercase; color: var(--brand); letter-spacing: .06em; }
+    .event-date-block .day { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text); }
     .event-info { flex: 1; min-width: 0; }
-    .event-info strong { display: block; font-size: .93rem; }
-    .event-info .event-meta { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
-
-    /* ── EMPTY / LOADING ── */
-    .shop-loading { text-align: center; padding: 5rem 1rem; color: var(--muted); }
-    .no-products { text-align: center; padding: 3.5rem 1rem; color: var(--muted); grid-column: 1 / -1; }
-    .no-products .icon { font-size: 2.5rem; margin-bottom: .5rem; }
-
-    /* ── BADGE ── */
-    .badge-verified {
-      display: inline-flex; align-items: center; gap: .3rem;
-      font-size: .72rem; font-weight: 700; color: var(--success, #15803d);
-      background: rgba(2,122,72,.09); padding: .15rem .6rem; border-radius: 99px;
-    }
-    .verified-badge-large {
-      display: inline-flex; align-items: center; gap: .4rem;
-      font-size: .8rem; font-weight: 700; color: var(--success, #15803d);
-      background: rgba(2,122,72,.09); padding: .25rem .85rem; border-radius: 99px;
-      border: 1.5px solid rgba(2,122,72,.2);
-    }
+    .event-info strong { display: block; font-size: .93rem; font-weight: 600; }
+    .event-info .event-meta { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
 
     /* ── REVIEWS ── */
     .reviews-section { max-width: 680px; }
     .reviews-summary {
       display: flex; align-items: center; gap: 2rem;
-      background: var(--surface); border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
       padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
-      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+      box-shadow: var(--shadow-sm);
     }
-    .rating-big { text-align: center; }
+    .rating-big { text-align: center; flex-shrink: 0; }
     .rating-number { font-size: 3rem; font-weight: 900; line-height: 1; }
-    .rating-stars { font-size: 1.1rem; letter-spacing: .1rem; }
+    .rating-stars { font-size: 1.05rem; letter-spacing: .08rem; }
     .rating-count { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
     .rating-bars { flex: 1; }
     .rating-bar-row {
       display: flex; align-items: center; gap: .6rem;
       font-size: .78rem; color: var(--muted); margin-bottom: .3rem;
     }
-    .rating-bar-track {
-      flex: 1; height: 6px; background: var(--line);
-      border-radius: 99px; overflow: hidden;
-    }
+    .rating-bar-track { flex: 1; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
     .rating-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; }
 
     .review-card {
-      background: var(--surface); border-radius: var(--radius-md);
-      padding: 1rem 1.25rem; margin-bottom: .75rem;
-      box-shadow: 0 1px 6px rgba(12,31,29,.06);
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem; margin-bottom: .75rem;
+      box-shadow: var(--shadow-sm);
     }
-    .review-header {
-      display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem;
-    }
+    .review-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; }
     .reviewer-avatar {
       width: 36px; height: 36px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: .9rem; color: #fff;
-      flex-shrink: 0;
+      font-weight: 700; font-size: .9rem; color: #fff; flex-shrink: 0;
     }
     .reviewer-name { font-weight: 600; font-size: .9rem; }
     .reviewer-meta { font-size: .75rem; color: var(--muted); }
-    .review-stars { margin-left: auto; font-size: .9rem; }
+    .review-stars { margin-left: auto; font-size: .88rem; }
     .review-text { font-size: .88rem; color: var(--text); line-height: 1.6; }
     .review-product-ref {
       display: inline-flex; align-items: center; gap: .3rem;
       font-size: .75rem; color: var(--brand);
-      background: rgba(15,118,110,.07); padding: .15rem .6rem;
+      background: var(--primary-soft); padding: .15rem .6rem;
       border-radius: 99px; margin-top: .5rem;
     }
 
-    /* ── VIDEOS TAB ── */
-    .videos-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-    }
+    /* ── POSTS / VIDEOS ── */
+    .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
     .video-card {
-      aspect-ratio: 9/16;
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      position: relative;
-      cursor: pointer;
-      transition: transform .2s, box-shadow .2s;
-      box-shadow: 0 2px 10px rgba(12,31,29,.07);
+      aspect-ratio: 9/16; background: var(--surface); border-radius: var(--radius-md);
+      overflow: hidden; position: relative; cursor: pointer;
+      transition: transform .2s, box-shadow .2s; box-shadow: var(--shadow-sm);
     }
-    .video-card:hover { transform: scale(1.02); box-shadow: 0 8px 28px rgba(12,31,29,.15); }
-    .video-thumb {
-      width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 3rem;
-    }
-    .video-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.7) 100%);
-    }
+    .video-card:hover { transform: scale(1.02); box-shadow: 0 8px 28px rgba(15,23,42,.15); }
+    .video-thumb { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+    .video-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.65) 100%); }
     .video-play {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
       width: 44px; height: 44px; border-radius: 50%;
@@ -293,10 +310,15 @@
     }
     .video-likes {
       position: absolute; top: .6rem; right: .65rem;
-      font-size: .7rem; color: rgba(255,255,255,.8);
+      font-size: .7rem; color: rgba(255,255,255,.85);
       display: flex; align-items: center; gap: .25rem;
-      text-shadow: 0 1px 4px rgba(0,0,0,.6);
+      text-shadow: 0 1px 4px rgba(0,0,0,.5);
     }
+
+    /* ── EMPTY / LOADING ── */
+    .shop-loading { text-align: center; padding: 6rem 1rem; color: var(--muted); }
+    .no-products { text-align: center; padding: 3.5rem 1rem; color: var(--muted); grid-column: 1 / -1; }
+    .no-products .icon { font-size: 2.5rem; margin-bottom: .5rem; }
   </style>
 </head>
 <body>
@@ -322,7 +344,7 @@
   </header>
 
   <main id="shop-main">
-    <div class="shop-loading">Loading vendor…</div>
+    <div class="shop-loading">Loading shop…</div>
   </main>
 
   <script src="/assets/app.js"></script>
@@ -333,11 +355,10 @@
     const main = document.getElementById("shop-main");
 
     if (!username || username === "vendor-shop") {
-      main.innerHTML = '<div class="container" style="padding:4rem 0;text-align:center;color:var(--muted)"><strong>No vendor specified.</strong></div>';
+      main.innerHTML = '<div class="shop-content" style="text-align:center;color:var(--muted);padding-top:4rem;"><strong>No vendor specified.</strong></div>';
       return;
     }
 
-    // Load vendor + products + posts in parallel
     const [vendorRes, productsRes, postsRes] = await Promise.all([
       fetch(`/api/vendors/${encodeURIComponent(username)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null).catch(() => null),
@@ -349,7 +370,7 @@
 
     const vendor = vendorRes?.vendor;
     if (!vendor) {
-      main.innerHTML = '<div class="container" style="padding:4rem 0;text-align:center;color:var(--muted)"><strong>Vendor not found.</strong></div>';
+      main.innerHTML = '<div class="shop-content" style="text-align:center;color:var(--muted);padding-top:4rem;"><strong>Vendor not found.</strong></div>';
       return;
     }
 
@@ -359,52 +380,69 @@
     const shopPosts = postsRes?.posts || [];
     const displayName = vendor.name || ("@" + vendor.username);
     const initial = (vendor.name || vendor.username || "V")[0].toUpperCase();
-    const bannerColor = profile.banner_color || "#0f766e";
-    const bannerDark = shadeColor(bannerColor, -20);
+    const bannerColor = profile.banner_color || "#2563EB";
+    const bannerDark = shadeColor(bannerColor, -22);
 
-    // Build social links
+    // Social links
     const socials = [
       { url: profile.instagram_url, label: "Instagram", icon: "📸" },
       { url: profile.tiktok_url, label: "TikTok", icon: "🎵" },
       { url: profile.website_url, label: "Website", icon: "🌐" },
     ].filter(s => s.url);
 
-    // Tags
-    const tags = [
+    // Tags — dedicated tags first, then derived
+    const dedicatedTags = Array.isArray(profile.tags)
+      ? profile.tags
+      : (typeof profile.tags === "string" && profile.tags
+          ? profile.tags.split(",").map(t => t.trim()).filter(Boolean)
+          : []);
+
+    const derivedTags = [
       profile.category,
       profile.subcategory,
       profile.location,
       profile.price_range ? _priceLabel(profile.price_range) : "",
-      profile.preferred_env === "indoor" ? "Indoor" : profile.preferred_env === "outdoor" ? "Outdoor" : "",
     ].filter(Boolean);
 
-    // Render page
+    // Merge, deduplicate (dedicated take priority), cap at 10
+    const allTags = [...new Set([...dedicatedTags, ...derivedTags])].slice(0, 10);
+
+    document.title = `${displayName} | Vendor Atlas`;
+
     main.innerHTML = `
       <!-- BANNER -->
-      <div class="shop-banner" style="background: linear-gradient(135deg, ${escapeHtml(bannerColor)} 0%, ${escapeHtml(bannerDark)} 100%);">
-        <div class="shop-banner-inner">${escapeHtml(initial)}${escapeHtml(initial)}</div>
+      <div class="shop-banner">
+        <div class="shop-banner-bg" style="background: linear-gradient(135deg, ${escapeHtml(bannerColor)} 0%, ${escapeHtml(bannerDark)} 100%);"></div>
+        <div class="shop-banner-text">${escapeHtml(initial)}${escapeHtml(initial)}</div>
       </div>
 
-      <!-- PROFILE HEADER -->
-      <div class="container">
-        <div class="shop-profile-wrap">
+      <!-- SHOP HEADER -->
+      <div class="shop-header-wrap">
+        <div class="shop-header-inner">
           <div class="shop-profile">
             <div class="shop-avatar" style="background: linear-gradient(135deg, ${escapeHtml(bannerColor)}, ${escapeHtml(bannerDark)})">
               ${escapeHtml(initial)}
             </div>
             <div class="shop-profile-info">
               <h1>${escapeHtml(displayName)}</h1>
-              <p class="shop-handle">@${escapeHtml(vendor.username)}${profile.location ? " · " + escapeHtml(profile.location) : ""}</p>
+              <div class="shop-handle">
+                <span>@${escapeHtml(vendor.username)}</span>
+                ${profile.location ? `<span class="shop-handle-dot">·</span><span>📍 ${escapeHtml(profile.location)}</span>` : ""}
+                ${vendor.verified ? `<span class="shop-handle-dot">·</span><span class="verified-badge-large">✓ Verified</span>` : ""}
+              </div>
               <div class="shop-stats">
                 ${products.length ? `<div class="shop-stat"><strong>${products.length}</strong> product${products.length === 1 ? "" : "s"}</div>` : ""}
                 ${shopPosts.length ? `<div class="shop-stat"><strong>${shopPosts.length}</strong> post${shopPosts.length === 1 ? "" : "s"}</div>` : ""}
-                ${events.length ? `<div class="shop-stat"><strong>${events.length}</strong> upcoming event${events.length === 1 ? "" : "s"}</div>` : ""}
+                ${events.length ? `<div class="shop-stat"><strong>${events.length}</strong> upcoming</div>` : ""}
                 <div class="shop-stat"><strong id="follower-count">—</strong> followers</div>
                 ${productsRes?.source === "shopify" ? `<div class="shop-stat"><span class="badge-verified">✓ Shopify</span></div>` : ""}
               </div>
-              ${vendor.verified ? `<div style="margin:.4rem 0;"><span class="verified-badge-large">✓ Verified Small Business</span></div>` : ""}
               ${vendor.bio ? `<div class="shop-bio">${escapeHtml(vendor.bio)}</div>` : ""}
-              ${tags.length ? `<div class="shop-tags">${tags.map(t => `<span class="shop-tag">${escapeHtml(t)}</span>`).join("")}</div>` : ""}
+              ${allTags.length ? `
+                <div class="shop-tags-row">
+                  ${allTags.map((t, i) => `<span class="shop-tag${i >= dedicatedTags.length ? " secondary" : ""}">${escapeHtml(t)}</span>`).join("")}
+                </div>
+              ` : ""}
               ${socials.length ? `
                 <div class="shop-social">
                   ${socials.map(s => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${s.icon} ${escapeHtml(s.label)}</a>`).join("")}
@@ -417,39 +455,38 @@
           <!-- SHOP NAV -->
           <div class="shop-nav">
             <button class="shop-nav-tab active" data-panel="products">Products${products.length ? ` (${products.length})` : ""}</button>
-            <button class="shop-nav-tab" data-panel="posts">Posts${shopPosts.length ? ` (${shopPosts.length})` : ""}</button>
+            ${shopPosts.length ? `<button class="shop-nav-tab" data-panel="posts">Posts (${shopPosts.length})</button>` : ""}
             <button class="shop-nav-tab" data-panel="reviews">Reviews</button>
             ${events.length ? `<button class="shop-nav-tab" data-panel="events">Events (${events.length})</button>` : ""}
             <button class="shop-nav-tab" data-panel="about">About</button>
           </div>
         </div>
+      </div>
+
+      <!-- CONTENT PANELS -->
+      <div class="shop-content">
 
         <!-- PRODUCTS PANEL -->
-        <div class="products-section" id="panel-products">
-          ${buildProductsPanel(products, tags)}
+        <div id="panel-products">
+          ${buildProductsPanel(products)}
         </div>
-
-        <!-- EVENTS PANEL -->
-        ${events.length ? `
-          <div class="events-list" id="panel-events" style="display:none;">
-            ${buildEventsPanel(events)}
-          </div>
-        ` : ""}
 
         <!-- POSTS PANEL -->
-        <div id="panel-posts" style="display:none;">
-          ${buildPostsPanel(shopPosts, displayName)}
-        </div>
+        ${shopPosts.length ? `<div id="panel-posts" style="display:none;">${buildPostsPanel(shopPosts, displayName)}</div>` : ""}
 
         <!-- REVIEWS PANEL -->
         <div class="reviews-section" id="panel-reviews" style="display:none;">
           ${buildReviewsPanel(vendor)}
         </div>
 
+        <!-- EVENTS PANEL -->
+        ${events.length ? `<div class="events-list" id="panel-events" style="display:none;">${buildEventsPanel(events)}</div>` : ""}
+
         <!-- ABOUT PANEL -->
         <div class="about-section" id="panel-about" style="display:none;">
           ${buildAboutPanel(vendor, profile, socials)}
         </div>
+
       </div>
     `;
 
@@ -465,7 +502,7 @@
       });
     });
 
-    // Load follower count
+    // Follower count
     fetch(`/api/vendors/${encodeURIComponent(username)}/followers`, { credentials: "include" })
       .then(r => r.ok ? r.json() : null).then(d => {
         const el = document.getElementById("follower-count");
@@ -484,15 +521,15 @@
       });
     });
 
-    // Follow area
     initFollowArea(vendor.id);
 
-    // ── BUILDERS ──
-    function buildProductsPanel(products, tags) {
+    // ── BUILDERS ──────────────────────────────────────────────────────────
+
+    function buildProductsPanel(products) {
       const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
       const filterBar = cats.length > 1 ? `
         <div class="products-filter-bar">
-          <span class="filter-label">Category</span>
+          <span class="filter-label">Filter:</span>
           <div class="filter-pills">
             <button class="filter-pill active" data-cat="all">All</button>
             ${cats.map(c => `<button class="filter-pill" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}
@@ -501,7 +538,6 @@
 
       if (!products.length) {
         return `
-          ${filterBar}
           <div class="products-grid">
             <div class="no-products">
               <div class="icon">🛍️</div>
@@ -533,7 +569,7 @@
             ${p.category ? `<div class="product-category">${escapeHtml(p.category)}</div>` : ""}
             ${price !== null ? `<div class="product-price">$${Number(price).toFixed(2)}</div>` : ""}
             <div class="product-stock ${inStock ? "" : "out"}">${inStock ? "In stock" : "Out of stock"}</div>
-            ${p.description ? `<div style="font-size:.78rem;color:var(--muted);line-height:1.4;margin-top:.15rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(p.description)}</div>` : ""}
+            ${p.description ? `<div class="product-desc">${escapeHtml(p.description)}</div>` : ""}
             ${buyUrl ? `<div class="product-buy"><a href="${escapeHtml(buyUrl)}" target="_blank" rel="noopener">Buy now</a></div>` : ""}
           </div>
         </div>`;
@@ -574,118 +610,25 @@
 
       return `
         ${vendor.bio ? `<p>${escapeHtml(vendor.bio)}</p>` : ""}
-        ${profile.business_name && profile.business_name !== vendor.name ? `<p><strong>${escapeHtml(profile.business_name)}</strong></p>` : ""}
+        ${profile.business_name && profile.business_name !== vendor.name
+          ? `<p><strong>${escapeHtml(profile.business_name)}</strong></p>` : ""}
+        ${details.length ? `<hr class="about-divider">` : ""}
         ${details.map(d => `
           <div class="about-detail">
             <div class="icon">${d.icon}</div>
             <div class="detail-text">${escapeHtml(d.text)}<span>${escapeHtml(d.label)}</span></div>
           </div>`).join("")}
         ${socials.length ? `
-          <div style="margin-top:1.25rem;">
-            <h3>Links</h3>
-            ${socials.map(s => `<div style="margin-bottom:.5rem;"><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" style="color:var(--brand);font-size:.9rem;">${s.icon} ${escapeHtml(s.label)} ↗</a></div>`).join("")}
-          </div>` : ""}`;
-    }
-
-    async function initFollowArea(vendorId) {
-      const area = document.getElementById("follow-area");
-      if (!area) return;
-
-      // Share button — always visible
-      const shareBtn = document.createElement("button");
-      shareBtn.className = "btn btn-secondary";
-      shareBtn.textContent = "Share";
-      shareBtn.style.whiteSpace = "nowrap";
-      shareBtn.addEventListener("click", async () => {
-        const url = location.href;
-        if (navigator.share) {
-          try { await navigator.share({ title: displayName, url }); } catch (_) {}
-        } else {
-          await navigator.clipboard.writeText(url);
-          shareBtn.textContent = "Link copied!";
-          setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
-        }
-      });
-      area.appendChild(shareBtn);
-
-      // Follow + Message buttons — for shoppers and organizers only
-      // Edit Shop button — for the vendor who owns this shop
-      try {
-        const meRes = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
-        if (!meRes || !meRes.authenticated) return;
-        const me = meRes.user || meRes;
-        const viewerRole = me.role || "";
-
-        // If this vendor is viewing their own shop, show "Manage Shop" instead of follow/message
-        if (viewerRole === "vendor" && (me.username === username || String(me.id) === String(vendorId))) {
-          const editBtn = document.createElement("a");
-          editBtn.className = "btn btn-primary";
-          editBtn.textContent = "Manage Shop";
-          editBtn.href = "/my-shop";
-          editBtn.style.whiteSpace = "nowrap";
-          area.insertBefore(editBtn, shareBtn);
-          return;
-        }
-
-        if (viewerRole === "vendor") return; // other vendors can't follow/message
-
-        // Message button
-        const msgBtn = document.createElement("button");
-        msgBtn.className = "btn btn-secondary";
-        msgBtn.textContent = "Message";
-        msgBtn.style.whiteSpace = "nowrap";
-        msgBtn.addEventListener("click", async () => {
-          msgBtn.disabled = true;
-          try {
-            const res = await fetch("/api/messages/conversations", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ participant_ids: [vendorId], type: "direct" }),
-            });
-            const d = await res.json();
-            if (d.ok && d.conversation) {
-              window.location.href = "/messages?conv=" + d.conversation.id;
-            } else {
-              showToast(d.error || "Could not open conversation", "error");
-            }
-          } catch (_) { showToast("Network error", "error"); }
-          msgBtn.disabled = false;
-        });
-        area.insertBefore(msgBtn, shareBtn);
-
-        const followed = await fetch("/api/shopper/following", { credentials: "include" })
-          .then(r => r.ok ? r.json() : []);
-        const isFollowing = Array.isArray(followed) && followed.some(v => String(v.id) === String(vendorId));
-
-        const btn = document.createElement("button");
-        btn.className = "btn " + (isFollowing ? "btn-secondary" : "btn-primary");
-        btn.textContent = isFollowing ? "Following ✓" : "Follow";
-        btn.style.whiteSpace = "nowrap";
-        btn.addEventListener("click", async () => {
-          btn.disabled = true;
-          try {
-            const method = btn.dataset.following === "1" ? "DELETE" : "POST";
-            await fetch(`/api/vendors/${vendorId}/follow`, { method, credentials: "include" });
-            if (method === "POST") {
-              btn.textContent = "Following ✓";
-              btn.className = "btn btn-secondary";
-              btn.dataset.following = "1";
-              const fc = document.getElementById("follower-count");
-              if (fc) fc.textContent = (parseInt(fc.textContent) || 0) + 1;
-            } else {
-              btn.textContent = "Follow";
-              btn.className = "btn btn-primary";
-              btn.dataset.following = "0";
-              const fc = document.getElementById("follower-count");
-              if (fc) fc.textContent = Math.max(0, (parseInt(fc.textContent) || 1) - 1);
-            }
-          } catch (_) {}
-          btn.disabled = false;
-        });
-        btn.dataset.following = isFollowing ? "1" : "0";
-        area.insertBefore(btn, shareBtn);
-      } catch (_) {}
+          <hr class="about-divider">
+          <h3>Links</h3>
+          ${socials.map(s => `
+            <div style="margin-bottom:.5rem;">
+              <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener"
+                 style="color:var(--brand);font-size:.92rem;font-weight:600;">
+                ${s.icon} ${escapeHtml(s.label)} ↗
+              </a>
+            </div>`).join("")}
+        ` : ""}`;
     }
 
     function buildPostsPanel(posts, vendorDisplayName) {
@@ -696,7 +639,7 @@
           <p style="margin:.4rem 0 0;font-size:.88rem;">Follow them to be notified when they post.</p>
         </div>`;
       }
-      const COLORS = ["#b45309","#0f766e","#7c3aed","#dc2626","#0e7490","#92400e","#059669","#4f46e5"];
+      const COLORS = ["#b45309","#1d4ed8","#7c3aed","#dc2626","#0e7490","#92400e","#059669","#4f46e5"];
       const EMOJIS = ["🎬","✨","🛍️","🔥","🏺","💍","🌿","🎨"];
       return `
         <div class="videos-grid" id="posts-grid">
@@ -718,20 +661,19 @@
           }).join("")}
         </div>
         <p style="margin-top:1rem;font-size:.82rem;color:var(--muted);">
-          Showing ${posts.length} post${posts.length === 1 ? "" : "s"} from @${escapeHtml(username)}.
+          ${posts.length} post${posts.length === 1 ? "" : "s"} from @${escapeHtml(username)}
         </p>`;
     }
 
     function buildReviewsPanel(vendor) {
       const reviews = [
         { name: "Jamie L.", color: "#b45309", rating: 5, date: "March 2026", product: "Hand-Stamped Copper Ring", text: "Absolutely beautiful quality. The craftsmanship is incredible and it arrived exactly as shown. Will definitely order again!" },
-        { name: "Sam T.", color: "#0f766e", rating: 5, date: "March 2026", product: null, text: "Found this vendor at the Austin Night Market and immediately followed them. Their booth was beautifully arranged and the products are even better in person." },
+        { name: "Sam T.", color: "#1d4ed8", rating: 5, date: "March 2026", product: null, text: "Found this vendor at the Austin Night Market and immediately followed them. Their booth was beautifully arranged and the products are even better in person." },
         { name: "Alex R.", color: "#7c3aed", rating: 4, date: "February 2026", product: "Handthrown Stoneware Mug", text: "Great mug, solid weight and beautiful glaze. Shipping took a bit longer than expected but the product was worth the wait." },
         { name: "Morgan K.", color: "#059669", rating: 5, date: "February 2026", product: null, text: "I love supporting small businesses and this vendor is exactly why. Friendly, responsive, and their work is genuinely special." },
       ];
       const avg = 4.75;
       const distribution = [{ stars: 5, pct: 82 }, { stars: 4, pct: 12 }, { stars: 3, pct: 4 }, { stars: 2, pct: 1 }, { stars: 1, pct: 1 }];
-
       return `
         <div class="reviews-summary">
           <div class="rating-big">
@@ -761,10 +703,109 @@
             <div class="review-text">${escapeHtml(r.text)}</div>
             ${r.product ? `<div class="review-product-ref">🛍️ ${escapeHtml(r.product)}</div>` : ""}
           </div>`).join("")}
-        <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem;">Reviews are from verified purchases at events and online.</p>`;
+        <p style="font-size:.82rem;color:var(--muted);margin-top:.75rem;">Reviews from verified purchases at events and online.</p>`;
     }
 
-    // ── POST MODAL ──────────────────────────────────────────
+    // ── FOLLOW AREA ────────────────────────────────────────────────────────
+
+    async function initFollowArea(vendorId) {
+      const area = document.getElementById("follow-area");
+      if (!area) return;
+
+      const shareBtn = document.createElement("button");
+      shareBtn.className = "btn btn-secondary";
+      shareBtn.textContent = "Share";
+      shareBtn.style.whiteSpace = "nowrap";
+      shareBtn.addEventListener("click", async () => {
+        const url = location.href;
+        if (navigator.share) {
+          try { await navigator.share({ title: displayName, url }); } catch (_) {}
+        } else {
+          await navigator.clipboard.writeText(url);
+          shareBtn.textContent = "Copied!";
+          setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
+        }
+      });
+      area.appendChild(shareBtn);
+
+      try {
+        const meRes = await fetch("/api/auth/me", { credentials: "include" }).then(r => r.ok ? r.json() : null);
+        if (!meRes || !meRes.authenticated) return;
+        const me = meRes.user || meRes;
+        const viewerRole = me.role || "";
+
+        if (viewerRole === "vendor" && (me.username === username || String(me.id) === String(vendorId))) {
+          const editBtn = document.createElement("a");
+          editBtn.className = "btn btn-primary";
+          editBtn.textContent = "Manage Shop";
+          editBtn.href = "/my-shop";
+          editBtn.style.whiteSpace = "nowrap";
+          area.insertBefore(editBtn, shareBtn);
+          return;
+        }
+
+        if (viewerRole === "vendor") return;
+
+        const msgBtn = document.createElement("button");
+        msgBtn.className = "btn btn-secondary";
+        msgBtn.textContent = "Message";
+        msgBtn.style.whiteSpace = "nowrap";
+        msgBtn.addEventListener("click", async () => {
+          msgBtn.disabled = true;
+          try {
+            const res = await fetch("/api/messages/conversations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ participant_ids: [vendorId], type: "direct" }),
+            });
+            const d = await res.json();
+            if (d.ok && d.conversation) {
+              window.location.href = "/messages?conv=" + d.conversation.id;
+            } else {
+              showToast(d.error || "Could not open conversation", "error");
+            }
+          } catch (_) { showToast("Network error", "error"); }
+          msgBtn.disabled = false;
+        });
+        area.insertBefore(msgBtn, shareBtn);
+
+        const followed = await fetch("/api/shopper/following", { credentials: "include" })
+          .then(r => r.ok ? r.json() : []);
+        const isFollowing = Array.isArray(followed) && followed.some(v => String(v.id) === String(vendorId));
+
+        const followBtn = document.createElement("button");
+        followBtn.className = "btn " + (isFollowing ? "btn-secondary" : "btn-primary");
+        followBtn.textContent = isFollowing ? "Following ✓" : "Follow";
+        followBtn.style.whiteSpace = "nowrap";
+        followBtn.dataset.following = isFollowing ? "1" : "0";
+        followBtn.addEventListener("click", async () => {
+          followBtn.disabled = true;
+          try {
+            const method = followBtn.dataset.following === "1" ? "DELETE" : "POST";
+            await fetch(`/api/vendors/${vendorId}/follow`, { method, credentials: "include" });
+            if (method === "POST") {
+              followBtn.textContent = "Following ✓";
+              followBtn.className = "btn btn-secondary";
+              followBtn.dataset.following = "1";
+              const fc = document.getElementById("follower-count");
+              if (fc) fc.textContent = (parseInt(fc.textContent) || 0) + 1;
+            } else {
+              followBtn.textContent = "Follow";
+              followBtn.className = "btn btn-primary";
+              followBtn.dataset.following = "0";
+              const fc = document.getElementById("follower-count");
+              if (fc) fc.textContent = Math.max(0, (parseInt(fc.textContent) || 1) - 1);
+            }
+          } catch (_) {}
+          followBtn.disabled = false;
+        });
+        area.insertBefore(followBtn, shareBtn);
+      } catch (_) {}
+    }
+
+    // ── POST MODAL ─────────────────────────────────────────────────────────
+
     window.openPostModal = function(post) {
       let modal = document.getElementById("post-modal");
       if (!modal) {
@@ -774,14 +815,14 @@
         modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
         document.body.appendChild(modal);
       }
-      const COLORS = ["#b45309","#0f766e","#7c3aed","#dc2626","#0e7490","#92400e"];
+      const COLORS = ["#b45309","#1d4ed8","#7c3aed","#dc2626","#0e7490","#92400e"];
       const EMOJIS = ["🎬","✨","🛍️","🔥","🏺","💍"];
       const color = post.thumbnail_color || COLORS[0];
       const emoji = post.thumbnail_emoji || EMOJIS[0];
       const likes = post.likes_count || 0;
       const dateStr = post.created_at ? new Date(post.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
       modal.innerHTML = `
-        <div style="background:var(--surface-strong,#fff);border-radius:var(--radius-lg,20px);max-width:520px;width:100%;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);">
+        <div style="background:var(--surface);border-radius:var(--radius-lg);max-width:520px;width:100%;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);">
           <div style="position:relative;width:100%;aspect-ratio:4/3;background:linear-gradient(135deg,${escapeHtml(color)}dd,${escapeHtml(darkenHex(color))}ff);display:flex;align-items:center;justify-content:center;font-size:5rem;">
             ${post.thumbnail_url
               ? `<img src="${escapeHtml(post.thumbnail_url)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">`
@@ -799,23 +840,15 @@
               <div style="margin-left:auto;font-size:.88rem;color:var(--muted);">❤️ ${likes.toLocaleString()}</div>
             </div>
             ${post.caption ? `<p style="font-size:.93rem;line-height:1.6;margin:0 0 .75rem;">${escapeHtml(post.caption)}</p>` : ""}
-            ${post.event_name ? `<div style="font-size:.78rem;background:rgba(15,118,110,.08);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;margin-bottom:.5rem;">📅 ${escapeHtml(post.event_name)}</div>` : ""}
-            ${post.product_name ? `<div style="font-size:.78rem;background:rgba(15,118,110,.08);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;">🛍️ ${escapeHtml(post.product_name)}${post.product_price ? " · $" + Number(post.product_price).toFixed(2) : ""}</div>` : ""}
+            ${post.event_name ? `<div style="font-size:.78rem;background:var(--primary-soft);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;margin-bottom:.5rem;">📅 ${escapeHtml(post.event_name)}</div>` : ""}
+            ${post.product_name ? `<div style="font-size:.78rem;background:var(--primary-soft);color:var(--brand);padding:.2rem .7rem;border-radius:99px;display:inline-block;">🛍️ ${escapeHtml(post.product_name)}${post.product_price ? " · $" + Number(post.product_price).toFixed(2) : ""}</div>` : ""}
             ${(post.tags||[]).length ? `<div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.65rem;">${post.tags.map(t=>`<span style="font-size:.72rem;background:var(--line);padding:.15rem .55rem;border-radius:99px;color:var(--muted);">#${escapeHtml(t)}</span>`).join("")}</div>` : ""}
             <button onclick="document.getElementById('post-modal').remove()" style="margin-top:1rem;width:100%;background:var(--line);border:none;border-radius:var(--radius-md);padding:.6rem;font-size:.88rem;color:var(--muted);cursor:pointer;">Close</button>
           </div>
         </div>`;
     };
 
-    function darkenHex(hex) {
-      try {
-        let n = parseInt((hex||'#0f766e').replace('#',''), 16);
-        const r = Math.max(0, (n >> 16) - 40);
-        const g = Math.max(0, (n >> 8 & 0xff) - 40);
-        const b = Math.max(0, (n & 0xff) - 40);
-        return '#' + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
-      } catch (_) { return '#0b5b55'; }
-    }
+    // ── HELPERS ────────────────────────────────────────────────────────────
 
     function _priceLabel(r) {
       return r === "low" ? "Under $25" : r === "mid" ? "$25–$100" : r === "high" ? "$100+" : r;
@@ -834,7 +867,21 @@
         return "#" + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
       } catch (_) { return hex; }
     }
+    function darkenHex(hex) {
+      try {
+        let n = parseInt((hex||"#2563eb").replace("#",""), 16);
+        const r = Math.max(0, (n >> 16) - 40);
+        const g = Math.max(0, (n >> 8 & 0xff) - 40);
+        const b = Math.max(0, (n & 0xff) - 40);
+        return "#" + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+      } catch (_) { return "#1d4ed8"; }
+    }
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
   })();
+
   function shadeColor(hex, pct) {
     try {
       let n = parseInt(hex.replace("#",""), 16);
